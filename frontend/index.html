@@ -2449,19 +2449,33 @@ python pipeline.py "FC-01" --dump-json
   function animateLatency(from, to, duration, token) {
     return new Promise(resolve => {
       if (to === null || to === undefined) { setLatency(from); resolve(true); return; }
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+      let settled = false;
+      let guard = null;
+      const finish = ok => {
+        if (settled) return;
+        settled = true;
+        if (guard !== null) clearTimeout(guard);
+        resolve(ok);
+      };
+      const settle = () => {
+        if (token !== state.playToken) { finish(false); return; }
         setLatency(to);
-        resolve(token === state.playToken);
+        finish(true);
+      };
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+        settle();
         return;
       }
+      guard = setTimeout(settle, duration + 250);
       const start = performance.now();
       function frame(now) {
-        if (token !== state.playToken) { resolve(false); return; }
+        if (settled) return;
+        if (token !== state.playToken) { finish(false); return; }
         const t = clamp((now - start) / duration, 0, 1);
         const eased = 1 - Math.pow(1 - t, 3);
         setLatency(from + (to - from) * eased);
         if (t < 1) requestAnimationFrame(frame);
-        else { setLatency(to); resolve(true); }
+        else { setLatency(to); finish(true); }
       }
       requestAnimationFrame(frame);
     });
@@ -2527,22 +2541,54 @@ python pipeline.py "FC-01" --dump-json
       }
       const digits = Math.max(5, String(Math.max(0, Math.round(target))).length);
       buildOdometer(digits);
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+      let settled = false;
+      let guard = null;
+      const finish = ok => {
+        if (settled) return;
+        settled = true;
+        if (guard !== null) clearTimeout(guard);
+        resolve(ok);
+      };
+      const settle = () => {
+        if (token !== state.playToken) { finish(false); return; }
         setOdometer(target, digits);
-        resolve(token === state.playToken);
+        finish(true);
+      };
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+        settle();
         return;
       }
+      guard = setTimeout(settle, duration + 250);
       const start = performance.now();
       function frame(now) {
-        if (token !== state.playToken) { resolve(false); return; }
+        if (settled) return;
+        if (token !== state.playToken) { finish(false); return; }
         const t = clamp((now - start) / duration, 0, 1);
         const eased = 1 - Math.pow(1 - t, 3);
         setOdometer(target * eased, digits);
         if (t < 1) requestAnimationFrame(frame);
-        else { setOdometer(target, digits); resolve(true); }
+        else { setOdometer(target, digits); finish(true); }
       }
       requestAnimationFrame(frame);
     });
+  }
+
+  function headlineTargets() {
+    const d = state.data;
+    const e2e = d.totals.e2e ?? cumulative(["retriever", "noul", "score", "choice", "guard", "generator"]);
+    const genTarget = d.stages.generator && d.stages.generator.called === false ? null : d.totals.genConsumed;
+    return { e2e, genTarget };
+  }
+
+  async function animateHeadline(token) {
+    const { e2e, genTarget } = headlineTargets();
+    await Promise.all([
+      animateLatency(0, e2e, 900, token),
+      animateOdometer(genTarget, 900, token)
+    ]);
+    if (token !== state.playToken) return;
+    $("#latencyValue").classList.add("is-final");
+    renderTokenMeta();
   }
 
   function renderBaseline() {
@@ -3108,6 +3154,7 @@ python pipeline.py "FC-01" --dump-json
     ["retriever", "noul", "score", "choice", "guard", "generator"].forEach(k => setStageMs(k, null));
     setStageMs("total", null);
     setText($("#replayNote").querySelector(".on"), "running");
+    const headline = animateHeadline(token);
 
     // RETRIEVER
     setStageActive("retriever");
@@ -3116,12 +3163,8 @@ python pipeline.py "FC-01" --dump-json
       setTimeout(() => t.classList.add("on"), 30 + i * 12);
     });
     setStageMs("retriever", d.stages.retriever.ms);
-    const lat1 = cumulative(["retriever"]);
-    await animateLatency(0, lat1, 420, token);
-    if (token !== state.playToken) return;
 
     // NOUL
-    const noulStart = lat1 ?? 0;
     setStageActive("noul");
     const chips = $$("#chipGrid .chip");
     const drops = chips.filter(c => c.dataset.keep === "false");
@@ -3139,9 +3182,6 @@ python pipeline.py "FC-01" --dump-json
     setStageMs("noul", noul.ms);
     await wait(Math.max(dropDur, 700), token);
     if (token !== state.playToken) return;
-    const lat2 = cumulative(["retriever", "noul"]) ?? noulStart;
-    await animateLatency(noulStart, lat2, 380, token);
-    if (token !== state.playToken) return;
 
     // SCORE
     setStageActive("score");
@@ -3156,9 +3196,6 @@ python pipeline.py "FC-01" --dump-json
     setStageMs("score", score.ms);
     await wait(Math.max(700, scoreRows.length * 70 + 420), token);
     if (token !== state.playToken) return;
-    const lat3 = cumulative(["retriever", "noul", "score"]) ?? lat2;
-    await animateLatency(lat2, lat3, 380, token);
-    if (token !== state.playToken) return;
 
     // CHOICE
     setStageActive("choice");
@@ -3167,17 +3204,11 @@ python pipeline.py "FC-01" --dump-json
     setStageMs("choice", choice.ms);
     await wait(Math.max(650, conflicts.length * 180 + 420), token);
     if (token !== state.playToken) return;
-    const lat4 = cumulative(["retriever", "noul", "score", "choice"]) ?? lat3;
-    await animateLatency(lat3, lat4, 380, token);
-    if (token !== state.playToken) return;
 
     // GUARD
     setStageActive("guard");
     setStageMs("guard", d.stages.guard.ms);
     await wait(420, token);
-    if (token !== state.playToken) return;
-    const lat5 = cumulative(["retriever", "noul", "score", "choice", "guard"]) ?? lat4;
-    await animateLatency(lat4, lat5, 300, token);
     if (token !== state.playToken) return;
 
     // GENERATOR
@@ -3185,16 +3216,10 @@ python pipeline.py "FC-01" --dump-json
     $("#genBox").classList.add("on");
     setStageMs("generator", d.stages.generator.ms);
     setStageMs("total", d.totals.e2e);
-    const finalMs = d.totals.e2e ?? cumulative(["retriever", "noul", "score", "choice", "guard", "generator"]) ?? lat5;
-    await animateLatency(lat5, finalMs, 520, token);
+    await headline;
     if (token !== state.playToken) return;
     $("#latencyValue").classList.add("is-final");
     setText($("#replayNote").querySelector(".on"), "complete");
-
-    // token counter runs only after the pipeline has landed
-    const genTarget = d.stages.generator && d.stages.generator.called === false ? null : d.totals.genConsumed;
-    await animateOdometer(genTarget, 1500, token);
-    if (token !== state.playToken) return;
     renderTokenMeta();
     state.playing = false;
   }
