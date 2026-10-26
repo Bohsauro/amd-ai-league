@@ -2,36 +2,36 @@
   "case_id": "FC-01",
   "model": "meta-llama/llama-3.1-8b-instruct",
   "pattern": "classic agentic loop: up to 5 LLM calls, ALL corpus snippets sent on every call, no filtering",
-  "corpus_sources": 34,
+  "corpus_sources": 53,
   "selection_mode": "case_id",
   "runs": [
     {
       "n": 1,
-      "total_tokens": 27364,
-      "e2e_ms": 3567.93
+      "total_tokens": 46563,
+      "e2e_ms": 30569.94
     },
     {
       "n": 2,
-      "total_tokens": 26841,
-      "e2e_ms": 3691.85
+      "total_tokens": 46567,
+      "e2e_ms": 32913.46
     },
     {
       "n": 3,
-      "total_tokens": 31367,
-      "e2e_ms": 6572.57
+      "total_tokens": 41689,
+      "e2e_ms": 16320.23
     }
   ],
   "total_tokens": {
-    "median": 27364,
-    "min": 26841,
-    "max": 31367
+    "median": 46563,
+    "min": 41689,
+    "max": 46567
   },
   "total_latency_ms": {
-    "median": 3691.85,
-    "min": 3567.93,
-    "max": 6572.57
+    "median": 30569.94,
+    "min": 16320.23,
+    "max": 32913.46
   },
-  "cost_usd_total": 0.00300188,
+  "cost_usd_total": 0.02809933,
   "gpu_sec_per_query": null,
   "gpu_sec_note": "not measurable in this run: hosted OpenRouter API, no AMD GPU attached; do not present as a measured GPU figure",
   "note": "Dispersion lives here, not in baseline_metrics.json: the frozen schema (additionalProperties: false) only allows schema_version, case_id, query, model, calls, totals, answer."

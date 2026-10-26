@@ -142,6 +142,25 @@ def _normalize_citations(raw: Any, allowed: set[str], claim_id: str) -> list[dic
     return citations
 
 
+def _provider_options() -> dict[str, Any]:
+    """Selezione provider per la demo.
+
+    Default: pin su Groq (percorso misurato della demo: ~450 ms). Il semplice
+    `sort: latency` di OpenRouter puo' deviare su provider piu' lenti (es.
+    CoreWeave ~1.8s) anche quando Groq e' disponibile, sballando il budget e2e
+    di 1.2s. Il pin e' configurabile: OPENROUTER_PROVIDER_ONLY='' per nessun
+    pin, oppure lista separata da virgole. Se il provider pinnato cade, la
+    chiamata va in errore e `bin/demo` ricade sul run congelato (fallback
+    offline previsto per la registrazione).
+    """
+    raw = os.environ.get("OPENROUTER_PROVIDER_ONLY", "Groq")
+    options: dict[str, Any] = {"sort": "latency"}
+    providers = [item.strip() for item in raw.split(",") if item.strip()]
+    if providers:
+        options["only"] = providers
+    return options
+
+
 def _skipped(answer: str, confidence: float, model: str, reason: str, prompt_tokens_est: int) -> dict[str, Any]:
     return {
         "called": False,
@@ -224,7 +243,7 @@ def generate(
         "temperature": 0.0,
         "max_tokens": 220,
         "response_format": {"type": "json_object"},
-        "provider": {"sort": "latency"},
+        "provider": _provider_options(),
     }
     headers = {
         "Authorization": f"Bearer {api_key}",

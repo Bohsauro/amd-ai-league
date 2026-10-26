@@ -2,7 +2,11 @@
 
 > Caso d'uso: riconciliazione real-time di dati finanziari in notizie conflittuali.
 > Regola: ogni coppia deve avere una **verità verificabile** (fonte primaria: filing, earnings call trascritta, report ufficiale).
-> Formato dati: JSON pre-curato, **esattamente 6 casi (FC-01 … FC-06)** + 1 sorgente live opzionale al demo.
+> Formato dati: JSON pre-curato, **10 casi (FC-01 … FC-10)** + snapshot live opzionale al demo (`--live PATH`).
+> Decisione SERPAPI (2026-10-26): **non usata nella demo** — `SERPAPI_KEY` non è in `.env` e il
+> tempo residuo al submit non giustifica l'onboarding di un'API a pagamento. Il canale "live"
+> resta implementato come **snapshot JSON** (`--live PATH`, già supportato da retriever), e la UI
+> non rivendica nessuna "sorgente live": l'etichetta mostrata è "Measured values from run.json".
 > Contratto macchina: `schemas/corpus.schema.json`. Consegna in `backend/corpus.json` (task 01).
 
 ## Schema per caso

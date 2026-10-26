@@ -21,7 +21,7 @@
 
 ```
 query
-  -> RETRIEVER        : corpus pre-curato JSON + 1 sorgente live (SerpAPI/Bing)
+  -> RETRIEVER        : corpus pre-curato JSON + snapshot live opzionale (--live PATH; SerpAPI se SERPAPI_KEY presente)
   -> NOUL (gate bool): keep/drop per snippet  -> drop 60-70%
   -> SCORE (rank)    : relevance[0,1] x reliability[0,1] sul supersite
   -> CHOICE (conf)   : pairwise agree/disagree/unrelated + verdetto + claim-id

@@ -313,20 +313,21 @@ registrazione; il token delta è stabile.
 - Vietato su questo frame: "5-12x", "10-30x", "throughput per GPU", "9.4k tokens saved", "ROCm runs it" al
   presente, qualunque rapporto non misurato (BUILD_SPEC §0: senza GPU AMD il throughput è architetturale). Vedi §9.
 
-## 6. FC-06 (fallimento tipizzato) — condizionale alla misura, altrimenti tagliato (D5)
+## 6. FC-06 (fallimento tipizzato) — ORA misurato, resta condizionale alla registrazione (D5)
 
-FC-06 **non è nel montaggio** e **non è citabile come feature dimostrata**. Sweep del CEO 26/10 10:17 sul caso
-progettato come "evidenza insufficiente": la pipeline risponde `CONFLICT` (conf 0,83) con generatore `resolved`
-— cioè il contrario del fallimento tipizzato. La frase "il generatore può rifiutare" **non è prodotta dal codice
-oggi**: finché è così non si dice, non si mostra e non va in voice-over (dettaglio e fix su BOH-5).
+Con il corpus a 10 casi (26/10), il run misurato delle 15:21 su FC-06 dà
+`stages.choice.label = INSUFFICIENT`·`stages.guard.action = insufficient`·
+`stages.generator.called = false`·`status = skipped` (jq su `backend/runs/FC-06.json`):
+il **rifiuto tipizzato è prodotto dal codice ed è una feature dimostrata**. Il sweep delle 10:17
+(sul corpus a 6 casi) aveva misurato il contrario (`CONFLICT` + `resolved`); con il pool a 53
+sorgenti il caso Microsoft-Inflection non trova una fonte primaria dominante e il guard ferma
+il generatore: è esattamente la parte "the generator can refuse".
 
-L'insert da 8s esiste **solo se** ricorrono tutte e tre le condizioni, verificate sul file e non a memoria:
+L'insert da 8s va nel montaggio **solo se** al momento della registrazione:
 
-1. GUARD è stato corretto (BOH-5) **entro le 16:00**;
-2. un run FC-06 **misurato** mostra `stages.choice.label = INSUFFICIENT`, `stages.guard.action = insufficient`,
-   `stages.generator.called = false`, `stages.generator.status = skipped` — verificato con `jq` su **quel**
-   `run.json`;
-3. il CEO conferma che quel run è quello del video (stesso corpus/modello, R6).
+1. il run di FC-06 usato è **quello del video** (stesso corpus/modello, R6), verificato con `jq`;
+2. su quel run: `choice.label = INSUFFICIENT`, `guard.action = insufficient`,
+   `generator.called = false`, `generator.status = skipped`;
 
 Se una manca, la sezione **si taglia**: nessun fallimento recitato a mano, nessun `unresolved` scritto per
 ipotesi. Nota di contratto: il fallimento tipizzato si presenta come **`skipped` + "0 gen calls"**, non come
@@ -342,8 +343,9 @@ Nessuna cifra: usabile senza sostituzioni.
 ## 8. Regole di registrazione
 
 - **La coppia run + baseline si genera insieme**, nello stesso momento e con lo stesso corpus/modello (R6):
-  prima `python baseline_agent.py FC-01`, poi `python pipeline.py FC-01 --dump-json`, poi §0.3. Se una delle
-  due è vecchia, la barra e i frame comparativi tornano a `{{baseline.label}}` / si tagliano.
+  un solo comando: `bin/demo --freeze` (esegue i 10 casi, misura il throughput, scrive `run.json`,
+  congela per il fallback e copia in `frontend/`), poi `bin/gen-verified-numbers` per i segnaposto.
+  Se una delle due è vecchia, la barra e i frame comparativi tornano a `{{baseline.label}}` / si tagliano.
 - 1 query live (realtà) + 1 rehearsal deterministico (`--offline`) per lo split-screen; i due run non si mescolano (R1).
 - I counter **non** sono animati a mano: contano dal vivo dal processo reale, o leggono `run.json`.
 - Prima di registrare: sostituire **tutti** i segnaposto di §0.1 con i valori di §0.3 e verificare che sul
@@ -364,7 +366,7 @@ Nessuna cifra: usabile senza sostituzioni.
 | "5-12x lower latency" | moltiplicatore non misurato | `{{baseline.latency_x}}×`, solo fra due `e2e_ms` misurati |
 | "10-30x throughput per GPU" | richiede GPU AMD (BUILD_SPEC §0) | "one generative call per query, the rest is a batched forward pass; target: ROCm, one card" |
 | "ROCm runs it" (al presente) | nessuna GPU AMD su questa macchina: è un'**affermazione di fatto** non verificabile, più facile da contestare di una cifra | "target: ROCm · one card · batched" — portabilità dichiarata, non esecuzione (§5) |
-| "the generator can refuse" / typed failure come feature | al 26/10 10:17 FC-06 dà `CONFLICT` + `resolved`: il codice non produce il rifiuto | solo se un run FC-06 **misurato** dà `INSUFFICIENT` + `skipped` (§6); altrimenti la frase non esiste |
+| "the generator can refuse" / typed failure come feature | al 26/10 15:21 FC-06 dà `INSUFFICIENT` + `skipped` su `backend/runs/FC-06.json` (corpus 10 casi) | la frase si usa solo se il run del video è quello misurato (§6) |
 | "9.4k tokens saved" | numero di un run vecchio, e su base non omogenea | il risparmio è quello di §0.5, con segno e provenienza |
 | "Same answer quality" | nessun eval harness nel timebox: non è verificabile con un comando del repo | "already reconciled, already cited" (fatto strutturale: `stages.choice.label`, citazioni in `run.json`) |
 | "GPU-sec/query" come cifra | non misurabile senza GPU AMD | rapporto token/query (hardware-agnostico), misurato |

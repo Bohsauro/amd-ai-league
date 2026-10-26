@@ -406,6 +406,240 @@
         }
       ],
       "notes": "No primary source discloses a price: Microsoft's post describes hiring and licensing, not an acquisition amount. Two reliable outlets repeat $650M from anonymous sources, an insider tells Fast Company the cost was likely above $1B, and Techzine reports EUR 600M. GUARD must return INSUFFICIENTE instead of choosing a number. This is the typed-failure showcase."
+    },
+    {
+      "id": "FC-07",
+      "subject": "NVIDIA Q3 fiscal 2025: revenue $35.1B, GAAP EPS $0.78 vs non-GAAP $0.81, Q4 guidance $37.5B",
+      "query": "What were NVIDIA's revenue and earnings per share in Q3 fiscal 2025, and what did it guide for Q4?",
+      "claim": "NVIDIA Q3 fiscal 2025 revenue was $35.08 billion; GAAP diluted EPS $0.78 vs non-GAAP $0.81; data center revenue $30.8 billion; Q4 guidance $37.5 billion plus or minus 2%.",
+      "truth": "For the quarter ended October 27, 2024, NVIDIA reported record revenue of $35.08 billion (up 94% year over year), GAAP diluted EPS of $0.78, non-GAAP diluted EPS of $0.81 and record data center revenue of $30.8 billion (up 112% year over year). For Q4 fiscal 2025 it guided revenue of $37.5 billion, plus or minus 2%. Primary source: NVIDIA press release, 20 Nov 2024, https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2025",
+      "truth_url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2025",
+      "notes": "Same release contains two EPS numbers: GAAP $0.78 includes stock-based compensation and other charges, non-GAAP $0.81 excludes them. Coverage citing 'NVIDIA earned 78 cents' and coverage citing '81 cents adjusted' are both correct but answer different questions. The revenue beat ($35.08B vs $33.16B expected) adds a second numeric axis. Broadens the demo beyond Intel to the market's most-watched AI stock.",
+      "sources": [
+        {
+          "id": "FC-07-S1",
+          "source_name": "NVIDIA Newsroom",
+          "publisher_type": "official",
+          "date": "2024-11-20",
+          "title": "NVIDIA Announces Financial Results for Third Quarter Fiscal 2025",
+          "source_url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2025",
+          "content": "NVIDIA today reported revenue for the third quarter ended October 27, 2024, of $35.1 billion, up 17% from the previous quarter and up 94% from a year ago. GAAP earnings per diluted share was $0.78, up 16% from the previous quarter and up 111% from a year ago. Non-GAAP earnings per diluted share was $0.81, up 19% quarter over quarter and up 103% from a year ago. Record quarterly data center revenue of $30.8 billion, up 17% from Q2 and up 112% year over year. Q4 outlook: revenue expected to be $37.5 billion, plus or minus 2%, with GAAP and non-GAAP gross margins of 73.0% and 73.5%.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-07-S2",
+          "source_name": "NVIDIA Investor Relations",
+          "publisher_type": "official",
+          "date": "2024-11-20",
+          "title": "NVIDIA — Financial Info — Quarterly Results",
+          "source_url": "https://investor.nvidia.com/financial-info/quarterly-results/default.aspx",
+          "content": "NVIDIA's investor relations quarterly results hub. The Q3 fiscal 2025 earnings release published November 20, 2024 reports revenue of $35.08 billion for the quarter ended October 27, GAAP diluted earnings per share of $0.78 and non-GAAP diluted earnings per share of $0.81. The release also reports record data center revenue of $30.77 billion, up 112% year over year, and provides Q4 fiscal 2025 revenue guidance of $37.5 billion plus or minus 2%, alongside the CFO commentary and earnings materials.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-07-S3",
+          "source_name": "CNBC",
+          "publisher_type": "press",
+          "date": "2024-11-20",
+          "title": "Nvidia (NVDA) earnings report Q3 2025",
+          "source_url": "https://www.cnbc.com/2024/11/20/nvidia-nvda-earnings-report-q3-2025.html",
+          "content": "Here is how NVIDIA did compared with LSEG analyst expectations for the fiscal third quarter: earnings per share of 81 cents adjusted versus 75 cents expected, and revenue of $35.08 billion versus $33.16 billion expected. Net income rose to $19.3 billion, or 78 cents per share, from $9.24 billion in the year-ago period. NVIDIA said it expects about $37.5 billion, plus or minus 2%, in current-quarter sales, versus $37.08 billion expected by analysts. Data center revenue was $30.8 billion, up 112% year over year.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-07-S4",
+          "source_name": "The Motley Fool",
+          "publisher_type": "report",
+          "date": "2024-11-20",
+          "title": "Nvidia (NVDA) Q3 2025 Earnings Call Transcript",
+          "source_url": "https://www.fool.com/earnings/call-transcripts/2024/11/20/nvidia-nvda-q3-2025-earnings-call-transcript/",
+          "content": "NVIDIA Q3 fiscal 2025 earnings call transcript. CFO commentary: Q3 was another record quarter; revenue of $35.1 billion was up 17% sequentially and up 94% year on year and well above our outlook of $32.5 billion. Data center achieved another record with revenue of $30.8 billion, up 17% sequentially and up 112% year on year. NVIDIA demand remains strong as Hopper shipments continue and Blackwell ramps into the fourth quarter.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-07-S5",
+          "source_name": "AIStockPicksToday",
+          "publisher_type": "noise",
+          "date": "2024-11-20",
+          "title": "NVIDIA Q3 Earnings: 9 Reasons the Stock Is a Buy Right Now",
+          "source_url": "",
+          "content": "NVIDIA Q3 earnings just printed and our AI screener says buy now, now, now. Click for the free report and 3 hidden catalysts Wall Street is missing before the next earnings call. Don't be the last to see our NVIDIA scorecard and bonus REIT picks. Download the full PDF today, no credit card required, sponsored by our premium trading service.",
+          "verdict_in_corpus": "noise"
+        }
+      ]
+    },
+    {
+      "id": "FC-08",
+      "subject": "AMD Q3 2024: GAAP EPS $0.47 vs non-GAAP $0.92 on revenue $6.8B",
+      "query": "What EPS did AMD report for Q3 2024?",
+      "claim": "AMD Q3 2024 revenue was $6.8 billion; GAAP diluted EPS $0.47 vs non-GAAP $0.92.",
+      "truth": "For the quarter ended September 28, 2024, AMD reported revenue of $6.819 billion, GAAP gross margin of 50%, GAAP net income of $771 million and GAAP diluted EPS of $0.47; on a non-GAAP basis gross margin was 54%, net income $1.5 billion and diluted EPS $0.92. Primary source: AMD press release, 29 Oct 2024, https://ir.amd.com/news-events/press-releases/detail/1224/amd-reports-third-quarter-2024-financial-results",
+      "truth_url": "https://ir.amd.com/news-events/press-releases/detail/1224/amd-reports-third-quarter-2024-financial-results",
+      "notes": "AMD's GAAP EPS ($0.47) excludes almost half the earnings shown non-GAAP ($0.92): acquisition intangible amortization and stock-based compensation. Headlines saying 'AMD earned 47 cents' and 'AMD earned 92 cents' are both true and both from AMD's own release. Same-company GAAP vs non-GAAP reconciliation as FC-01 but for AMD, the demo's sponsor company.",
+      "sources": [
+        {
+          "id": "FC-08-S1",
+          "source_name": "AMD Investor Relations",
+          "publisher_type": "official",
+          "date": "2024-10-29",
+          "title": "AMD Reports Third Quarter 2024 Financial Results",
+          "source_url": "https://ir.amd.com/news-events/press-releases/detail/1224/amd-reports-third-quarter-2024-financial-results",
+          "content": "AMD today announced revenue for the third quarter of 2024 of $6.8 billion, gross margin of 50%, operating income of $724 million, net income of $771 million and diluted earnings per share of $0.47. On a non-GAAP basis, gross margin was 54%, operating income was $1.7 billion, net income was $1.5 billion and diluted earnings per share was $0.92. Revenue grew 18% year over year, led by higher sales of EPYC and Instinct data center processors and Ryzen PC processors.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-08-S2",
+          "source_name": "AMD SEC filing (10-Q)",
+          "publisher_type": "official",
+          "date": "2024-10-30",
+          "title": "AMD Form 10-Q for the quarter ended September 28, 2024",
+          "source_url": "https://ir.amd.com/financial-information/sec-filings/content/0000002488-24-000163/amd-20240928.htm",
+          "content": "AMD's Form 10-Q for the quarterly period ended September 28, 2024 reports net revenue of $6,819 million, up from $5,800 million in the same period a year ago. GAAP net income was $771 million, compared with $299 million in the prior-year quarter, and GAAP diluted earnings per share was $0.47, compared with $0.18. The filing includes the GAAP to non-GAAP reconciliations accompanying the earnings release, including non-GAAP diluted EPS of $0.92.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-08-S3",
+          "source_name": "CNBC",
+          "publisher_type": "press",
+          "date": "2024-10-29",
+          "title": "AMD earnings report Q3 2024",
+          "source_url": "https://www.cnbc.com/2024/10/29/amd-earnings-report-q3-2024.html",
+          "content": "AMD reported third quarter results on Tuesday with earnings in line with forecasts and revenue slightly above expectations: adjusted earnings per share of 92 cents versus 92 cents expected, and revenue of $6.82 billion versus $6.71 billion expected. Net income was $771 million, or 47 cents per share, compared with $299 million a year ago. AMD said its important data center business doubled in sales for the second quarter in a row.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-08-S4",
+          "source_name": "AMD press release (PDF)",
+          "publisher_type": "official",
+          "date": "2024-10-29",
+          "title": "AMD Reports Third Quarter 2024 Financial Results (PDF)",
+          "source_url": "https://d1io3yog0oux5.cloudfront.net/_016ed771a65723c055e13ad960a941fb/amd/news/2024-10-29_AMD_Reports_Third_Quarter_2024_Financial_1224.pdf",
+          "content": "PDF version of AMD's third quarter 2024 earnings press release published on the investor relations site. It reports revenue of $6.8 billion for the quarter ended September 28, 2024, GAAP operating income of $724 million, GAAP net income of $771 million and GAAP diluted earnings per share of $0.47. Non-GAAP figures include operating income of $1.7 billion, net income of $1.5 billion and diluted earnings per share of $0.92.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-08-S5",
+          "source_name": "ChipAlerts Pro",
+          "publisher_type": "noise",
+          "date": "2024-10-29",
+          "title": "AMD Q3 Earnings: Our 200-Point A.I. Scoring Model Says BULLISH",
+          "source_url": "",
+          "content": "AMD Q3 earnings just dropped and we crunched the numbers with our 200-point A.I. scoring model. Get the instant verdict: BULLISH. Click here to subscribe to the free daily stock alert and never miss a CPU earnings event again. Sponsored by our premium service, 30-day money back guarantee, unsubscribe in one click.",
+          "verdict_in_corpus": "noise"
+        }
+      ]
+    },
+    {
+      "id": "FC-09",
+      "subject": "iPhone 16 shipped September 20 'built for Apple Intelligence' but AI features arrived October 28 with iOS 18.1",
+      "query": "Was Apple Intelligence available on iPhone 16 at launch?",
+      "claim": "iPhone 16 shipped on September 20, 2024 marketed as built for Apple Intelligence, but the first Apple Intelligence features arrived only on October 28, 2024 with iOS 18.1.",
+      "truth": "Apple announced iPhone 16 on September 9, 2024 with pre-orders September 13 and availability September 20, describing the devices as built for Apple Intelligence and saying the first features would roll out the following month. Apple Intelligence became available on October 28, 2024 via the free iOS 18.1, iPadOS 18.1 and macOS Sequoia 15.1 software updates. Primary source: Apple Newsroom, 28 Oct 2024, https://www.apple.com/newsroom/2024/10/apple-intelligence-is-available-today-on-iphone-ipad-and-mac/",
+      "truth_url": "https://www.apple.com/newsroom/2024/10/apple-intelligence-is-available-today-on-iphone-ipad-and-mac/",
+      "notes": "Announced-vs-actual conflict: the iPhone 16 lineup was 'built for Apple Intelligence' and launched September 20, but the first AI features shipped five weeks later in the iOS 18.1 update (October 28). Coverage describing Apple Intelligence as a launch feature and coverage describing it as arriving in October with iOS 18.1 are both citing Apple, but at different stages. Uses archived Apple pages for the launch period because the live pages were rewritten for newer hardware.",
+      "sources": [
+        {
+          "id": "FC-09-S1",
+          "source_name": "Apple Newsroom",
+          "publisher_type": "official",
+          "date": "2024-09-09",
+          "title": "Apple debuts iPhone 16 Pro and iPhone 16 Pro Max",
+          "source_url": "https://www.apple.com/newsroom/2024/09/apple-debuts-iphone-16-pro-and-iphone-16-pro-max/",
+          "content": "Apple debuts iPhone 16 Pro and iPhone 16 Pro Max, powered by the A18 Pro chip and built for Apple Intelligence; the Pro lineup introduces larger display sizes, Camera Control, innovative pro camera features and a huge leap in battery life. Pre-orders begin Friday, September 13, with availability beginning Friday, September 20. Apple says Apple Intelligence will be available as a free software update, with the first set of features rolling out next month in U.S. English for most regions around the world.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-09-S2",
+          "source_name": "Apple Newsroom",
+          "publisher_type": "official",
+          "date": "2024-10-28",
+          "title": "Apple Intelligence is available today on iPhone, iPad, and Mac",
+          "source_url": "https://www.apple.com/newsroom/2024/10/apple-intelligence-is-available-today-on-iphone-ipad-and-mac/",
+          "content": "Apple Intelligence is available today on iPhone, iPad and Mac through a free software update with the release of iOS 18.1, iPadOS 18.1 and macOS Sequoia 15.1. Users can refine their writing with systemwide Writing Tools, summarize notifications, mail and messages, experience a more natural and capable Siri, remove distractions in Photos, and search photos with natural language. Visual Intelligence uses the new Camera Control on the iPhone 16 lineup to learn about objects and places instantly.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-09-S3",
+          "source_name": "Apple (archived, Internet Archive)",
+          "publisher_type": "official",
+          "date": "2024-11-01",
+          "title": "Apple Intelligence — Apple (snapshot November 1, 2024)",
+          "source_url": "https://web.archive.org/web/20241101000000/https://www.apple.com/apple-intelligence/",
+          "content": "Archived capture of Apple's Apple Intelligence page from November 1, 2024: Apple Intelligence is available now as a free update for iPhone, iPad and Mac users. It is available in beta on all iPhone 16 models, iPhone 15 Pro and iPhone 15 Pro Max with device and Siri language set to U.S. English. Some features and additional platforms will be available this December, and Apple notes it will expand the rollout to more languages over the following year.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-09-S4",
+          "source_name": "Apple (archived, Internet Archive)",
+          "publisher_type": "official",
+          "date": "2024-10-15",
+          "title": "iPhone 16 — Apple (snapshot October 15, 2024)",
+          "source_url": "https://web.archive.org/web/20241015000000/https://www.apple.com/iphone-16/",
+          "content": "Archived capture of Apple's iPhone 16 product page from October 15, 2024: iPhone 16 is powered by the A18 chip and features Apple Intelligence, Camera Control, a 48MP Fusion camera and five vibrant colors. The page leads with Apple Intelligence as the headlining feature of the lineup, alongside the new Fusion camera system, and highlights the Camera Control button as a gateway to Visual Intelligence.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-09-S5",
+          "source_name": "iPhoneInsiderSecrets",
+          "publisher_type": "noise",
+          "date": "2024-09-12",
+          "title": "iPhone 16 vs iPhone 16 Pro: The Ultimate Comparison Guide",
+          "source_url": "",
+          "content": "iPhone 16 vs iPhone 16 Pro: the ultimate comparison guide. 12 things Apple won't tell you about the new iPhone. Our secret tips sheet covers battery, cameras and AI features nobody is talking about. Click here before you buy. Free download, no email required, sponsored content, we may earn a commission on every click, written by our affiliate team.",
+          "verdict_in_corpus": "noise"
+        }
+      ]
+    },
+    {
+      "id": "FC-10",
+      "subject": "Amazon-Anthropic investment: $4B cumulative as of March 2024 vs $8B cumulative after November 2024",
+      "query": "How much has Amazon invested in Anthropic?",
+      "claim": "Amazon's total investment in Anthropic reached $8 billion with the additional $4 billion announced in November 2024, after totaling $4 billion following the March 2024 investment.",
+      "truth": "Amazon has invested in Anthropic in rounds: $1.25 billion (September 2023) plus $2.75 billion (March 2024) for a $4 billion total, then an additional $4 billion announced in November 2024, bringing the cumulative total to $8 billion. '$4 billion' can refer to the total as of March 2024 or to the incremental November 2024 investment; '$8 billion' is the cumulative total as of November 2024. Primary source: Anthropic, 22 Nov 2024, https://www.anthropic.com/news/anthropic-amazon-trainium",
+      "truth_url": "https://www.anthropic.com/news/anthropic-amazon-trainium",
+      "notes": "Incremental-vs-cumulative conflict: Anthropic's November 2024 announcement says 'a new $4 billion investment from Amazon' and 'will bring Amazon's total investment to $8 billion'. Coverage quoting '$4 billion' and coverage quoting '$8 billion' are both correct; the figures answer different questions (increment vs total). Wikipedia's funding history ties the rounds together: $1.25B + $2.75B (by March 2024), then +$4B (November 2024).",
+      "sources": [
+        {
+          "id": "FC-10-S1",
+          "source_name": "Anthropic",
+          "publisher_type": "official",
+          "date": "2024-11-22",
+          "title": "Powering AI development with AWS",
+          "source_url": "https://www.anthropic.com/news/anthropic-amazon-trainium",
+          "content": "We are excited to continue our work with Amazon Web Services, deepening our work together to develop and deploy advanced AI systems. This expanded partnership includes a new $4 billion investment from Amazon and establishes AWS as our primary cloud and training partner. This will bring Amazon's total investment in Anthropic to $8 billion while maintaining their position as a minority investor. Anthropic is working closely with Annapurna Labs at AWS on the development and optimization of future generations of Trainium accelerators.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-10-S2",
+          "source_name": "Wikipedia",
+          "publisher_type": "report",
+          "date": "2026-10-25",
+          "title": "Anthropic — funding history (retrieved October 25, 2026)",
+          "source_url": "https://en.wikipedia.org/wiki/Anthropic",
+          "content": "Wikipedia's Anthropic article, funding section (retrieved October 25, 2026): Amazon became a minority stakeholder by initially investing $1.25 billion and planning a total investment of $4 billion. The remaining $2.75 billion was invested in March 2024. In November 2024, Amazon invested another $4 billion, doubling its total investment in the company. As part of the deal, Anthropic uses Amazon Web Services as its primary cloud provider and makes its models available through Amazon Bedrock.",
+          "verdict_in_corpus": "correct"
+        },
+        {
+          "id": "FC-10-S3",
+          "source_name": "WealthPulse Daily",
+          "publisher_type": "noise",
+          "date": "2024-11-22",
+          "title": "AMZN + CLAUDE: The AI Deal Nobody Saw Coming",
+          "source_url": "",
+          "content": "AMZN plus CLAUDE: the merger nobody saw coming. Our retirement calculator says the Amazon-Anthropic deal changes everything for your portfolio. Download the free AI wealth report now and get 5 stock picks before the market opens on Monday. Sponsored by our premium newsletter, results not typical, past performance does not guarantee future returns.",
+          "verdict_in_corpus": "noise"
+        },
+        {
+          "id": "FC-10-S4",
+          "source_name": "CloudTruth Exposé",
+          "publisher_type": "noise",
+          "date": "2024-11-23",
+          "title": "Why Wall Street Hates Amazon's Anthropic Bet",
+          "source_url": "",
+          "content": "Why Wall Street hates Amazon's Anthropic bet. One insider reveals the dark truth about cloud AI deals and what it means for your portfolio. Click here to read the full exposé, share it with your friends, and subscribe to see part two tomorrow. Free signup, your email is safe with us, advertisers love you, ninety-day trial then twenty dollars a month.",
+          "verdict_in_corpus": "noise"
+        }
+      ]
     }
   ]
 }

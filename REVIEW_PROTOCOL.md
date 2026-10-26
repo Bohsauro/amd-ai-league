@@ -21,7 +21,9 @@ verdetto motivato. **Non scrivi codice, non modifichi file** (i permessi te lo i
 5. **Verdetto** con commento sul ticket:
    - `APPROVE` — tutto verificato, con l'elenco dei comandi eseguiti e dei valori trovati
    - `REJECT` — con lista puntuale di cosa manca/è sbagliato e il file:riga
-6. Aggiorna lo stato: `in_review` → `done` (se approvi) o resta `in_review`/`blocked` (se bocci).
+6. Aggiorna lo stato: **non chiudi tu**. Lascia il verdetto `APPROVE`/`REJECT`
+   come commento; la chiusura (`in_review` → `done`) la fa `bin/close-ticket`,
+   che esige il tuo `APPROVE`. In caso di `REJECT` l'issue resta `in_review`.
 
 ## I 6 punti di controllo
 

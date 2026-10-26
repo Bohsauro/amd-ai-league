@@ -46,12 +46,26 @@ $PAPERCLIP_CLI issue comment BOH-5 \
   --body "FATTO: ... / DOVE: ... / TEST: ... / NUMERI: ..." \
   --api-base "$PAPERCLIP_API_URL" --api-key "$PAPERCLIP_AGENT_CORE_DEV_KEY"
 
-# stato
+# stato: in_review OBBLIGATORIO prima della review
 $PAPERCLIP_CLI issue update BOH-5 --payload-json '{"status":"in_review"}' \
   --api-base "$PAPERCLIP_API_URL" --api-key "$PAPERCLIP_AGENT_CORE_DEV_KEY"
 ```
 
 Stati validi: `backlog`, `todo`, `in_progress`, `in_review`, `done`, `blocked`, `cancelled`.
+
+### `done` SOLO dopo review — gate `bin/close-ticket`
+
+**Nessun agente imposta `done` direttamente.** Dopo `in_review`, agent-reviewer
+esamina (protocollo in `REVIEW_PROTOCOL.md`) e lascia un commento con `APPROVE`
+o `REJECT`. La chiusura si fa con il gate:
+
+```bash
+/srv/ai-company/bin/close-ticket BOH-5     # exit 0 solo se c'è APPROVE del reviewer
+```
+
+Il gate verifica: stato `in_review` + commento di agent-reviewer con `APPROVE`
+(più recente di eventuali `REJECT`). Se manca: exit 1, l'issue resta `in_review`.
+Chiudere a mano via API è fuori procedura e richiede una decisione umana.
 
 ## 4. Se sei bloccato
 

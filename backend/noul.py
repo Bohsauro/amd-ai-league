@@ -137,9 +137,22 @@ def evaluate(
     )
 
 
+QUOTA_MIN_POOL = 10
+
+
 def _keep_target(total: int) -> int:
+    """Quanti snippet tenere per rispettare il target di scarto 60-70%.
+
+    La quota e' una proprieta' di un *pool* di ricerca, non di un insieme gia'
+    selezionato: applicarla a 4 sorgenti di un singolo caso vorrebbe dire
+    buttare evidenza pertinente e chiamarla "off-topic". Sotto QUOTA_MIN_POOL
+    non si taglia nulla; sopra, si tiene il 35% circa (34 sorgenti -> 12).
+    """
+    if total < QUOTA_MIN_POOL:
+        return total
     target_drop = sum(NOUL_DROP_TARGET) / 2.0
-    return max(0, int(round(total * (1.0 - target_drop))))
+    return max(1, int(round(total * (1.0 - target_drop))))
+
 
 
 def _offtopic_confidence(similarity: float) -> float:

@@ -36,7 +36,11 @@ tipi: feat, fix, docs, refactor, test, chore
 - [ ] Nessuna scrittura fuori dal proprio perimetro
 - [ ] Commit + push sul branch del ruolo
 - [ ] Riepilogo sulla issue Paperclip (cosa, dove, test fatti)
+- [ ] `in_review` + **verdetto APPROVE di agent-reviewer** (gate `bin/close-ticket`)
 - [ ] Lock rilasciato (se acquisito)
+
+> `done` senza review è fuori procedura: `bin/close-ticket` rifiuta la chiusura
+> se non c'è un APPROVE del reviewer sul ticket.
 
 ## LLM endpoint
 
