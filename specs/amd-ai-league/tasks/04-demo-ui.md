@@ -2,6 +2,9 @@
 
 **Assegnatario:** agent-ui-ux · **Output:** `frontend/index.html` (+ `frontend/run.json`)
 
+**Criteri di accettazione:** `PLAN.md` §4.4 (AC-UI, U1–U6). Il contratto dati è `BUILD_SPEC.md` §2.8 +
+`schemas/run.schema.json`: la UI legge SOLO quei campi, nessun numero hardcoded, empty-state se manca `run.json`.
+
 Leggi `specs/amd-ai-league/DEMO_SCRIPT.md` e `BUILD_SPEC.md` prima di iniziare.
 Vanilla JS + CSS, nessun framework, nessun build step.
 

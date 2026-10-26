@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-company.local/schemas/run.schema.json",
+  "title": "AMD AI League — run.json (contratto core-dev -> UI)",
+  "description": "Contratto: specs/amd-ai-league/BUILD_SPEC.md §2.8 (v1.2). Campi extra ammessi; quelli elencati in required sono obbligatori. Nessun campo di ground truth (truth/label/verdict_in_corpus) ammesso in sources[].",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "query", "query_arg", "case_id", "selection_mode", "offline", "stages", "sources", "total_ms", "budget_ms", "within_budget", "tokens", "ticker"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"type": "string"},
+    "query": {"type": "string"},
+    "query_arg": {"type": "string"},
+    "case_id": {"type": "string"},
+    "case_subject": {"type": "string"},
+    "selection_mode": {"type": "string"},
+    "offline": {"type": "boolean"},
+    "model": {"type": ["string", "null"]},
+    "total_ms": {"type": "number", "minimum": 0},
+    "budget_ms": {"type": "number", "exclusiveMinimum": 0},
+    "within_budget": {"type": "boolean"},
+    "stages": {
+      "type": "object",
+      "required": ["retriever", "noul", "score", "choice", "guard", "generator"],
+      "properties": {
+        "retriever": {
+          "type": "object",
+          "required": ["ms", "snippets"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "snippets": {"type": "integer", "minimum": 0}
+          }
+        },
+        "noul": {
+          "type": "object",
+          "required": ["ms", "total", "kept", "dropped", "drop_pct", "decisions"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "total": {"type": "integer", "minimum": 0},
+            "kept": {"type": "integer", "minimum": 0},
+            "dropped": {"type": "integer", "minimum": 0},
+            "drop_pct": {"type": "number", "minimum": 0, "maximum": 100},
+            "decisions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "keep", "reason", "confidence", "similarity"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "keep": {"type": "boolean"},
+                  "reason": {"enum": ["spam", "boilerplate", "seo", "off-topic", "keep"]},
+                  "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                  "similarity": {"type": "number"},
+                  "signals": {"type": "object"}
+                }
+              }
+            }
+          }
+        },
+        "score": {
+          "type": "object",
+          "required": ["ms", "ranked_count", "top_k", "ranking"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "ranked_count": {"type": "integer", "minimum": 0},
+            "top_k": {"type": "integer", "minimum": 0},
+            "ranking": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "rank", "relevance", "reliability", "reliability_breakdown", "score"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "rank": {"type": "integer", "minimum": 1},
+                  "relevance": {"type": "number", "minimum": 0, "maximum": 1},
+                  "reliability": {"type": "number", "minimum": 0, "maximum": 1},
+                  "reliability_breakdown": {
+                    "type": "object",
+                    "required": ["authority", "recency", "consistency"],
+                    "properties": {
+                      "authority": {"type": "number", "minimum": 0, "maximum": 1},
+                      "recency": {"type": "number", "minimum": 0, "maximum": 1},
+                      "consistency": {"type": "number", "minimum": 0, "maximum": 1}
+                    }
+                  },
+                  "score": {"type": "number", "minimum": 0, "maximum": 1},
+                  "used_in_generation": {"type": "boolean"}
+                }
+              }
+            }
+          }
+        },
+        "choice": {
+          "type": "object",
+          "required": ["ms", "label", "verdict", "claim_id", "confidence", "evidence", "conflict_pairs"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "label": {"enum": ["RESOLVED", "CONFLICT", "INSUFFICIENT"]},
+            "verdict": {"type": "string"},
+            "claim": {"type": "string"},
+            "claim_id": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "evidence": {"type": "array", "items": {"type": "string"}},
+            "conflict_pairs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["a", "b", "relation"],
+                "properties": {
+                  "a": {"type": "string"},
+                  "b": {"type": "string"},
+                  "relation": {"enum": ["agree", "disagree", "unrelated"]}
+                }
+              }
+            },
+            "supporting": {"type": "object"}
+          }
+        },
+        "guard": {
+          "type": "object",
+          "required": ["ms", "triggered", "action", "sufficient", "confidence", "label", "threshold", "expanded"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "triggered": {"type": "boolean"},
+            "action": {"enum": ["pass", "expand", "insufficient"]},
+            "sufficient": {"type": "boolean"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "label": {"enum": ["RESOLVED", "CONFLICT", "INSUFFICIENT"]},
+            "verdict": {"type": "string"},
+            "reason": {"type": "string"},
+            "threshold": {"type": "number", "minimum": 0, "maximum": 1},
+            "expanded": {"type": "boolean"}
+          }
+        },
+        "generator": {
+          "type": "object",
+          "required": ["ms", "called", "status", "model", "citations"],
+          "properties": {
+            "ms": {"type": "number", "minimum": 0},
+            "called": {"type": "boolean"},
+            "status": {"enum": ["resolved", "unresolved", "skipped", "error"]},
+            "answer": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "citations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source_id", "claim_id"],
+                "properties": {
+                  "source_id": {"type": "string"},
+                  "claim_id": {"type": "string"}
+                }
+              }
+            },
+            "model": {"type": ["string", "null"]},
+            "provider": {"type": ["string", "null"]},
+            "usage": {
+              "type": ["object", "null"],
+              "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+              "properties": {
+                "prompt_tokens": {"type": "integer", "minimum": 0},
+                "completion_tokens": {"type": "integer", "minimum": 0},
+                "total_tokens": {"type": "integer", "minimum": 0}
+              }
+            },
+            "latency_ms": {"type": "number", "minimum": 0},
+            "prompt_tokens_est": {"type": "integer", "minimum": 0},
+            "error": {"type": ["string", "null"]}
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_name", "publisher_type", "date", "title", "keep", "reason", "used_in_generation"],
+        "properties": {
+          "id": {"type": "string"},
+          "source_name": {"type": "string"},
+          "publisher_type": {"enum": ["official", "press", "report", "blog", "noise"]},
+          "date": {"type": "string"},
+          "source_url": {"type": "string"},
+          "title": {"type": "string"},
+          "content_preview": {"type": "string"},
+          "tokens_est": {"type": "integer", "minimum": 0},
+          "keep": {"type": "boolean"},
+          "reason": {"enum": ["spam", "boilerplate", "seo", "off-topic", "keep"]},
+          "noul_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "similarity": {"type": "number"},
+          "rank": {"type": ["integer", "null"]},
+          "relevance": {"type": ["number", "null"]},
+          "reliability": {"type": ["number", "null"]},
+          "score": {"type": ["number", "null"]},
+          "used_in_generation": {"type": "boolean"}
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "required": ["raw_est", "kept_est", "curated_est", "gen_consumed", "gen_consumed_measured", "saved", "saved_pct"],
+      "properties": {
+        "raw_est": {"type": "integer", "minimum": 0},
+        "kept_est": {"type": "integer", "minimum": 0},
+        "curated_est": {"type": "integer", "minimum": 0},
+        "generator_prompt": {"type": ["integer", "null"], "minimum": 0},
+        "generator_completion": {"type": ["integer", "null"], "minimum": 0},
+        "generator_total": {"type": ["integer", "null"], "minimum": 0},
+        "gen_consumed": {"type": "integer", "minimum": 0},
+        "gen_consumed_measured": {"type": "boolean"},
+        "saved": {"type": "integer"},
+        "saved_pct": {"type": "number", "maximum": 100,
+          "description": "round(100*(raw_est - generator_prompt)/raw_est, 1). Nessun clamp: puo' essere negativo quando l'overhead fisso del prompt supera il contenuto degli snippet (BUILD_SPEC 2.8)."},
+        "estimate_method": {"type": "string"}
+      }
+    },
+    "ticker": {
+      "type": "object",
+      "required": ["noul", "score", "choice", "guard", "generator", "total"],
+      "properties": {
+        "noul": {"type": "string"},
+        "score": {"type": "string"},
+        "choice": {"type": "string"},
+        "guard": {"type": "string"},
+        "generator": {"type": "string"},
+        "total": {"type": "string"}
+      }
+    }
+  }
+}

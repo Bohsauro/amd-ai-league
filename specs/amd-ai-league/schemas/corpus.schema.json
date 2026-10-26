@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-company.local/schemas/corpus.schema.json",
+  "title": "AMD AI League — corpus.json",
+  "description": "Corpus demo: esattamente 6 casi FC-01..FC-06. Contratto: specs/amd-ai-league/CORPUS.md",
+  "type": "object",
+  "required": ["schema_version", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "cases": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/definitions/case"}
+    }
+  },
+  "definitions": {
+    "publisher_type": {"enum": ["official", "press", "report", "blog", "noise"]},
+    "verdict_in_corpus": {"enum": ["correct", "wrong", "partial", "noise"]},
+    "case": {
+      "type": "object",
+      "required": ["id", "subject", "query", "claim", "truth", "truth_url", "sources", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^FC-0[1-6]$"},
+        "subject": {"type": "string", "minLength": 8},
+        "query": {"type": "string", "minLength": 8},
+        "claim": {"type": "string", "minLength": 8, "description": "fatto numerico da riconciliare, una riga"},
+        "truth": {"type": "string", "minLength": 8, "description": "fatto esatto + riferimento fonte primaria"},
+        "truth_url": {"type": "string", "format": "uri"},
+        "notes": {"type": "string"},
+        "sources": {
+          "type": "array",
+          "minItems": 4,
+          "items": {"$ref": "#/definitions/source"}
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["id", "source_name", "publisher_type", "date", "title", "source_url", "content", "verdict_in_corpus"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^FC-0[1-6]-S[0-9]+$", "description": "globalmente univoco: <case_id>-S<n>"},
+        "source_name": {"type": "string", "minLength": 2},
+        "publisher_type": {"$ref": "#/definitions/publisher_type"},
+        "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "title": {"type": "string", "minLength": 3},
+        "source_url": {"type": "string"},
+        "content": {"type": "string", "minLength": 200, "maxLength": 1200},
+        "verdict_in_corpus": {"$ref": "#/definitions/verdict_in_corpus"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"publisher_type": {"enum": ["official", "press", "report", "blog"]}}},
+          "then": {"properties": {"source_url": {"type": "string", "format": "uri", "minLength": 10}}}
+        }
+      ]
+    }
+  }
+}

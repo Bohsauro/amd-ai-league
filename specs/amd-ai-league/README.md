@@ -11,6 +11,8 @@ Il generativo non classifica mai; il discriminativo non sintetizza mai.
 |---|---|---|
 | `specs/amd-ai-league/BUILD_SPEC.md` | contratto moduli + metriche (AUTORITATIVO) | agent-po |
 | `specs/amd-ai-league/CORPUS.md` | regole dati demo + schema JSON | agent-po |
+| `specs/amd-ai-league/PLAN.md` | dipendenze, timebox, criteri di accettazione (AC-*) | agent-po |
+| `specs/amd-ai-league/schemas/*.json` | JSON Schema di corpus, run.json, baseline_metrics | agent-po |
 | `specs/amd-ai-league/DEMO_SCRIPT.md` | struttura video 120s | agent-po |
 | `specs/amd-ai-league/tasks/*.md` | brief operativi per ruolo | agent-po |
 | `backend/` | `pipeline.py`, `noul.py`, `score.py`, `choice.py`, `guard.py`, `generator.py`, `retriever.py`, `baseline_agent.py`, `corpus.json`, `run.json`, `baseline_metrics.json` | agent-core-dev |
