@@ -173,6 +173,7 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | G20 | `saved_pct` clampato a `-100` dallo schema, e confronto `raw_est` (stima snippet) vs `generator_prompt` (prompt reale) **non omogeneo**: con pochi snippet per caso il "risparmio" è negativo o gonfiato | schema senza clamp + regola "no clamp" (§2.8, §2.11 #8); `saved_pct` resta diagnostica in `run.json` e **non va a schermo** (R5) |
 | G21 | `DEMO_SCRIPT.md` v1.1 aveva ancora il **frame** sbagliato, non solo i numeri: "the generator received `generator_prompt` validated tokens, not `raw_est`" e split-screen "raw vs curato" confrontano una stima-snippet con un prompt reale (su FC-01 il rapporto è −179%). Inoltre il frame di chiusura citava il risparmio su `raw_est` e la formula derivata confrontava i soli `prompt_tokens` della baseline col **totale** nostro (−83,9% invece di −86,6%) | frame 0:55–1:20 riscritto su baseline vs noi (§3), coppia total-vs-total `baseline.totals.prompt_tokens + completion_tokens → tokens.gen_consumed`, rapporto latenza `baseline.latency_x` = `e2e_ms`/`total_ms`; R5/R6 + gate D3/D9 + U7 aggiornati; valori di riferimento del CEO in §0.6 (verbale, non testo di scena) |
 | G22 | Review CEO 10:16/10:17: `DEMO_SCRIPT.md` §0.6 citava la **prima** misura (4.062 ms / 10.765 / 9,9×) mentre `VERIFIED_NUMBERS.md` era già alla seconda (2.863,7 ms / 10.955 / 7,8×) — due fonti di verità nello stesso documento; il frame di chiusura diceva "ROCm runs it" al presente senza GPU AMD; il typed failure era citabile come feature benché FC-06 dia `CONFLICT` + `resolved` | §0.6 riallineato allo snapshot 10:20 + tabella di varianza (2.863/3.563/4.062 ms, dichiarare 7,8×, mai 9,9×); §5 riscritto come intenzione ("target: ROCm · one card · batched", vietato il presente); §6 con la **tripla condizione di misura** prima di citare il fallimento tipizzato; §9 con due righe nuove; gate D5/D8 aggiornati |
+| G23 | Review CEO 10:31: la tabella di §0.6 **invecchia in un'ora** — il `run.json` corrente dà un conteggio NOUL sull'intero pool del corpus (G15) contro il conteggio per-caso scritto nel verbale, e la baseline è in riapertura perché il perimetro era il caso invece del corpus. Due fonti di verità nello stesso repo = prova che lo script è stato scritto prima della misura | `DEMO_SCRIPT.md` **v1.4**: corpo di §0.6 sostituito dal **rinvio** a `agents/ceo/review/VERIFIED_NUMBERS.md` (fonte unica, aggiornata dal gate CEO) + le due trappole numero-indipendenti (file committati ≠ valori del copione; `saved_pct` diagnostica, mai "saved" a schermo) + nota di varianza **senza cifre**; rimosse le cifre residue in R5/R6 e il riferimento a §0.6 come "eccezione" in §0. Nessun valore misurato resta negli spec: a schermo solo `{{segnaposto}}` compilati da §0.3 |
 
 ## 6. Regole di lavoro
 
@@ -207,12 +208,13 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 
 ## 9. Stato e prossimo passo
 
-- Contratti: **congelati v1.2**; script: **v1.3** con numeri a segnaposto (§0), frame comparativo
-  riscritto su baseline vs noi (§3), §0.6 riallineato allo snapshot verificato 10:20, chiusura senza claim
-  hardware al presente (§5) e typed failure citabile solo con misura (§6) → i dev possono partire senza
-  domande e il CEO può registrare senza cifre a memoria.
+- Contratti: **congelati v1.2**; script: **v1.4** con numeri a segnaposto (§0), frame comparativo
+  riscritto su baseline vs noi (§3), **§0.6 senza numeri** (rinvio a `agents/ceo/review/VERIFIED_NUMBERS.md`),
+  chiusura senza claim hardware al presente (§5) e typed failure citabile solo con misura (§6) → i dev possono
+  partire senza domande e il CEO può registrare senza cifre a memoria.
 - Numeri a schermo: **una sola mappa** (`DEMO_SCRIPT.md` §0.4), consumata da UI (AC-UI U2/U7) e da chi registra
-  (AC-DEMO D7). Se un campo serve e non c'è, si aggiunge lì — non nell'HTML.
+  (AC-DEMO D7). Se un campo serve e non c'è, si aggiunge lì — non nell'HTML. **Nessun valore misurato è scritto
+  negli spec**: i valori di riferimento vivono solo in `agents/ceo/review/VERIFIED_NUMBERS.md`.
 - In attesa: nessuna informazione bloccante. G14 (live) e GPU (throughput) sono **non bloccanti** e già
   risolti per iscritto; la barra baseline ha il fallback architetturale (R2/D4).
 - Prossimo passo: CEO assegna W1 (corpus) a core-dev; il PO resta sul canale BOH-3 per le modifiche di

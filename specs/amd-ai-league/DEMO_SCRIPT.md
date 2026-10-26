@@ -1,12 +1,16 @@
 # AMD AI League · Match 4 — SCRIPT DEMO (120 secondi)
 
-> Stato: **v1.3 (26/10)** — frame 0:55–1:20 su **baseline vs noi** (like-for-like); segnaposto obbligatori a
-> schermo; §0.6 riallineato a `VERIFIED_NUMBERS.md` 10:20 (seconda misura, varianza dichiarata); claim ROCm
-> riscritto come **intenzione**; fallimento tipizzato **condizionato alla misura** (§6).
+> Stato: **v1.4 (26/10)** — copione approvato dal CEO (v1.3); unico edit: **§0.6 non contiene più numeri**.
+> I valori di riferimento vivono solo in `agents/ceo/review/VERIFIED_NUMBERS.md`; qui restano i segnaposto
+> obbligatori a schermo, il claim ROCm come **intenzione** e il fallimento tipizzato **condizionato alla misura**.
 >
-> **Changelog v1.3** (review CEO 10:16 e 10:17): §0.6 con i valori correnti + tabella di varianza; §5 senza
-> "ROCm runs it" al presente; §6 con la condizione di misura sul typed failure; §9 con le due righe nuove.
-> Nessun'altra modifica al copione: l'impianto v1.2 resta.
+> **Changelog v1.4** (review CEO 10:31): corpo di §0.6 sostituito dal rinvio alla fonte unica + le due trappole
+> che non dipendono dai numeri (file committati ≠ valori del copione; `saved_pct` diagnostica, mai "saved" a
+> schermo) + nota di varianza senza cifre. Tolte anche le cifre residue in R5 e R6, che duplicavano gli stessi
+> valori e sarebbero invecchiate con loro. §1–§5 e §7–§9 invariati.
+>
+> **Changelog v1.3** (review CEO 10:16 e 10:17): §5 senza "ROCm runs it" al presente; §6 con la condizione di
+> misura sul typed failure; §9 con le due righe nuove.
 > Lingua: inglese (mercato globale). Tono: dimostrativo, mai fumo.
 > Due counter animati a schermo — null'altro si muove se non la pipeline.
 
@@ -23,7 +27,8 @@ Chi registra sostituisce i token con i valori del run (§0.3), la UI legge gli s
 mai un numero inventato (D6).
 
 Un numero scritto in questo file — anche in una tabella, anche come "esempio" — è già un numero falso:
-invecchia al primo refactor. L'unica eccezione è §0.6, che è un **verbale di verifica**, non testo di scena.
+invecchia al primo refactor. §0.6 non fa eccezione: **rinvia** i valori a `agents/ceo/review/VERIFIED_NUMBERS.md`
+e non li duplica, così nel repo la fonte di verità resta una sola.
 
 ### 0.1 Tabella segnaposto
 
@@ -70,17 +75,17 @@ invecchia al primo refactor. L'unica eccezione è §0.6, che è un **verbale di 
   finale non deve contenere la stringa `{{`.
 - **R5 — il rapporto `raw_est → generator_prompt` non va mai a schermo.** I due lati non sono omogenei:
   `raw_est` è una stima dei soli snippet (chars/4), `generator_prompt` è il prompt reale, che include system
-  prompt, regole di citazione e formattazione. Con 5–6 sorgenti per caso l'overhead fisso supera il contenuto:
-  su FC-01 il valore vero è **negativo** (verifica CEO 26/10, snapshot 10:20: prompt reale 1.335 vs 464 stimati =
-  **−187,7%**).
+  prompt, regole di citazione e formattazione. Con un corpus piccolo l'overhead fisso supera il contenuto e il
+  rapporto diventa **negativo** (overhead); con un corpus largo può diventare positivo. Il segno dipende dal
+  perimetro, quindi il valore non è citabile come risultato (verifica CEO, valori in `VERIFIED_NUMBERS.md`).
   Un risparmio negativo mostrato come vantaggio è falso; clampato a −100 è falso due volte. Quindi:
   `tokens.saved_pct` resta in `run.json` (senza clamp, per P14) come diagnostica, e **non compare in nessun
   frame**. L'headline è quella di §0.5, che confronta due misure reali.
 - **R6 — baseline omogenea e databile.** Requisito duro: stesso **corpus** e stesso **modello** del run mostrato.
   La stessa sessione è la condizione ideale: se i due `generated_at` distano più di 10 min (§0.3), o la baseline
   non ha `generated_at`, il frame si registra lo stesso ma la riga di provenienza a schermo **dichiara entrambe
-  le fonti con la loro data** ("baseline: earlier run"), così si vede che sono due misure separate. Tre baseline
-  reali dello stesso caso danno 2.863 / 3.563 / 4.062 ms: è varianza dell'API, non errore — ma non si nasconde
+  le fonti con la loro data** ("baseline: earlier run"), così si vede che sono due misure separate. Baseline
+  reali dello stesso caso danno valori diversi fra loro: è varianza dell'API, non errore — ma non si nasconde
   mescolando i run in silenzio.
 
 ### 0.3 Come si generano i valori (un comando, riproducibile)
@@ -200,43 +205,27 @@ Nessun moltiplicatore, nessun range: due file, due misure, un comando.
 
 ---
 
-## 0.6 Valori di riferimento al 26/10 — verbale di verifica, NON testo di scena
+## 0.6 Valori di riferimento — rinvio alla fonte unica, NON testo di scena
 
-Fonte unica: `agents/ceo/review/VERIFIED_NUMBERS.md`, aggiornato **26/10 10:20 UTC** (snapshot con md5 di
-`backend/textutil.py`, `pipeline.py`, `corpus.json`: ogni valore vale per quegli hash, non per "il file adesso").
-Serve a **revisionare** lo script (il frame è coerente? il claim regge?), non a essere letto: a schermo vanno
-solo i segnaposto, compilati da §0.3 con il run della registrazione.
+I valori di riferimento vivono in `agents/ceo/review/VERIFIED_NUMBERS.md`, aggiornato dal gate CEO; qui non si
+duplicano.
 
-**Questa è la seconda misura della giornata.** La prima (4.062 ms / 10.765 token / 9,9×) è **superata**: non si
-cita più. La differenza non è un errore, è carico del provider — e si documenta invece di nasconderla.
+Questa sezione esiste per **revisionare** lo script (il frame è coerente? il claim regge?), non per essere letta:
+a schermo vanno solo i segnaposto, compilati da §0.3 con il run della registrazione.
 
-| Metrica (FC-01) | Baseline | Nostra | Delta |
-|---|---|---|---|
-| chiamate LLM | 5 | 1 | −80% |
-| latenza end-to-end | 2.863,7 ms | 358,8–397,6 ms | **7,2–8,0×** → dichiarare **7,8×** |
-| token (in+out) | 10.955 (9.031 + 1.924) | 1.475 (1.335 + 140) | **−86,5%** |
-| costo/query | ~$0,00052 | ~$0,00008 | ≈ −85% |
-
-Stage (run FC-01): NOUL **5/6 keep (1 drop)** · SCORE top-5 · CHOICE `CONFLICT` (FC-01-S3 vs FC-01-S4) · GUARD
-`pass` (conf 0,63) · GENERATOR `resolved`, **3 citazioni** · **TOTAL ~360 ms** (budget 1.200 ms rispettato).
-Ticker coerente con `run.json`; nessun ground truth nel run (anti-leakage).
-
-**Varianza documentata** (stesso caso, stesso modello, tre sessioni): la baseline dà `2.863,7` / `3.563` /
-`4.062` ms, la nostra pipeline resta in `358,8–397,6 ms`. Lo speedup che ne esce va da **7,2× a 8,0×**: si
-dichiara **7,8×** (misura corrente) e **mai** 9,9× (prima misura, con una baseline più lenta). Il **token delta
-è stabile** (−86,5%) perché non dipende dal carico del provider; lo speedup sì. Per questo a schermo
-`{{baseline.latency_x}}` si calcola **sempre** dai due file della registrazione, mai da questa tabella.
+**Varianza, senza cifre.** Lo speedup dipende dal carico del provider e si calcola sempre dai due file della
+registrazione; il token delta è stabile.
 
 **Attenzione, due trappole già viste:**
 
-1. I file committati **non** contengono questi valori, e non devono: `backend/baseline_metrics.json` ora è
-   **conforme** allo schema (`case_id FC-01`, 5 calls, `totals.*`) ma ha `generated_at: null` → per R6 la riga
-   di provenienza a schermo dichiara "baseline: earlier run". `backend/run.json` viene rigenerato dal refactor
-   di core-dev (corpus ampliato): i suoi numeri cambiano di ora in ora. Incollarli qui li renderebbe falsi entro
-   un'ora — da qui R1/R6 e il divieto di cifre letterali.
-2. `tokens.saved_pct` è **diagnostica, non un claim**: al momento della verifica vale **−187,7%** (overhead, non
-   risparmio) e il suo segno dipende dalla dimensione del corpus. Da qui R5: non compare in nessun frame, e la
-   parola "saved" non si usa mai a schermo — se il valore è negativo si dice **overhead**.
+1. I file committati **non** contengono i valori del copione, e non devono: `backend/baseline_metrics.json` e
+   `backend/run.json` vengono rigenerati a ogni refactor (corpus ampliato; `generated_at` può essere assente, e
+   per R6 la riga di provenienza a schermo dichiara "baseline: earlier run"). Copiare quei numeri qui li
+   renderebbe falsi entro un'ora — da qui R1/R6 e il divieto di cifre letterali.
+2. `tokens.saved_pct` è **diagnostica, non un claim**: il suo segno dipende dal perimetro del corpus e dal run
+   (negativo quando il prompt reale supera la stima degli snippet, positivo quando il corpus è largo), quindi
+   non è citabile come risultato. Da qui R5: non compare in nessun frame, e la parola
+   "saved" non si usa mai a schermo — se il valore è negativo si dice **overhead**.
 
 ---
 
