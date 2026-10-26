@@ -1,117 +1,50 @@
 {
-  "generated_at": "2026-10-26T09:56:53.137505Z",
-  "query_id": "FC-01",
+  "schema_version": "1.0",
+  "case_id": "FC-01",
   "query": "What EPS did Intel report for Q2 2024, and what is its Q3 2024 EPS guidance?",
   "model": "meta-llama/llama-3.1-8b-instruct",
-  "pattern": "classic agentic loop: up to 5 LLM calls, ALL corpus snippets sent on every call, no filtering",
-  "corpus_sources": 6,
-  "selection_mode": "case_id",
-  "total_latency_ms": 3563.32,
-  "llm_calls": 5,
-  "total_input_tokens": 9371,
-  "total_output_tokens": 2457,
-  "total_tokens": 11828,
   "calls": [
     {
-      "call": 1,
-      "action": "plan",
-      "latency_ms": 308.44,
-      "input_tokens": 1142,
-      "output_tokens": 98,
-      "total_tokens": 1240,
-      "cost_usd": 6.494e-05,
-      "next_action": "rerank"
+      "n": 1,
+      "purpose": "plan",
+      "prompt_tokens": 1142,
+      "completion_tokens": 99,
+      "ms": 259.79
     },
     {
-      "call": 2,
-      "action": "rerank",
-      "latency_ms": 356.07,
-      "input_tokens": 1262,
-      "output_tokens": 170,
-      "total_tokens": 1432,
-      "cost_usd": 7.67e-05,
-      "next_action": "extract"
+      "n": 2,
+      "purpose": "rerank",
+      "prompt_tokens": 1263,
+      "completion_tokens": 154,
+      "ms": 345.3
     },
     {
-      "call": 3,
-      "action": "extract",
-      "latency_ms": 749.45,
-      "input_tokens": 1459,
-      "output_tokens": 648,
-      "total_tokens": 2107,
-      "cost_usd": 9.919e-05,
-      "next_action": "reconcile"
+      "n": 3,
+      "purpose": "extract",
+      "prompt_tokens": 1444,
+      "completion_tokens": 699,
+      "ms": 821.07
     },
     {
-      "call": 4,
-      "action": "reconcile",
-      "latency_ms": 1661.07,
-      "input_tokens": 2116,
-      "output_tokens": 1385,
-      "total_tokens": 3501,
-      "cost_usd": 0.0002038,
-      "next_action": "synthesize"
+      "n": 4,
+      "purpose": "reconcile",
+      "prompt_tokens": 2152,
+      "completion_tokens": 831,
+      "ms": 1041.69
     },
     {
-      "call": 5,
-      "action": "synthesize",
-      "latency_ms": 461.68,
-      "input_tokens": 3392,
-      "output_tokens": 156,
-      "total_tokens": 3548,
-      "cost_usd": 0.00016928,
-      "next_action": "synthesize"
+      "n": 5,
+      "purpose": "synthesize",
+      "prompt_tokens": 3030,
+      "completion_tokens": 141,
+      "ms": 378.98
     }
   ],
-  "cost_usd_total": 0.00061391,
-  "gpu_sec_per_query": null,
-  "gpu_sec_note": "not measurable in this run: hosted OpenRouter API, no AMD GPU attached; do not present as a measured GPU figure",
-  "final_answer": "Intel reported Q2 2024 EPS of $0.02 and Q3 2024 EPS guidance of $-0.03.",
-  "final_status": "resolved",
-  "final_confidence": 0.9,
-  "final_citations": [
-    {
-      "source_id": "FC-01-S1",
-      "claim_id": 1
-    },
-    {
-      "source_id": "FC-01-S3",
-      "claim_id": 3
-    },
-    {
-      "source_id": "FC-01-S1",
-      "claim_id": 4
-    },
-    {
-      "source_id": "FC-01-S3",
-      "claim_id": 5
-    }
-  ],
-  "final_raw": {
-    "action": "synthesize",
-    "result": {
-      "answer": "Intel reported Q2 2024 EPS of $0.02 and Q3 2024 EPS guidance of $-0.03.",
-      "confidence": 0.9,
-      "citations": [
-        {
-          "source_id": "FC-01-S1",
-          "claim_id": 1
-        },
-        {
-          "source_id": "FC-01-S3",
-          "claim_id": 3
-        },
-        {
-          "source_id": "FC-01-S1",
-          "claim_id": 4
-        },
-        {
-          "source_id": "FC-01-S3",
-          "claim_id": 5
-        }
-      ],
-      "status": "resolved"
-    },
-    "next_action": null
-  }
+  "totals": {
+    "llm_calls": 5,
+    "prompt_tokens": 9031,
+    "completion_tokens": 1924,
+    "e2e_ms": 2863.66
+  },
+  "answer": "Intel reported a Q2 2024 EPS of $0.02 and Q3 2024 EPS guidance of $(0.03) non-GAAP."
 }

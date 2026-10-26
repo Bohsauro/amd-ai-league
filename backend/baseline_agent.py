@@ -12,6 +12,13 @@ estimates, no fabricated timings. If usage is missing the run fails.
 Usage:
     python baseline_agent.py "FC-01"
     python baseline_agent.py "FC-01" --out baseline_metrics.json
+
+`baseline_metrics.json` is written in the frozen schema
+(`specs/amd-ai-league/schemas/baseline_metrics.schema.json`, v1.0). Because that
+schema sets `additionalProperties: false`, the run-to-run dispersion (median /
+min / max over repeated runs) is written to a companion file,
+`baseline_metrics_dispersion.json`, instead of being smuggled into the schema
+document. Use `--runs N` (default 3) to control the repetition count.
 """
 
 from __future__ import annotations
@@ -19,9 +26,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import statistics
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +37,8 @@ import httpx
 SCRIPT_DIR = Path(__file__).resolve().parent
 CORPUS_PATH = SCRIPT_DIR / "corpus.json"
 DEFAULT_OUT = SCRIPT_DIR / "baseline_metrics.json"
+DEFAULT_DISPERSION_OUT = SCRIPT_DIR / "baseline_metrics_dispersion.json"
+SCHEMA_VERSION = "1.0"
 
 OPENROUTER_URL = os.environ.get(
     "OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions"
@@ -340,25 +349,42 @@ def pick_next(action: str, parsed: dict[str, Any], call_no: int) -> str:
     return "synthesize"
 
 
-def run(
+PATTERN = (
+    f"classic agentic loop: up to {MAX_CALLS} LLM calls, "
+    "ALL corpus snippets sent on every call, no filtering"
+)
+GPU_SEC_NOTE = (
+    "not measurable in this run: hosted OpenRouter API, no AMD GPU attached; "
+    "do not present as a measured GPU figure"
+)
+
+
+def run_once(
     query: str,
     case_id: str | None,
     sources: list[dict[str, Any]],
     selection_mode: str = "case_id",
+    run_no: int = 1,
+    run_total: int = 1,
 ) -> dict[str, Any]:
+    """One full agentic baseline run. All numbers come from real API usage."""
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY is not set")
     model = resolve_model()
     snippets = snippet_block(sources)
 
-    print(f"BASELINE: query={case_id or query!r} sources={len(sources)} model={model}")
+    print(
+        f"BASELINE run {run_no}/{run_total}: query={case_id or query!r} "
+        f"sources={len(sources)} model={model}"
+    )
     print(f"pattern: classic agentic loop, up to {MAX_CALLS} calls, FULL corpus each call")
 
     calls: list[dict[str, Any]] = []
     scratchpad: list[dict[str, Any]] = []
     action = "plan"
     total_started = time.perf_counter()
+    final_parsed: dict[str, Any] = {}
 
     with httpx.Client(timeout=120.0) as client:
         for call_no in range(1, MAX_CALLS + 1):
@@ -370,14 +396,12 @@ def run(
             )
             input_tokens = usage["prompt_tokens"]
             output_tokens = usage["completion_tokens"]
-            total_tokens = usage.get("total_tokens", input_tokens + output_tokens)
             record = {
-                "call": call_no,
-                "action": action,
-                "latency_ms": round(latency_ms, 2),
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": total_tokens,
+                "n": call_no,
+                "purpose": action,
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "ms": round(latency_ms, 2),
                 "cost_usd": usage.get("cost"),
                 "next_action": None,
             }
@@ -396,42 +420,99 @@ def run(
 
     total_latency_ms = (time.perf_counter() - total_started) * 1000.0
 
-    final = final_parsed
-    answer, citations, status, confidence = extract_final(final)
-
+    answer, citations, status, confidence = extract_final(final_parsed)
     costs = [c["cost_usd"] for c in calls if isinstance(c["cost_usd"], (int, float))]
     total_cost = round(sum(costs), 8) if costs else None
 
-    metrics = {
-        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "query_id": case_id,
+    return {
+        "case_id": case_id,
         "query": query,
         "model": model,
-        "pattern": (
-            f"classic agentic loop: up to {MAX_CALLS} LLM calls, "
-            "ALL corpus snippets sent on every call, no filtering"
-        ),
+        "pattern": PATTERN,
         "corpus_sources": len(sources),
         "selection_mode": selection_mode,
-        "total_latency_ms": round(total_latency_ms, 2),
-        "llm_calls": len(calls),
-        "total_input_tokens": sum(c["input_tokens"] for c in calls),
-        "total_output_tokens": sum(c["output_tokens"] for c in calls),
-        "total_tokens": sum(c["total_tokens"] for c in calls),
         "calls": calls,
+        "totals": {
+            "llm_calls": len(calls),
+            "prompt_tokens": sum(c["prompt_tokens"] for c in calls),
+            "completion_tokens": sum(c["completion_tokens"] for c in calls),
+            "e2e_ms": round(total_latency_ms, 2),
+        },
+        "answer": answer,
+        "status": status,
+        "confidence": confidence,
+        "citations": citations,
         "cost_usd_total": total_cost,
-        "gpu_sec_per_query": None,
-        "gpu_sec_note": (
-            "not measurable in this run: hosted OpenRouter API, no AMD GPU attached; "
-            "do not present as a measured GPU figure"
-        ),
-        "final_answer": answer,
-        "final_status": status,
-        "final_confidence": confidence,
-        "final_citations": citations,
-        "final_raw": final,
+        "raw_final": final_parsed,
     }
-    return metrics
+
+
+def _total_tokens(result: dict[str, Any]) -> int:
+    return result["totals"]["prompt_tokens"] + result["totals"]["completion_tokens"]
+
+
+def select_median_run(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Representative run: median by total tokens, tie-broken by e2e latency."""
+    ordered = sorted(results, key=lambda r: (_total_tokens(r), r["totals"]["e2e_ms"]))
+    return ordered[(len(ordered) - 1) // 2]
+
+
+def schema_metrics(result: dict[str, Any]) -> dict[str, Any]:
+    """Project a measured run onto the frozen baseline_metrics schema v1.0."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "case_id": result["case_id"] or "",
+        "query": result["query"],
+        "model": result["model"],
+        "calls": [
+            {
+                "n": call["n"],
+                "purpose": call["purpose"],
+                "prompt_tokens": call["prompt_tokens"],
+                "completion_tokens": call["completion_tokens"],
+                "ms": call["ms"],
+            }
+            for call in result["calls"]
+        ],
+        "totals": dict(result["totals"]),
+        "answer": result["answer"],
+    }
+
+
+def dispersion_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Run-to-run spread, kept outside the schema document (see module docstring)."""
+    tokens = [_total_tokens(r) for r in results]
+    latencies = [r["totals"]["e2e_ms"] for r in results]
+    costs = [r["cost_usd_total"] for r in results if isinstance(r["cost_usd_total"], (int, float))]
+    return {
+        "case_id": results[0]["case_id"],
+        "model": results[0]["model"],
+        "pattern": results[0]["pattern"],
+        "corpus_sources": results[0]["corpus_sources"],
+        "selection_mode": results[0]["selection_mode"],
+        "runs": [
+            {"n": i + 1, "total_tokens": tokens[i], "e2e_ms": latencies[i]}
+            for i in range(len(results))
+        ],
+        "total_tokens": {
+            "median": statistics.median(tokens),
+            "min": min(tokens),
+            "max": max(tokens),
+        },
+        "total_latency_ms": {
+            "median": statistics.median(latencies),
+            "min": min(latencies),
+            "max": max(latencies),
+        },
+        "cost_usd_total": round(sum(costs), 8) if costs else None,
+        "gpu_sec_per_query": None,
+        "gpu_sec_note": GPU_SEC_NOTE,
+        "note": (
+            "Dispersion lives here, not in baseline_metrics.json: the frozen schema "
+            "(additionalProperties: false) only allows schema_version, case_id, query, "
+            "model, calls, totals, answer."
+        ),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -439,25 +520,66 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("query", help="corpus case id (e.g. FC-01) or literal query")
     parser.add_argument("--corpus", type=Path, default=CORPUS_PATH)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--dispersion-out",
+        type=Path,
+        default=None,
+        help="dispersion file path (default: next to --out; backend/ for the default --out)",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=3,
+        help="repeated runs used for the dispersion interval (default 3; use 1 for a quick check)",
+    )
     args = parser.parse_args(argv)
+    if args.runs < 1:
+        parser.error("--runs must be >= 1")
+    if args.dispersion_out is not None:
+        dispersion_out = args.dispersion_out
+    elif args.out == DEFAULT_OUT:
+        dispersion_out = DEFAULT_DISPERSION_OUT
+    else:
+        dispersion_out = args.out.with_name(f"{args.out.stem}_dispersion.json")
 
     case_id, query, sources, selection_mode = resolve_case(args.query, args.corpus)
-    metrics = run(query, case_id, sources, selection_mode)
+    results = [
+        run_once(query, case_id, sources, selection_mode, i + 1, args.runs)
+        for i in range(args.runs)
+    ]
 
+    chosen = select_median_run(results)
+    metrics = schema_metrics(chosen)
     args.out.write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
-    print("\nFINAL ANSWER")
-    print(metrics["final_answer"])
+    if args.runs > 1:
+        dispersion = dispersion_metrics(results)
+        dispersion_out.write_text(
+            json.dumps(dispersion, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
+    print("\nFINAL ANSWER (median run)")
+    print(metrics["answer"])
     print(
-        f"\nBASELINE TOTAL: {metrics['total_latency_ms']:.1f}ms | "
-        f"calls={metrics['llm_calls']} | "
-        f"tokens={metrics['total_tokens']} "
-        f"(in={metrics['total_input_tokens']}, out={metrics['total_output_tokens']})"
+        f"\nBASELINE TOTAL: {metrics['totals']['e2e_ms']:.1f}ms | "
+        f"calls={metrics['totals']['llm_calls']} | "
+        f"tokens={metrics['totals']['prompt_tokens'] + metrics['totals']['completion_tokens']} "
+        f"(in={metrics['totals']['prompt_tokens']}, out={metrics['totals']['completion_tokens']})"
     )
-    if metrics["cost_usd_total"] is not None:
-        print(f"cost=${metrics['cost_usd_total']:.8f}")
+    if chosen["cost_usd_total"] is not None:
+        print(f"cost=${chosen['cost_usd_total']:.8f}")
+    if args.runs > 1:
+        tokens = [_total_tokens(r) for r in results]
+        latencies = [r["totals"]["e2e_ms"] for r in results]
+        print(
+            f"dispersion over {args.runs} runs: "
+            f"tokens median={statistics.median(tokens)} [{min(tokens)}..{max(tokens)}] | "
+            f"latency median={statistics.median(latencies):.1f}ms "
+            f"[{min(latencies):.1f}..{max(latencies):.1f}]"
+        )
+        print(f"dispersion written to {dispersion_out}")
     print(f"metrics written to {args.out}")
     return 0
 
