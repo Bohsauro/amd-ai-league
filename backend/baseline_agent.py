@@ -133,8 +133,8 @@ def resolve_case(
         return case_id, query, sources, "local"
 
     cases = retriever.load_corpus(corpus_path)
-    case, snippets, mode = retriever.select_case(cases, raw)
-    snippets = snippets + retriever.load_live_snippets()
+    case, _case_snippets, mode = retriever.select_case(cases, raw)
+    snippets = retriever.pool_snippets(cases) + retriever.load_live_snippets()
     case_id = str(case.get("id")) if case else None
     query = str(case.get("query") or raw) if case else raw.strip()
     return case_id, query, [snippet.to_dict() for snippet in snippets], mode
