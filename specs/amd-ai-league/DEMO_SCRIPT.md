@@ -1,8 +1,12 @@
 # AMD AI League · Match 4 — SCRIPT DEMO (120 secondi)
 
-> Stato: **v1.2 (26/10)** — frame 0:55–1:20 riscritto da confronto "raw vs prompt" a **baseline vs noi**
-> (like-for-like, due misure omogenee). I segnaposto restano l'unica forma ammessa a schermo: i valori
-> di riferimento sono in §0.6, con provenienza e data, e **non si leggono dal copione**.
+> Stato: **v1.3 (26/10)** — frame 0:55–1:20 su **baseline vs noi** (like-for-like); segnaposto obbligatori a
+> schermo; §0.6 riallineato a `VERIFIED_NUMBERS.md` 10:20 (seconda misura, varianza dichiarata); claim ROCm
+> riscritto come **intenzione**; fallimento tipizzato **condizionato alla misura** (§6).
+>
+> **Changelog v1.3** (review CEO 10:16 e 10:17): §0.6 con i valori correnti + tabella di varianza; §5 senza
+> "ROCm runs it" al presente; §6 con la condizione di misura sul typed failure; §9 con le due righe nuove.
+> Nessun'altra modifica al copione: l'impianto v1.2 resta.
 > Lingua: inglese (mercato globale). Tono: dimostrativo, mai fumo.
 > Due counter animati a schermo — null'altro si muove se non la pipeline.
 
@@ -32,7 +36,7 @@ invecchia al primo refactor. L'unica eccezione è §0.6, che è un **verbale di 
 | `{{noul.kept}}` | `run.json` | `stages.noul.kept` | int | taglia il frame |
 | `{{tokens.raw_est}}` | `run.json` | `tokens.raw_est` | int, separatore migliaia | taglia il frame |
 | `{{tokens.generator_prompt}}` | `run.json` | `tokens.generator_prompt` | int, separatore migliaia | `tokens.curated_est` (etichettato `est.`) |
-| `{{tokens.saved}}` | `run.json` | `tokens.saved` | int, separatore migliaia | — |
+| `{{tokens.saved}}` | `run.json` | `tokens.saved` | int, separatore migliaia — **negativo = overhead** | **vietato a schermo** (diagnostica, come `saved_pct`) |
 | `{{tokens.saved_pct}}` | `run.json` | `tokens.saved_pct` | 1 decimale + `%` | **vietato a schermo** — vedi R5 |
 | `{{tokens.gen_consumed}}` | `run.json` | `tokens.gen_consumed` | int, separatore migliaia | `0` se `called:false` |
 | `{{gen.total_tokens}}` | `run.json` | `stages.generator.usage.total_tokens` | int | `0` se `called:false` |
@@ -67,7 +71,8 @@ invecchia al primo refactor. L'unica eccezione è §0.6, che è un **verbale di 
 - **R5 — il rapporto `raw_est → generator_prompt` non va mai a schermo.** I due lati non sono omogenei:
   `raw_est` è una stima dei soli snippet (chars/4), `generator_prompt` è il prompt reale, che include system
   prompt, regole di citazione e formattazione. Con 5–6 sorgenti per caso l'overhead fisso supera il contenuto:
-  su FC-01 il valore vero è **negativo** (verifica CEO 26/10: prompt reale 1.295 vs 464 stimati = −179%).
+  su FC-01 il valore vero è **negativo** (verifica CEO 26/10, snapshot 10:20: prompt reale 1.335 vs 464 stimati =
+  **−187,7%**).
   Un risparmio negativo mostrato come vantaggio è falso; clampato a −100 è falso due volte. Quindi:
   `tokens.saved_pct` resta in `run.json` (senza clamp, per P14) come diagnostica, e **non compare in nessun
   frame**. L'headline è quella di §0.5, che confronta due misure reali.
@@ -197,28 +202,41 @@ Nessun moltiplicatore, nessun range: due file, due misure, un comando.
 
 ## 0.6 Valori di riferimento al 26/10 — verbale di verifica, NON testo di scena
 
-Numeri prodotti dai run del CEO il 2026-10-26 (fonte: `agents/ceo/review/VERIFIED_NUMBERS.md`).
-Servono a **revisionare** lo script (il frame è coerente? il claim regge?), non a essere letti: a schermo
-vanno solo i segnaposto, compilati da §0.3 con il run della registrazione.
+Fonte unica: `agents/ceo/review/VERIFIED_NUMBERS.md`, aggiornato **26/10 10:20 UTC** (snapshot con md5 di
+`backend/textutil.py`, `pipeline.py`, `corpus.json`: ogni valore vale per quegli hash, non per "il file adesso").
+Serve a **revisionare** lo script (il frame è coerente? il claim regge?), non a essere letto: a schermo vanno
+solo i segnaposto, compilati da §0.3 con il run della registrazione.
+
+**Questa è la seconda misura della giornata.** La prima (4.062 ms / 10.765 token / 9,9×) è **superata**: non si
+cita più. La differenza non è un errore, è carico del provider — e si documenta invece di nasconderla.
 
 | Metrica (FC-01) | Baseline | Nostra | Delta |
 |---|---|---|---|
 | chiamate LLM | 5 | 1 | −80% |
-| latenza end-to-end | 4.062 ms | 411 ms | 9,9× |
-| token totali (in+out) | 10.765 (8.917 + 1.848) | 1.438 (1.295 + 143) | −86,6% |
-| citazioni | 4 (`claim_id`) | 3 (`source_id` + `claim_id`) | — |
+| latenza end-to-end | 2.863,7 ms | 358,8–397,6 ms | **7,2–8,0×** → dichiarare **7,8×** |
+| token (in+out) | 10.955 (9.031 + 1.924) | 1.475 (1.335 + 140) | **−86,5%** |
+| costo/query | ~$0,00052 | ~$0,00008 | ≈ −85% |
 
-Stage (stesso run): NOUL 5 keep / 1 drop · SCORE top-5 · CHOICE `CONFLICT` · GUARD pass (conf 0,63) ·
-GENERATOR 408,8 ms, `resolved`, 1 chiamata.
+Stage (run FC-01): NOUL **5/6 keep (1 drop)** · SCORE top-5 · CHOICE `CONFLICT` (FC-01-S3 vs FC-01-S4) · GUARD
+`pass` (conf 0,63) · GENERATOR `resolved`, **3 citazioni** · **TOTAL ~360 ms** (budget 1.200 ms rispettato).
+Ticker coerente con `run.json`; nessun ground truth nel run (anti-leakage).
+
+**Varianza documentata** (stesso caso, stesso modello, tre sessioni): la baseline dà `2.863,7` / `3.563` /
+`4.062` ms, la nostra pipeline resta in `358,8–397,6 ms`. Lo speedup che ne esce va da **7,2× a 8,0×**: si
+dichiara **7,8×** (misura corrente) e **mai** 9,9× (prima misura, con una baseline più lenta). Il **token delta
+è stabile** (−86,5%) perché non dipende dal carico del provider; lo speedup sì. Per questo a schermo
+`{{baseline.latency_x}}` si calcola **sempre** dai due file della registrazione, mai da questa tabella.
 
 **Attenzione, due trappole già viste:**
 
-1. I file committati **non** contengono questi valori: `backend/baseline_metrics.json` è in formato
-   pre-contratto (3.563 ms / 11.828 token) e `backend/run.json` viene rigenerato dal refactor in corso.
-   È varianza reale, non errore — ma significa che i numeri qui sopra **non vanno incollati nello script**:
-   sarebbero sbagliati entro un'ora. Da qui R1/R6 e il divieto di cifre letterali.
-2. `raw_est` (464) è **minore** di `generator_prompt` (1.295): il frame "raw vs curato" è aritmeticamente
-   perdente su questo corpus. Da qui R5 e la riscrittura di §3.
+1. I file committati **non** contengono questi valori, e non devono: `backend/baseline_metrics.json` ora è
+   **conforme** allo schema (`case_id FC-01`, 5 calls, `totals.*`) ma ha `generated_at: null` → per R6 la riga
+   di provenienza a schermo dichiara "baseline: earlier run". `backend/run.json` viene rigenerato dal refactor
+   di core-dev (corpus ampliato): i suoi numeri cambiano di ora in ora. Incollarli qui li renderebbe falsi entro
+   un'ora — da qui R1/R6 e il divieto di cifre letterali.
+2. `tokens.saved_pct` è **diagnostica, non un claim**: al momento della verifica vale **−187,7%** (overhead, non
+   risparmio) e il suo segno dipende dalla dimensione del corpus. Da qui R5: non compare in nessun frame, e la
+   parola "saved" non si usa mai a schermo — se il valore è negativo si dice **overhead**.
 
 ---
 
@@ -279,7 +297,7 @@ GENERATOR 408,8 ms, `resolved`, 1 chiamata.
 
 ## 5. Chiusura (1:45–2:00) — differenziazione + AMD
 
-> "Classic agents make the GPU do everything. We let the GPU do only the one thing it's for — generation — and push five of the six stages to fast, typed discriminative decisions. That's not a better model. It's a better computer. ROCm runs it, one card, batched."
+> "Classic agents make the GPU do everything. We let the GPU do only the one thing it's for — generation — and push five of the six stages to fast, typed discriminative decisions. That's not a better model. It's a better computer. Target: ROCm, one card, batched."
 
 - On-screen (solo valori misurati + claim architetturale, **nessun moltiplicatore**):
 
@@ -287,7 +305,7 @@ GENERATOR 408,8 ms, `resolved`, 1 chiamata.
   {{baseline.total_tokens}} → {{tokens.gen_consumed}} tokens per query · −{{baseline.saved_pct}}%
   {{baseline.llm_calls}} generative calls → 1
   one generative call per query · the rest is a batched forward pass
-  ROCm runs it, one card
+  target: ROCm · one card · batched
   ```
 
 - Riga latenza ammessa **solo se** la baseline è misurata (R2/R6), come rapporto fra due misure:
@@ -298,14 +316,33 @@ GENERATOR 408,8 ms, `resolved`, 1 chiamata.
 
 - Se la baseline non è misurata: restano solo `{{tokens.gen_consumed}}` (etichettato "our tokens per query")
   e le righe architetturali. **Nessun numero al posto del confronto.**
-- Vietato su questo frame: "5-12x", "10-30x", "throughput per GPU", "9.4k tokens saved", qualunque rapporto
-  non misurato (BUILD_SPEC §0: senza GPU AMD il throughput è architetturale). Vedi §9.
+- **ROCm è intenzione, non esecuzione.** Su questa macchina non c'è una GPU AMD (si gira via OpenRouter):
+  "ROCm runs it" al presente è un'**affermazione di fatto** che non possiamo mostrare — un giudice chiede il
+  run su ROCm e non c'è. Il claim si enuncia quindi come **portabilità by design** ("target: ROCm", "runs on
+  ROCm by design"), mai come esecuzione avvenuta. Stessa regola dei numeri: si mostra solo ciò che è misurato,
+  oppure lo si dichiara come intenzione (VERIFIED_NUMBERS §"Vietati").
+- Vietato su questo frame: "5-12x", "10-30x", "throughput per GPU", "9.4k tokens saved", "ROCm runs it" al
+  presente, qualunque rapporto non misurato (BUILD_SPEC §0: senza GPU AMD il throughput è architetturale). Vedi §9.
 
-## 6. FC-06 (fallimento tipizzato) — tagliato, non simulato (D5)
+## 6. FC-06 (fallimento tipizzato) — condizionale alla misura, altrimenti tagliato (D5)
 
-FC-06 **non è nel montaggio**. Motivo: il timebox non copre un terzo run e il frame non aggiunge nulla ai
-120s. Se avanza tempo, insert opzionale da 8s con i numeri del run FC-06 (`{{gen.status}}` = `unresolved`,
-`0` gen calls) — **mai** un fallimento recitato a mano. Questa è la dichiarazione esplicita richiesta da D5.
+FC-06 **non è nel montaggio** e **non è citabile come feature dimostrata**. Sweep del CEO 26/10 10:17 sul caso
+progettato come "evidenza insufficiente": la pipeline risponde `CONFLICT` (conf 0,83) con generatore `resolved`
+— cioè il contrario del fallimento tipizzato. La frase "il generatore può rifiutare" **non è prodotta dal codice
+oggi**: finché è così non si dice, non si mostra e non va in voice-over (dettaglio e fix su BOH-5).
+
+L'insert da 8s esiste **solo se** ricorrono tutte e tre le condizioni, verificate sul file e non a memoria:
+
+1. GUARD è stato corretto (BOH-5) **entro le 16:00**;
+2. un run FC-06 **misurato** mostra `stages.choice.label = INSUFFICIENT`, `stages.guard.action = insufficient`,
+   `stages.generator.called = false`, `stages.generator.status = skipped` — verificato con `jq` su **quel**
+   `run.json`;
+3. il CEO conferma che quel run è quello del video (stesso corpus/modello, R6).
+
+Se una manca, la sezione **si taglia**: nessun fallimento recitato a mano, nessun `unresolved` scritto per
+ipotesi. Nota di contratto: il fallimento tipizzato si presenta come **`skipped` + "0 gen calls"**, non come
+`unresolved` (BUILD_SPEC §2.10) — `unresolved` significa che il generatore ha risposto senza risolvere, ed è
+un'altra cosa. Questa è la dichiarazione esplicita richiesta da D5.
 
 ## 7. One-liner di backup (se il timing stringe)
 
@@ -336,7 +373,9 @@ Nessuna cifra: usabile senza sostituzioni.
 | "−92% context" / "12.4k raw vs 940" | non omogeneo (stima snippet vs prompt reale) e aritmeticamente falso su questo corpus: il valore vero è negativo (R5) | `{{baseline.total_tokens}} → {{tokens.gen_consumed}}` con `−{{baseline.saved_pct}}%` |
 | "the generator received 940 validated tokens, not 12,480" | confronta due grandezze diverse (prompt nostro vs token baseline) e usa cifre di un run vecchio | "`{{baseline.llm_calls}}` calls and `{{baseline.total_tokens}}` tokens vs one call and `{{tokens.gen_consumed}}`" |
 | "5-12x lower latency" | moltiplicatore non misurato | `{{baseline.latency_x}}×`, solo fra due `e2e_ms` misurati |
-| "10-30x throughput per GPU" | richiede GPU AMD (BUILD_SPEC §0) | "one generative call per query, the rest is a batched forward pass; ROCm runs it on one card" |
+| "10-30x throughput per GPU" | richiede GPU AMD (BUILD_SPEC §0) | "one generative call per query, the rest is a batched forward pass; target: ROCm, one card" |
+| "ROCm runs it" (al presente) | nessuna GPU AMD su questa macchina: è un'**affermazione di fatto** non verificabile, più facile da contestare di una cifra | "target: ROCm · one card · batched" — portabilità dichiarata, non esecuzione (§5) |
+| "the generator can refuse" / typed failure come feature | al 26/10 10:17 FC-06 dà `CONFLICT` + `resolved`: il codice non produce il rifiuto | solo se un run FC-06 **misurato** dà `INSUFFICIENT` + `skipped` (§6); altrimenti la frase non esiste |
 | "9.4k tokens saved" | numero di un run vecchio, e su base non omogenea | il risparmio è quello di §0.5, con segno e provenienza |
 | "Same answer quality" | nessun eval harness nel timebox: non è verificabile con un comando del repo | "already reconciled, already cited" (fatto strutturale: `stages.choice.label`, citazioni in `run.json`) |
 | "GPU-sec/query" come cifra | non misurabile senza GPU AMD | rapporto token/query (hardware-agnostico), misurato |
