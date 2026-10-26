@@ -1,0 +1,1895 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-26T10:24:08.726989+00:00",
+  "query": "What EPS did Intel report for Q2 2024, and what is its Q3 2024 EPS guidance?",
+  "query_arg": "FC-01",
+  "case_id": "FC-01",
+  "case_subject": "Intel Q2 2024 EPS and Q3 2024 guidance: GAAP loss vs non-GAAP profit",
+  "selection_mode": "case_id",
+  "offline": false,
+  "model": "meta-llama/llama-3.1-8b-instruct",
+  "stages": {
+    "retriever": {
+      "ms": 0.268,
+      "snippets": 34
+    },
+    "noul": {
+      "ms": 3.121,
+      "total": 34,
+      "kept": 12,
+      "dropped": 22,
+      "drop_pct": 64.7,
+      "empty_corpus": false,
+      "decisions": [
+        {
+          "id": "FC-01-S1",
+          "source_url": "https://www.intc.com/news-events/press-releases/detail/1704/intel-reports-second-quarter-2024-financial-results",
+          "source_name": "Intel Corporation (investor relations)",
+          "publisher_type": "official",
+          "date": "2024-08-01",
+          "content": "Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02. It forecasts third-quarter 2024 revenue of $12.5-13.5B, GAAP EPS of $(0.24) and non-GAAP EPS of $(0.03).",
+          "title": "Intel Reports Second-Quarter 2024 Financial Results",
+          "case_id": "FC-01",
+          "keep": true,
+          "confidence": 0.9487,
+          "reason": "keep",
+          "similarity": 0.2189,
+          "signals": {
+            "words": 29,
+            "length_ratio": 0.935,
+            "boilerplate_hits": 0,
+            "domain": "www.intc.com",
+            "publisher_type": "official",
+            "tokens_est": 70
+          }
+        },
+        {
+          "id": "FC-01-S2",
+          "source_url": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
+          "source_name": "CNBC",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "CNBC reported on 1 August 2024 that Intel's adjusted EPS was 2 cents versus 10 cents expected and revenue was $12.83B versus $12.94B expected. It noted the GAAP net loss of $1.61B, or 38 cents per share, and said Intel guided the third quarter to an adjusted net loss of 3 cents per share on $12.5-13.5B revenue.",
+          "title": "Intel to cut 15% of workforce, reports quarterly guidance miss",
+          "case_id": "FC-01",
+          "keep": true,
+          "confidence": 0.9038,
+          "reason": "keep",
+          "similarity": 0.1182,
+          "signals": {
+            "words": 44,
+            "length_ratio": 1.419,
+            "boilerplate_hits": 0,
+            "domain": "www.cnbc.com",
+            "publisher_type": "press",
+            "tokens_est": 94
+          }
+        },
+        {
+          "id": "FC-01-S3",
+          "source_url": "https://www.marketbeat.com/earnings/reports/2024-8-1-intel-co-stock/",
+          "source_name": "MarketBeat",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "MarketBeat's Q2 2024 page says Intel reported EPS of $0.02 versus a $0.0990 consensus and calls it a miss; it summarises Q3 guidance as a non-GAAP EPS of -$0.03 on $12.5-13.5B revenue. The page does not lead with the GAAP loss per share.",
+          "title": "Intel Q2 2024 Earnings Results & Report",
+          "case_id": "FC-01",
+          "keep": true,
+          "confidence": 0.95,
+          "reason": "keep",
+          "similarity": 0.3178,
+          "signals": {
+            "words": 31,
+            "length_ratio": 1.0,
+            "boilerplate_hits": 0,
+            "domain": "www.marketbeat.com",
+            "publisher_type": "press",
+            "tokens_est": 70
+          }
+        },
+        {
+          "id": "FC-01-S4",
+          "source_url": "https://wccftech.com/intel-q2-2024-earnings-a-horrendous-result-with-a-miss-on-total-revenue-dcai-gross-margin-and-eps/",
+          "source_name": "Wccftech",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "Wccftech reported on 1 August 2024 that Intel disclosed GAAP net income of -$1,654M and non-GAAP EPS of $0.02, and published Intel's Q3 2024 guidance table. Its framing emphasises the GAAP loss and the miss on revenue, DCAI, gross margin and EPS.",
+          "title": "Intel Q2 2024 Earnings: A Horrendous Result With A Miss On Total Revenue, DCAI, Gross Margin, And EPS",
+          "case_id": "FC-01",
+          "keep": true,
+          "confidence": 0.9565,
+          "reason": "keep",
+          "similarity": 0.2821,
+          "signals": {
+            "words": 41,
+            "length_ratio": 1.323,
+            "boilerplate_hits": 0,
+            "domain": "wccftech.com",
+            "publisher_type": "press",
+            "tokens_est": 87
+          }
+        },
+        {
+          "id": "FC-01-S5",
+          "source_url": "https://www.reuters.com/technology/intel-cut-15-jobs-suspend-dividend-turnaround-push-shares-plummet-2024-08-01/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "Reuters reported on 1 August 2024 that Intel would cut 15% of its jobs and suspend its dividend after a disappointing quarter. The report focused on the $1.6B loss and the weak outlook rather than reconciling GAAP and non-GAAP EPS.",
+          "title": "Intel to cut 15% jobs, suspend dividend in turnaround push; shares plummet",
+          "case_id": "FC-01",
+          "keep": true,
+          "confidence": 0.95,
+          "reason": "keep",
+          "similarity": 0.1668,
+          "signals": {
+            "words": 31,
+            "length_ratio": 1.0,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 77
+          }
+        },
+        {
+          "id": "FC-01-S6",
+          "source_url": "",
+          "source_name": "StockEarningsNow",
+          "publisher_type": "noise",
+          "date": "2024-08-01",
+          "content": "Intel Q2 2024 earnings: the only breakdown you need. Our AI-powered score reveals whether INTC is a buy before the next earnings call. Click for the free report and three hidden catalysts Wall Street is missing.",
+          "title": "Intel Q2 2024 Earnings: The Only Breakdown You Need",
+          "case_id": "FC-01",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.1788,
+          "signals": {
+            "words": 29,
+            "length_ratio": 0.935,
+            "boilerplate_hits": 0,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 66
+          }
+        },
+        {
+          "id": "FC-02-S1",
+          "source_url": "https://investors.broadcom.com/news-releases/news-release-details/broadcom-acquire-vmware-approximately-61-billion-cash-and-stock/",
+          "source_name": "Broadcom (investor relations)",
+          "publisher_type": "official",
+          "date": "2022-05-26",
+          "content": "Broadcom announced a definitive agreement to acquire VMware for approximately $61B in cash and stock. The release also states that Broadcom would assume approximately $8B of VMware net debt, which is why the total transaction value is often quoted as about $69B.",
+          "title": "Broadcom to Acquire VMware for Approximately $61 Billion in Cash and Stock",
+          "case_id": "FC-02",
+          "keep": true,
+          "confidence": 0.7637,
+          "reason": "keep",
+          "similarity": 0.0649,
+          "signals": {
+            "words": 33,
+            "length_ratio": 1.065,
+            "boilerplate_hits": 0,
+            "domain": "investors.broadcom.com",
+            "publisher_type": "official",
+            "tokens_est": 85
+          }
+        },
+        {
+          "id": "FC-02-S2",
+          "source_url": "https://www.reuters.com/markets/deals/chipmaker-broadcom-buy-vmware-61-bln-deal-2022-05-26/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2022-05-26",
+          "content": "Reuters reported on 26 May 2022 that chipmaker Broadcom would buy VMware in a $61 billion deal, matching the cash-and-stock consideration in Broadcom's announcement. The report framed the transaction around the equity value and did not include the roughly $8 billion of VMware net debt that Broadcom said it would assume, the component that takes the total value to about $69 billion.",
+          "title": "Chipmaker Broadcom to buy VMware in $61 bln deal",
+          "case_id": "FC-02",
+          "keep": true,
+          "confidence": 0.7484,
+          "reason": "keep",
+          "similarity": 0.0565,
+          "signals": {
+            "words": 42,
+            "length_ratio": 1.355,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 109
+          }
+        },
+        {
+          "id": "FC-02-S3",
+          "source_url": "https://www.computing.co.uk/news/4050217/broadcom-acquire-vmware-61-billion-deal",
+          "source_name": "Computing UK",
+          "publisher_type": "press",
+          "date": "2022-05-27",
+          "content": "Computing reported on 27 May 2022 that Broadcom would acquire VMware in a $61 billion deal, again using the cash-and-stock figure from the announcement. The article described the agreement as a $61 billion acquisition and did not add the approximately $8 billion of net debt that Broadcom agreed to assume, so it did not produce the roughly $69 billion total that later coverage used.",
+          "title": "Broadcom to acquire VMware in $61 billion deal",
+          "case_id": "FC-02",
+          "keep": true,
+          "confidence": 0.761,
+          "reason": "keep",
+          "similarity": 0.0616,
+          "signals": {
+            "words": 42,
+            "length_ratio": 1.355,
+            "boilerplate_hits": 0,
+            "domain": "www.computing.co.uk",
+            "publisher_type": "press",
+            "tokens_est": 108
+          }
+        },
+        {
+          "id": "FC-02-S4",
+          "source_url": "https://www.reuters.com/markets/deals/broadcom-closes-69-bln-vmware-deal-after-china-approval-2023-11-22/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2023-11-22",
+          "content": "Reuters reported on 22 November 2023 that Broadcom closed its '$69 billion acquisition' of VMware after receiving China's regulatory approval. The headline uses the total value including assumed debt, not the $61B cash-and-stock consideration.",
+          "title": "Broadcom closes $69 billion VMware deal after China approval",
+          "case_id": "FC-02",
+          "keep": false,
+          "confidence": 0.6975,
+          "reason": "off-topic",
+          "similarity": 0.0225,
+          "signals": {
+            "words": 32,
+            "length_ratio": 1.032,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 76
+          }
+        },
+        {
+          "id": "FC-02-S5",
+          "source_url": "https://www.computing.co.uk/news/4149831/broadcom-finally-completes-usd69bn-acquisition-vmware",
+          "source_name": "Computing UK",
+          "publisher_type": "press",
+          "date": "2023-11-23",
+          "content": "Computing reported on 23 November 2023 that Broadcom had completed its '$69bn acquisition' of VMware after China's approval. The article describes the deal as a $69 billion acquisition without separating the $61B consideration from the assumed debt.",
+          "title": "Broadcom finally completes $69bn acquisition of VMware",
+          "case_id": "FC-02",
+          "keep": false,
+          "confidence": 0.6973,
+          "reason": "off-topic",
+          "similarity": 0.0227,
+          "signals": {
+            "words": 29,
+            "length_ratio": 0.935,
+            "boilerplate_hits": 0,
+            "domain": "www.computing.co.uk",
+            "publisher_type": "press",
+            "tokens_est": 76
+          }
+        },
+        {
+          "id": "FC-02-S6",
+          "source_url": "https://hystax.com/how-vmware-prices-and-policies-changed-after-broadcoms-acquisition/",
+          "source_name": "Hystax",
+          "publisher_type": "blog",
+          "date": "2026-03-10",
+          "content": "Hystax's March 2026 explainer says the Broadcom acquisition of VMware was 'valued at approximately $69 billion'. It does not separate the cash-and-stock consideration from the debt that Broadcom assumed.",
+          "title": "How VMware Pricing and Licensing Changed After the Broadcom VMware Acquisition",
+          "case_id": "FC-02",
+          "keep": false,
+          "confidence": 0.7121,
+          "reason": "off-topic",
+          "similarity": 0.0079,
+          "signals": {
+            "words": 24,
+            "length_ratio": 0.774,
+            "boilerplate_hits": 0,
+            "domain": "hystax.com",
+            "publisher_type": "blog",
+            "tokens_est": 71
+          }
+        },
+        {
+          "id": "FC-03-S1",
+          "source_url": "https://boeing.mediaroom.com/2024-03-25-Boeing-Announces-Board-and-Management-Changes",
+          "source_name": "Boeing",
+          "publisher_type": "official",
+          "date": "2024-03-25",
+          "content": "Boeing announced on 25 March 2024 that President and CEO Dave Calhoun had decided to step down as CEO at the end of 2024, and that he would continue to lead Boeing through the year. The release did not name a successor or an earlier departure date.",
+          "title": "Boeing Announces Board and Management Changes",
+          "case_id": "FC-03",
+          "keep": true,
+          "confidence": 0.7878,
+          "reason": "keep",
+          "similarity": 0.0759,
+          "signals": {
+            "words": 28,
+            "length_ratio": 0.903,
+            "boilerplate_hits": 0,
+            "domain": "boeing.mediaroom.com",
+            "publisher_type": "official",
+            "tokens_est": 74
+          }
+        },
+        {
+          "id": "FC-03-S2",
+          "source_url": "https://www.reuters.com/business/aerospace-defense/boeing-ceo-dave-calhoun-step-down-2024-03-25/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2024-03-25",
+          "content": "Reuters reported on 25 March 2024 that Boeing CEO Dave Calhoun would step down at the end of 2024 as part of a management shake-up amid the safety crisis. The report reflected the company's announcement at that time.",
+          "title": "Boeing CEO Dave Calhoun to step down in shakeup amid safety crisis",
+          "case_id": "FC-03",
+          "keep": false,
+          "confidence": 0.6784,
+          "reason": "off-topic",
+          "similarity": 0.0416,
+          "signals": {
+            "words": 29,
+            "length_ratio": 0.935,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 71
+          }
+        },
+        {
+          "id": "FC-03-S3",
+          "source_url": "https://boeing.mediaroom.com/2024-07-31-Boeing-Board-Names-Kelly-Ortberg-President-and-CEO",
+          "source_name": "Boeing",
+          "publisher_type": "official",
+          "date": "2024-07-31",
+          "content": "Boeing announced on 31 July 2024 that its board had elected Robert K. 'Kelly' Ortberg as president and chief executive officer, effective 8 August 2024. He succeeded Dave Calhoun, who had announced his intention to retire earlier in the year.",
+          "title": "Boeing Board Names Kelly Ortberg President and CEO",
+          "case_id": "FC-03",
+          "keep": true,
+          "confidence": 0.7283,
+          "reason": "keep",
+          "similarity": 0.0513,
+          "signals": {
+            "words": 31,
+            "length_ratio": 1.0,
+            "boilerplate_hits": 0,
+            "domain": "boeing.mediaroom.com",
+            "publisher_type": "official",
+            "tokens_est": 74
+          }
+        },
+        {
+          "id": "FC-03-S4",
+          "source_url": "https://www.reuters.com/business/aerospace-defense/boeings-new-ceo-moves-factory-heartland-stem-safety-crisis-2024-08-08/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2024-08-08",
+          "content": "Reuters reported on 8 August 2024 that Boeing's new CEO, Kelly Ortberg, was taking over and moving to the factory heartland to address the safety crisis. The report treats 8 August 2024 as the start of Ortberg's tenure.",
+          "title": "Boeing's new CEO moves to factory heartland to stem safety crisis",
+          "case_id": "FC-03",
+          "keep": false,
+          "confidence": 0.6736,
+          "reason": "off-topic",
+          "similarity": 0.0464,
+          "signals": {
+            "words": 28,
+            "length_ratio": 0.903,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 72
+          }
+        },
+        {
+          "id": "FC-03-S5",
+          "source_url": "https://www.lemonde.fr/en/economy/article/2024/07/31/boeing-hastens-the-departure-of-its-ceo_6710234_19.html",
+          "source_name": "Le Monde",
+          "publisher_type": "press",
+          "date": "2024-07-31",
+          "content": "Le Monde reported on 31 July 2024 that Boeing was hastening the departure of its CEO, with Kelly Ortberg replacing Dave Calhoun sooner than the end-2024 date announced in March. The article highlights the gap between the original timetable and the actual transition.",
+          "title": "Boeing hastens the departure of its CEO",
+          "case_id": "FC-03",
+          "keep": true,
+          "confidence": 0.7395,
+          "reason": "keep",
+          "similarity": 0.0561,
+          "signals": {
+            "words": 30,
+            "length_ratio": 0.968,
+            "boilerplate_hits": 0,
+            "domain": "www.lemonde.fr",
+            "publisher_type": "press",
+            "tokens_est": 77
+          }
+        },
+        {
+          "id": "FC-04-S1",
+          "source_url": "https://www.amd.com/en/products/accelerators/instinct/mi300/mi325x.html",
+          "source_name": "AMD",
+          "publisher_type": "official",
+          "date": "2024-10-10",
+          "content": "AMD's MI325X product page lists a launch date of 10 October 2024, 256 GB of HBM3E dedicated memory, 6 TB/s peak memory bandwidth, 304 compute units and 1000W typical board power. It is the authoritative spec sheet for the part.",
+          "title": "AMD Instinct MI325X Accelerators - product specifications",
+          "case_id": "FC-04",
+          "keep": true,
+          "confidence": 0.7337,
+          "reason": "keep",
+          "similarity": 0.0522,
+          "signals": {
+            "words": 36,
+            "length_ratio": 1.161,
+            "boilerplate_hits": 0,
+            "domain": "www.amd.com",
+            "publisher_type": "official",
+            "tokens_est": 72
+          }
+        },
+        {
+          "id": "FC-04-S2",
+          "source_url": "https://wccftech.com/amd-instinct-mi325x-first-ai-gpu-256-gb-hbm3e-memory-288-gb-mi355x-cdna-4-next-year-8x-performance-uplift/",
+          "source_name": "Wccftech",
+          "publisher_type": "press",
+          "date": "2024-10-10",
+          "content": "Wccftech reported on 10 October 2024 that the MI325X is the first AI GPU with 256 GB of HBM3E memory, while the 288 GB figure belongs to the MI355X 'CDNA 4' accelerator planned for the following year.",
+          "title": "AMD Instinct MI325X Is The First AI GPU To Pack 256 GB HBM3e Memory, 288 GB MI355X 'CDNA 4' Next Year",
+          "case_id": "FC-04",
+          "keep": false,
+          "confidence": 0.6697,
+          "reason": "off-topic",
+          "similarity": 0.0503,
+          "signals": {
+            "words": 37,
+            "length_ratio": 1.194,
+            "boilerplate_hits": 0,
+            "domain": "wccftech.com",
+            "publisher_type": "press",
+            "tokens_est": 76
+          }
+        },
+        {
+          "id": "FC-04-S3",
+          "source_url": "https://www.extremetech.com/computing/amd-to-launch-an-mi325x-ai-accelerator-in-2024-with-288gb-of-hmb3e-memory",
+          "source_name": "ExtremeTech",
+          "publisher_type": "press",
+          "date": "2024-06-03",
+          "content": "ExtremeTech reported on 3 June 2024 that AMD would launch an MI325X accelerator in 2024 with 288 GB of HBM3E memory. That pre-launch figure does not match the 256 GB capacity AMD specified for the MI325X at launch.",
+          "title": "AMD to Launch an MI325X AI Accelerator in 2024 With 288GB of HMB3e Memory",
+          "case_id": "FC-04",
+          "keep": false,
+          "confidence": 0.6736,
+          "reason": "off-topic",
+          "similarity": 0.0464,
+          "signals": {
+            "words": 31,
+            "length_ratio": 1.0,
+            "boilerplate_hits": 0,
+            "domain": "www.extremetech.com",
+            "publisher_type": "press",
+            "tokens_est": 72
+          }
+        },
+        {
+          "id": "FC-04-S4",
+          "source_url": "https://videocardz.com/newz/amd-instinct-mi325x-gets-288gb-hbm3e-memory-mi350x-with-cdna4-set-for-2025-mi400-with-cdna-next-launching-in-2026",
+          "source_name": "VideoCardz",
+          "publisher_type": "press",
+          "date": "2024-06-03",
+          "content": "VideoCardz reported on 3 June 2024 that the MI325X would get 288 GB of HBM3E memory, with the MI350X and MI400 following in 2025 and 2026. The 288 GB figure was later attached to the MI355X rather than the MI325X.",
+          "title": "AMD Instinct MI325X gets 288GB HBM3e memory, MI350X with CDNA4 set for 2025",
+          "case_id": "FC-04",
+          "keep": false,
+          "confidence": 0.6775,
+          "reason": "off-topic",
+          "similarity": 0.0425,
+          "signals": {
+            "words": 33,
+            "length_ratio": 1.065,
+            "boilerplate_hits": 0,
+            "domain": "videocardz.com",
+            "publisher_type": "press",
+            "tokens_est": 73
+          }
+        },
+        {
+          "id": "FC-04-S5",
+          "source_url": "",
+          "source_name": "GPULeaksDaily",
+          "publisher_type": "noise",
+          "date": "2024-06-03",
+          "content": "AMD MI325X specs leak: 288GB HBM3E, 8 TB/s and a massive performance jump. Everything we know so far about Team Red's next AI monster. Subscribe for more leaks and exclusive benchmarks. This SEO-style post repeats the pre-launch 288 GB figure and adds an unconfirmed 8 TB/s bandwidth number; AMD's October 2024 product page lists 256 GB of HBM3E and 6 TB/s for the MI325X.",
+          "title": "AMD MI325X Specs Leak: 288GB HBM3E and 8TB/s",
+          "case_id": "FC-04",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.046,
+          "signals": {
+            "words": 52,
+            "length_ratio": 1.677,
+            "boilerplate_hits": 1,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 105
+          }
+        },
+        {
+          "id": "FC-05-S1",
+          "source_url": "",
+          "source_name": "MarketDailyInsider",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA Q2 2025 earnings: the ultimate breakdown you need to see. Our proprietary AI score says the stock is a must-own before the next leg higher. Click to discover the three hidden catalysts Wall Street is missing.",
+          "title": "NVIDIA Q2 2025 Earnings: The Ultimate Breakdown You Need to See",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.062,
+          "signals": {
+            "words": 32,
+            "length_ratio": 1.032,
+            "boilerplate_hits": 0,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 70
+          }
+        },
+        {
+          "id": "FC-05-S2",
+          "source_url": "",
+          "source_name": "StockTrendWire",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA just dropped its Q2 numbers and the internet is going wild. Here are five things every investor should know, plus our free portfolio checklist. Not financial advice. Read more to unlock the full analysis.",
+          "title": "NVIDIA Just Dropped Its Q2 Numbers - 5 Things Investors Need to Know",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.0855,
+          "signals": {
+            "words": 30,
+            "length_ratio": 0.968,
+            "boilerplate_hits": 1,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 70
+          }
+        },
+        {
+          "id": "FC-05-S3",
+          "source_url": "",
+          "source_name": "EarningsWhisperPro",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA earnings date, whisper number, implied move and options play. Subscribe to unlock the full Q2 FY2025 preview and our exclusive trade alert. Past performance is not indicative of future results.",
+          "title": "NVIDIA Earnings Date, Whisper Number and Options Play",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.0527,
+          "signals": {
+            "words": 30,
+            "length_ratio": 0.968,
+            "boilerplate_hits": 1,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 64
+          }
+        },
+        {
+          "id": "FC-05-S4",
+          "source_url": "",
+          "source_name": "FinPulse",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA revenue 2025: could the AI giant hit $50 billion this quarter? Read our speculative scenario analysis and price target. This is a hypothetical projection, not a reported result. Click for the full model.",
+          "title": "NVIDIA Revenue 2025: Could the AI Giant Hit $50 Billion This Quarter?",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.0387,
+          "signals": {
+            "words": 30,
+            "length_ratio": 0.968,
+            "boilerplate_hits": 0,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 70
+          }
+        },
+        {
+          "id": "FC-05-S5",
+          "source_url": "",
+          "source_name": "AutoRecap",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA Q2 FY2025 earnings recap: everything you need to know about the company's latest results, guidance and stock reaction. This article is updated automatically from trending headlines and may not reflect the official filing.",
+          "title": "NVIDIA Q2 FY2025 Earnings Recap: Everything You Need to Know",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.0967,
+          "signals": {
+            "words": 31,
+            "length_ratio": 1.0,
+            "boilerplate_hits": 0,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 73
+          }
+        },
+        {
+          "id": "FC-05-S6",
+          "source_url": "",
+          "source_name": "DealAlerts",
+          "publisher_type": "noise",
+          "date": "2024-08-28",
+          "content": "NVIDIA stock is moving after earnings. Our algorithm scanned 1,000 headlines and found one ticker poised to explode. Click here for the free report and join 50,000 subscribers. The page offers no reported revenue figure for NVIDIA's second quarter of fiscal 2025 and does not link to the company's official results release.",
+          "title": "NVIDIA Stock Is Moving After Earnings - One Ticker Poised to Explode",
+          "case_id": "FC-05",
+          "keep": false,
+          "confidence": 0.97,
+          "reason": "spam",
+          "similarity": 0.0754,
+          "signals": {
+            "words": 41,
+            "length_ratio": 1.323,
+            "boilerplate_hits": 1,
+            "domain": "",
+            "publisher_type": "noise",
+            "tokens_est": 98
+          }
+        },
+        {
+          "id": "FC-06-S1",
+          "source_url": "https://blogs.microsoft.com/blog/2024/03/19/mustafa-suleyman-deepmind-and-inflection-co-founder-joins-microsoft-to-lead-copilot/",
+          "source_name": "Microsoft (Official Microsoft Blog)",
+          "publisher_type": "official",
+          "date": "2024-03-19",
+          "content": "Microsoft's 19 March 2024 post announced that Mustafa Suleyman and Karén Simonyan were joining Microsoft to form Microsoft AI, and that several members of the Inflection team had chosen to join them. It describes the arrangement as hiring and a partnership; it does not state a purchase price or an acquisition amount.",
+          "title": "Mustafa Suleyman, DeepMind and Inflection Co-founder, joins Microsoft to lead Copilot",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.6954,
+          "reason": "off-topic",
+          "similarity": 0.0246,
+          "signals": {
+            "words": 39,
+            "length_ratio": 1.258,
+            "boilerplate_hits": 0,
+            "domain": "blogs.microsoft.com",
+            "publisher_type": "official",
+            "tokens_est": 101
+          }
+        },
+        {
+          "id": "FC-06-S2",
+          "source_url": "https://www.reuters.com/technology/microsoft-pays-inflection-650-mln-licensing-deal-while-poaching-top-talents-source-2024-03-21/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2024-03-21",
+          "content": "Reuters reported on 21 March 2024, citing a source, that Microsoft would pay Inflection $650 million in a licensing deal while hiring top talent. The figure is attributed to an unnamed source, not to a Microsoft filing or press release.",
+          "title": "Microsoft pays Inflection $650 mln in licensing deal while poaching top talents, source says",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.6946,
+          "reason": "off-topic",
+          "similarity": 0.0254,
+          "signals": {
+            "words": 35,
+            "length_ratio": 1.129,
+            "boilerplate_hits": 0,
+            "domain": "www.reuters.com",
+            "publisher_type": "press",
+            "tokens_est": 83
+          }
+        },
+        {
+          "id": "FC-06-S3",
+          "source_url": "https://www.bloomberg.com/news/articles/2024-03-21/microsoft-to-pay-inflection-ai-650-million-after-scooping-up-most-of-staff",
+          "source_name": "Bloomberg",
+          "publisher_type": "press",
+          "date": "2024-03-21",
+          "content": "Bloomberg reported on 21 March 2024 that Microsoft would pay Inflection AI $650 million after scooping up most of its staff, citing people familiar with the matter. Like the Reuters report, it relies on unnamed sources rather than a disclosed transaction price.",
+          "title": "Microsoft to Pay Inflection AI $650 Million After Scooping Up Most of Staff",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.6699,
+          "reason": "off-topic",
+          "similarity": 0.0501,
+          "signals": {
+            "words": 33,
+            "length_ratio": 1.065,
+            "boilerplate_hits": 0,
+            "domain": "www.bloomberg.com",
+            "publisher_type": "press",
+            "tokens_est": 85
+          }
+        },
+        {
+          "id": "FC-06-S4",
+          "source_url": "https://www.fastcompany.com/91069561/microsofts-inflection-ai-grab-likely-cost-more-than-1-billion-says-an-insider-exclusive",
+          "source_name": "Fast Company",
+          "publisher_type": "press",
+          "date": "2024-03-26",
+          "content": "Fast Company reported on 26 March 2024 that Microsoft's Inflection AI grab likely cost more than $1 billion, according to an insider. The estimate directly conflicts with the $650 million figure reported by other outlets.",
+          "title": "Microsoft's Inflection AI grab likely cost more than $1 billion, says an insider (exclusive)",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.7083,
+          "reason": "off-topic",
+          "similarity": 0.0117,
+          "signals": {
+            "words": 29,
+            "length_ratio": 0.935,
+            "boilerplate_hits": 0,
+            "domain": "www.fastcompany.com",
+            "publisher_type": "press",
+            "tokens_est": 79
+          }
+        },
+        {
+          "id": "FC-06-S5",
+          "source_url": "https://www.techzine.eu/news/analytics/119004/microsoft-scoops-up-inflection-ai-will-pay-e600-million/",
+          "source_name": "Techzine Global",
+          "publisher_type": "press",
+          "date": "2024-03-22",
+          "content": "Techzine reported on 22 March 2024 that Microsoft was scooping up Inflection AI and would pay EUR 600 million. That euro-denominated figure adds a third amount to the dispute and is not confirmed by Microsoft.",
+          "title": "Microsoft scoops up Inflection AI, will pay EUR 600 million",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.6803,
+          "reason": "off-topic",
+          "similarity": 0.0397,
+          "signals": {
+            "words": 28,
+            "length_ratio": 0.903,
+            "boilerplate_hits": 0,
+            "domain": "www.techzine.eu",
+            "publisher_type": "press",
+            "tokens_est": 68
+          }
+        },
+        {
+          "id": "FC-06-S6",
+          "source_url": "https://www.silicon.co.uk/e-enterprise/mergers/microsoft-inflection-ai-650m-556060",
+          "source_name": "Silicon UK",
+          "publisher_type": "press",
+          "date": "2024-03-25",
+          "content": "Silicon UK reported on 25 March 2024 that Microsoft pays Inflection AI $650m after poaching staff, repeating the figure that had circulated in anonymous-source reports. It does not cite a primary disclosure of the amount.",
+          "title": "Microsoft Pays Inflection AI $650m After Poaching Staff",
+          "case_id": "FC-06",
+          "keep": false,
+          "confidence": 0.7066,
+          "reason": "off-topic",
+          "similarity": 0.0134,
+          "signals": {
+            "words": 27,
+            "length_ratio": 0.871,
+            "boilerplate_hits": 0,
+            "domain": "www.silicon.co.uk",
+            "publisher_type": "press",
+            "tokens_est": 70
+          }
+        }
+      ]
+    },
+    "score": {
+      "ms": 1.456,
+      "ranked_count": 5,
+      "top_k": 5,
+      "ranking": [
+        {
+          "id": "FC-01-S3",
+          "source_url": "https://www.marketbeat.com/earnings/reports/2024-8-1-intel-co-stock/",
+          "source_name": "MarketBeat",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "MarketBeat's Q2 2024 page says Intel reported EPS of $0.02 versus a $0.0990 consensus and calls it a miss; it summarises Q3 guidance as a non-GAAP EPS of -$0.03 on $12.5-13.5B revenue. The page does not lead with the GAAP loss per share.",
+          "title": "Intel Q2 2024 Earnings Results & Report",
+          "case_id": "FC-01",
+          "rank": 1,
+          "relevance": 0.8642,
+          "reliability": 0.6937,
+          "reliability_breakdown": {
+            "authority": 0.7,
+            "recency": 1.0,
+            "consistency": 0.375
+          },
+          "score": 0.5995,
+          "used_in_generation": true
+        },
+        {
+          "id": "FC-01-S4",
+          "source_url": "https://wccftech.com/intel-q2-2024-earnings-a-horrendous-result-with-a-miss-on-total-revenue-dcai-gross-margin-and-eps/",
+          "source_name": "Wccftech",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "Wccftech reported on 1 August 2024 that Intel disclosed GAAP net income of -$1,654M and non-GAAP EPS of $0.02, and published Intel's Q3 2024 guidance table. Its framing emphasises the GAAP loss and the miss on revenue, DCAI, gross margin and EPS.",
+          "title": "Intel Q2 2024 Earnings: A Horrendous Result With A Miss On Total Revenue, DCAI, Gross Margin, And EPS",
+          "case_id": "FC-01",
+          "rank": 2,
+          "relevance": 0.812,
+          "reliability": 0.7025,
+          "reliability_breakdown": {
+            "authority": 0.7,
+            "recency": 1.0,
+            "consistency": 0.4099
+          },
+          "score": 0.5704,
+          "used_in_generation": true
+        },
+        {
+          "id": "FC-01-S1",
+          "source_url": "https://www.intc.com/news-events/press-releases/detail/1704/intel-reports-second-quarter-2024-financial-results",
+          "source_name": "Intel Corporation (investor relations)",
+          "publisher_type": "official",
+          "date": "2024-08-01",
+          "content": "Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02. It forecasts third-quarter 2024 revenue of $12.5-13.5B, GAAP EPS of $(0.24) and non-GAAP EPS of $(0.03).",
+          "title": "Intel Reports Second-Quarter 2024 Financial Results",
+          "case_id": "FC-01",
+          "rank": 3,
+          "relevance": 0.5273,
+          "reliability": 0.8438,
+          "reliability_breakdown": {
+            "authority": 1.0,
+            "recency": 1.0,
+            "consistency": 0.375
+          },
+          "score": 0.4449,
+          "used_in_generation": true
+        },
+        {
+          "id": "FC-01-S5",
+          "source_url": "https://www.reuters.com/technology/intel-cut-15-jobs-suspend-dividend-turnaround-push-shares-plummet-2024-08-01/",
+          "source_name": "Reuters",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "Reuters reported on 1 August 2024 that Intel would cut 15% of its jobs and suspend its dividend after a disappointing quarter. The report focused on the $1.6B loss and the weak outlook rather than reconciling GAAP and non-GAAP EPS.",
+          "title": "Intel to cut 15% jobs, suspend dividend in turnaround push; shares plummet",
+          "case_id": "FC-01",
+          "rank": 4,
+          "relevance": 0.5466,
+          "reliability": 0.64,
+          "reliability_breakdown": {
+            "authority": 0.7,
+            "recency": 1.0,
+            "consistency": 0.1599
+          },
+          "score": 0.3498,
+          "used_in_generation": false
+        },
+        {
+          "id": "FC-01-S2",
+          "source_url": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
+          "source_name": "CNBC",
+          "publisher_type": "press",
+          "date": "2024-08-01",
+          "content": "CNBC reported on 1 August 2024 that Intel's adjusted EPS was 2 cents versus 10 cents expected and revenue was $12.83B versus $12.94B expected. It noted the GAAP net loss of $1.61B, or 38 cents per share, and said Intel guided the third quarter to an adjusted net loss of 3 cents per share on $12.5-13.5B revenue.",
+          "title": "Intel to cut 15% of workforce, reports quarterly guidance miss",
+          "case_id": "FC-01",
+          "rank": 5,
+          "relevance": 0.2792,
+          "reliability": 0.6625,
+          "reliability_breakdown": {
+            "authority": 0.7,
+            "recency": 1.0,
+            "consistency": 0.25
+          },
+          "score": 0.185,
+          "used_in_generation": false
+        }
+      ]
+    },
+    "choice": {
+      "ms": 0.175,
+      "label": "CONFLICT",
+      "verdict": "Intel Corporation (investor relations): Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02.",
+      "claim": "0.02",
+      "claim_id": "CL-39ecc4716b",
+      "confidence": 0.6345,
+      "evidence": [
+        "FC-01-S1",
+        "FC-01-S4",
+        "FC-01-S3"
+      ],
+      "conflict_pairs": [
+        {
+          "a": "FC-01-S3",
+          "b": "FC-01-S4",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.1",
+              "b": "0.02"
+            },
+            {
+              "a": "0.03",
+              "b": "0.02"
+            },
+            {
+              "a": "12.5",
+              "b": "0.02"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S3",
+          "b": "FC-01-S1",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.02",
+              "b": "12.5"
+            },
+            {
+              "a": "0.1",
+              "b": "0.02"
+            },
+            {
+              "a": "0.1",
+              "b": "12.5"
+            },
+            {
+              "a": "0.03",
+              "b": "0.02"
+            },
+            {
+              "a": "0.03",
+              "b": "12.5"
+            },
+            {
+              "a": "12.5",
+              "b": "0.02"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S3",
+          "b": "FC-01-S5",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "13.5b",
+              "b": "1.6b"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S3",
+          "b": "FC-01-S2",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.02",
+              "b": "12.5"
+            },
+            {
+              "a": "0.1",
+              "b": "12.5"
+            },
+            {
+              "a": "0.03",
+              "b": "12.5"
+            },
+            {
+              "a": "13.5b",
+              "b": "12.83b"
+            },
+            {
+              "a": "13.5b",
+              "b": "12.94b"
+            },
+            {
+              "a": "13.5b",
+              "b": "1.61b"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S4",
+          "b": "FC-01-S1",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.02",
+              "b": "12.5"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S4",
+          "b": "FC-01-S2",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.02",
+              "b": "12.5"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S1",
+          "b": "FC-01-S5",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "13.5b",
+              "b": "1.6b"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S1",
+          "b": "FC-01-S2",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "0.02",
+              "b": "12.5"
+            },
+            {
+              "a": "13.5b",
+              "b": "12.83b"
+            },
+            {
+              "a": "13.5b",
+              "b": "12.94b"
+            },
+            {
+              "a": "13.5b",
+              "b": "1.61b"
+            }
+          ]
+        },
+        {
+          "a": "FC-01-S5",
+          "b": "FC-01-S2",
+          "relation": "disagree",
+          "figures": [
+            {
+              "a": "1.6b",
+              "b": "1.61b"
+            },
+            {
+              "a": "1.6b",
+              "b": "13.5b"
+            }
+          ]
+        }
+      ],
+      "supporting": {
+        "0.099": [
+          "FC-01-S3"
+        ],
+        "0.02": [
+          "FC-01-S4",
+          "FC-01-S3",
+          "FC-01-S1"
+        ],
+        "0.03": [
+          "FC-01-S3"
+        ],
+        "12.5": [
+          "FC-01-S3",
+          "FC-01-S1",
+          "FC-01-S2"
+        ],
+        "13.5b": [
+          "FC-01-S3",
+          "FC-01-S1",
+          "FC-01-S2"
+        ],
+        "1.6b": [
+          "FC-01-S5"
+        ],
+        "12.83b": [
+          "FC-01-S2"
+        ],
+        "12.94b": [
+          "FC-01-S2"
+        ],
+        "1.61b": [
+          "FC-01-S2"
+        ]
+      }
+    },
+    "guard": {
+      "ms": 0.006,
+      "expanded": false,
+      "expansions_used": 0,
+      "triggered": false,
+      "action": "pass",
+      "sufficient": true,
+      "confidence": 0.6345,
+      "label": "CONFLICT",
+      "verdict": "Intel Corporation (investor relations): Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02.",
+      "reason": "confidence 0.63 >= 0.60",
+      "threshold": 0.6
+    },
+    "generator": {
+      "ms": 453.921,
+      "called": true,
+      "status": "resolved",
+      "answer": "Intel reported Q2 2024 GAAP EPS of $(0.38) and non-GAAP EPS of $0.02. Q3 2024 guidance is non-GAAP EPS of $(0.03) on $12.5-13.5B revenue. The claim of $0.02 prevails because it is directly stated in Intel's official release.",
+      "confidence": 0.635,
+      "citations": [
+        {
+          "source_id": "FC-01-S3",
+          "claim_id": "CL-39ecc4716b"
+        },
+        {
+          "source_id": "FC-01-S4",
+          "claim_id": "CL-39ecc4716b"
+        },
+        {
+          "source_id": "FC-01-S1",
+          "claim_id": "CL-39ecc4716b"
+        }
+      ],
+      "model": "meta-llama/llama-3.1-8b-instruct",
+      "provider": "Groq",
+      "usage": {
+        "prompt_tokens": 1390,
+        "completion_tokens": 182,
+        "total_tokens": 1572,
+        "cost": 8.406e-05,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 8.406e-05,
+          "upstream_inference_prompt_cost": 6.95e-05,
+          "upstream_inference_completions_cost": 1.456e-05
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "latency_ms": 453.127,
+      "prompt_tokens_est": 918,
+      "selected_source_ids": [
+        "FC-01-S3",
+        "FC-01-S4",
+        "FC-01-S1"
+      ],
+      "error": null
+    }
+  },
+  "sources": [
+    {
+      "id": "FC-01-S1",
+      "source_name": "Intel Corporation (investor relations)",
+      "publisher_type": "official",
+      "date": "2024-08-01",
+      "source_url": "https://www.intc.com/news-events/press-releases/detail/1704/intel-reports-second-quarter-2024-financial-results",
+      "title": "Intel Reports Second-Quarter 2024 Financial Results",
+      "content_preview": "Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02. It forecasts third-quarter 2024 revenue of $12.5-13.5B, GAAP EPS of $(0.24) and non-GAAP EPS of $(0.03).",
+      "tokens_est": 70,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.9487,
+      "similarity": 0.2189,
+      "rank": 3,
+      "relevance": 0.5273,
+      "reliability": 0.8438,
+      "score": 0.4449,
+      "used_in_generation": true
+    },
+    {
+      "id": "FC-01-S2",
+      "source_name": "CNBC",
+      "publisher_type": "press",
+      "date": "2024-08-01",
+      "source_url": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
+      "title": "Intel to cut 15% of workforce, reports quarterly guidance miss",
+      "content_preview": "CNBC reported on 1 August 2024 that Intel's adjusted EPS was 2 cents versus 10 cents expected and revenue was $12.83B versus $12.94B expected. It noted the GAAP net loss of $1.61B, or 38 cents per share, and said Intel guided the third quarter to an adjusted net loss of 3 cents per share on $12.5-13.5B revenue.",
+      "tokens_est": 94,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.9038,
+      "similarity": 0.1182,
+      "rank": 5,
+      "relevance": 0.2792,
+      "reliability": 0.6625,
+      "score": 0.185,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-01-S3",
+      "source_name": "MarketBeat",
+      "publisher_type": "press",
+      "date": "2024-08-01",
+      "source_url": "https://www.marketbeat.com/earnings/reports/2024-8-1-intel-co-stock/",
+      "title": "Intel Q2 2024 Earnings Results & Report",
+      "content_preview": "MarketBeat's Q2 2024 page says Intel reported EPS of $0.02 versus a $0.0990 consensus and calls it a miss; it summarises Q3 guidance as a non-GAAP EPS of -$0.03 on $12.5-13.5B revenue. The page does not lead with the GAAP loss per share.",
+      "tokens_est": 70,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.95,
+      "similarity": 0.3178,
+      "rank": 1,
+      "relevance": 0.8642,
+      "reliability": 0.6937,
+      "score": 0.5995,
+      "used_in_generation": true
+    },
+    {
+      "id": "FC-01-S4",
+      "source_name": "Wccftech",
+      "publisher_type": "press",
+      "date": "2024-08-01",
+      "source_url": "https://wccftech.com/intel-q2-2024-earnings-a-horrendous-result-with-a-miss-on-total-revenue-dcai-gross-margin-and-eps/",
+      "title": "Intel Q2 2024 Earnings: A Horrendous Result With A Miss On Total Revenue, DCAI, Gross Margin, And EPS",
+      "content_preview": "Wccftech reported on 1 August 2024 that Intel disclosed GAAP net income of -$1,654M and non-GAAP EPS of $0.02, and published Intel's Q3 2024 guidance table. Its framing emphasises the GAAP loss and the miss on revenue, DCAI, gross margin and EPS.",
+      "tokens_est": 87,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.9565,
+      "similarity": 0.2821,
+      "rank": 2,
+      "relevance": 0.812,
+      "reliability": 0.7025,
+      "score": 0.5704,
+      "used_in_generation": true
+    },
+    {
+      "id": "FC-01-S5",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2024-08-01",
+      "source_url": "https://www.reuters.com/technology/intel-cut-15-jobs-suspend-dividend-turnaround-push-shares-plummet-2024-08-01/",
+      "title": "Intel to cut 15% jobs, suspend dividend in turnaround push; shares plummet",
+      "content_preview": "Reuters reported on 1 August 2024 that Intel would cut 15% of its jobs and suspend its dividend after a disappointing quarter. The report focused on the $1.6B loss and the weak outlook rather than reconciling GAAP and non-GAAP EPS.",
+      "tokens_est": 77,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.95,
+      "similarity": 0.1668,
+      "rank": 4,
+      "relevance": 0.5466,
+      "reliability": 0.64,
+      "score": 0.3498,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-01-S6",
+      "source_name": "StockEarningsNow",
+      "publisher_type": "noise",
+      "date": "2024-08-01",
+      "source_url": "",
+      "title": "Intel Q2 2024 Earnings: The Only Breakdown You Need",
+      "content_preview": "Intel Q2 2024 earnings: the only breakdown you need. Our AI-powered score reveals whether INTC is a buy before the next earnings call. Click for the free report and three hidden catalysts Wall Street is missing.",
+      "tokens_est": 66,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.1788,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S1",
+      "source_name": "Broadcom (investor relations)",
+      "publisher_type": "official",
+      "date": "2022-05-26",
+      "source_url": "https://investors.broadcom.com/news-releases/news-release-details/broadcom-acquire-vmware-approximately-61-billion-cash-and-stock/",
+      "title": "Broadcom to Acquire VMware for Approximately $61 Billion in Cash and Stock",
+      "content_preview": "Broadcom announced a definitive agreement to acquire VMware for approximately $61B in cash and stock. The release also states that Broadcom would assume approximately $8B of VMware net debt, which is why the total transaction value is often quoted as about $69B.",
+      "tokens_est": 85,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7637,
+      "similarity": 0.0649,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S2",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2022-05-26",
+      "source_url": "https://www.reuters.com/markets/deals/chipmaker-broadcom-buy-vmware-61-bln-deal-2022-05-26/",
+      "title": "Chipmaker Broadcom to buy VMware in $61 bln deal",
+      "content_preview": "Reuters reported on 26 May 2022 that chipmaker Broadcom would buy VMware in a $61 billion deal, matching the cash-and-stock consideration in Broadcom's announcement. The report framed the transaction around the equity value and did not include the roughly $8 billion of VMware net debt that Broadcom said it would assume, the component that takes the total value to about $69 billion.",
+      "tokens_est": 109,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7484,
+      "similarity": 0.0565,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S3",
+      "source_name": "Computing UK",
+      "publisher_type": "press",
+      "date": "2022-05-27",
+      "source_url": "https://www.computing.co.uk/news/4050217/broadcom-acquire-vmware-61-billion-deal",
+      "title": "Broadcom to acquire VMware in $61 billion deal",
+      "content_preview": "Computing reported on 27 May 2022 that Broadcom would acquire VMware in a $61 billion deal, again using the cash-and-stock figure from the announcement. The article described the agreement as a $61 billion acquisition and did not add the approximately $8 billion of net debt that Broadcom agreed to assume, so it did not produce the roughly $69 billion total that later coverage used.",
+      "tokens_est": 108,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.761,
+      "similarity": 0.0616,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S4",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2023-11-22",
+      "source_url": "https://www.reuters.com/markets/deals/broadcom-closes-69-bln-vmware-deal-after-china-approval-2023-11-22/",
+      "title": "Broadcom closes $69 billion VMware deal after China approval",
+      "content_preview": "Reuters reported on 22 November 2023 that Broadcom closed its '$69 billion acquisition' of VMware after receiving China's regulatory approval. The headline uses the total value including assumed debt, not the $61B cash-and-stock consideration.",
+      "tokens_est": 76,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6975,
+      "similarity": 0.0225,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S5",
+      "source_name": "Computing UK",
+      "publisher_type": "press",
+      "date": "2023-11-23",
+      "source_url": "https://www.computing.co.uk/news/4149831/broadcom-finally-completes-usd69bn-acquisition-vmware",
+      "title": "Broadcom finally completes $69bn acquisition of VMware",
+      "content_preview": "Computing reported on 23 November 2023 that Broadcom had completed its '$69bn acquisition' of VMware after China's approval. The article describes the deal as a $69 billion acquisition without separating the $61B consideration from the assumed debt.",
+      "tokens_est": 76,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6973,
+      "similarity": 0.0227,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-02-S6",
+      "source_name": "Hystax",
+      "publisher_type": "blog",
+      "date": "2026-03-10",
+      "source_url": "https://hystax.com/how-vmware-prices-and-policies-changed-after-broadcoms-acquisition/",
+      "title": "How VMware Pricing and Licensing Changed After the Broadcom VMware Acquisition",
+      "content_preview": "Hystax's March 2026 explainer says the Broadcom acquisition of VMware was 'valued at approximately $69 billion'. It does not separate the cash-and-stock consideration from the debt that Broadcom assumed.",
+      "tokens_est": 71,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.7121,
+      "similarity": 0.0079,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-03-S1",
+      "source_name": "Boeing",
+      "publisher_type": "official",
+      "date": "2024-03-25",
+      "source_url": "https://boeing.mediaroom.com/2024-03-25-Boeing-Announces-Board-and-Management-Changes",
+      "title": "Boeing Announces Board and Management Changes",
+      "content_preview": "Boeing announced on 25 March 2024 that President and CEO Dave Calhoun had decided to step down as CEO at the end of 2024, and that he would continue to lead Boeing through the year. The release did not name a successor or an earlier departure date.",
+      "tokens_est": 74,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7878,
+      "similarity": 0.0759,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-03-S2",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2024-03-25",
+      "source_url": "https://www.reuters.com/business/aerospace-defense/boeing-ceo-dave-calhoun-step-down-2024-03-25/",
+      "title": "Boeing CEO Dave Calhoun to step down in shakeup amid safety crisis",
+      "content_preview": "Reuters reported on 25 March 2024 that Boeing CEO Dave Calhoun would step down at the end of 2024 as part of a management shake-up amid the safety crisis. The report reflected the company's announcement at that time.",
+      "tokens_est": 71,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6784,
+      "similarity": 0.0416,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-03-S3",
+      "source_name": "Boeing",
+      "publisher_type": "official",
+      "date": "2024-07-31",
+      "source_url": "https://boeing.mediaroom.com/2024-07-31-Boeing-Board-Names-Kelly-Ortberg-President-and-CEO",
+      "title": "Boeing Board Names Kelly Ortberg President and CEO",
+      "content_preview": "Boeing announced on 31 July 2024 that its board had elected Robert K. 'Kelly' Ortberg as president and chief executive officer, effective 8 August 2024. He succeeded Dave Calhoun, who had announced his intention to retire earlier in the year.",
+      "tokens_est": 74,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7283,
+      "similarity": 0.0513,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-03-S4",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2024-08-08",
+      "source_url": "https://www.reuters.com/business/aerospace-defense/boeings-new-ceo-moves-factory-heartland-stem-safety-crisis-2024-08-08/",
+      "title": "Boeing's new CEO moves to factory heartland to stem safety crisis",
+      "content_preview": "Reuters reported on 8 August 2024 that Boeing's new CEO, Kelly Ortberg, was taking over and moving to the factory heartland to address the safety crisis. The report treats 8 August 2024 as the start of Ortberg's tenure.",
+      "tokens_est": 72,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6736,
+      "similarity": 0.0464,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-03-S5",
+      "source_name": "Le Monde",
+      "publisher_type": "press",
+      "date": "2024-07-31",
+      "source_url": "https://www.lemonde.fr/en/economy/article/2024/07/31/boeing-hastens-the-departure-of-its-ceo_6710234_19.html",
+      "title": "Boeing hastens the departure of its CEO",
+      "content_preview": "Le Monde reported on 31 July 2024 that Boeing was hastening the departure of its CEO, with Kelly Ortberg replacing Dave Calhoun sooner than the end-2024 date announced in March. The article highlights the gap between the original timetable and the actual transition.",
+      "tokens_est": 77,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7395,
+      "similarity": 0.0561,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-04-S1",
+      "source_name": "AMD",
+      "publisher_type": "official",
+      "date": "2024-10-10",
+      "source_url": "https://www.amd.com/en/products/accelerators/instinct/mi300/mi325x.html",
+      "title": "AMD Instinct MI325X Accelerators - product specifications",
+      "content_preview": "AMD's MI325X product page lists a launch date of 10 October 2024, 256 GB of HBM3E dedicated memory, 6 TB/s peak memory bandwidth, 304 compute units and 1000W typical board power. It is the authoritative spec sheet for the part.",
+      "tokens_est": 72,
+      "keep": true,
+      "reason": "keep",
+      "noul_confidence": 0.7337,
+      "similarity": 0.0522,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-04-S2",
+      "source_name": "Wccftech",
+      "publisher_type": "press",
+      "date": "2024-10-10",
+      "source_url": "https://wccftech.com/amd-instinct-mi325x-first-ai-gpu-256-gb-hbm3e-memory-288-gb-mi355x-cdna-4-next-year-8x-performance-uplift/",
+      "title": "AMD Instinct MI325X Is The First AI GPU To Pack 256 GB HBM3e Memory, 288 GB MI355X 'CDNA 4' Next Year",
+      "content_preview": "Wccftech reported on 10 October 2024 that the MI325X is the first AI GPU with 256 GB of HBM3E memory, while the 288 GB figure belongs to the MI355X 'CDNA 4' accelerator planned for the following year.",
+      "tokens_est": 76,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6697,
+      "similarity": 0.0503,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-04-S3",
+      "source_name": "ExtremeTech",
+      "publisher_type": "press",
+      "date": "2024-06-03",
+      "source_url": "https://www.extremetech.com/computing/amd-to-launch-an-mi325x-ai-accelerator-in-2024-with-288gb-of-hmb3e-memory",
+      "title": "AMD to Launch an MI325X AI Accelerator in 2024 With 288GB of HMB3e Memory",
+      "content_preview": "ExtremeTech reported on 3 June 2024 that AMD would launch an MI325X accelerator in 2024 with 288 GB of HBM3E memory. That pre-launch figure does not match the 256 GB capacity AMD specified for the MI325X at launch.",
+      "tokens_est": 72,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6736,
+      "similarity": 0.0464,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-04-S4",
+      "source_name": "VideoCardz",
+      "publisher_type": "press",
+      "date": "2024-06-03",
+      "source_url": "https://videocardz.com/newz/amd-instinct-mi325x-gets-288gb-hbm3e-memory-mi350x-with-cdna4-set-for-2025-mi400-with-cdna-next-launching-in-2026",
+      "title": "AMD Instinct MI325X gets 288GB HBM3e memory, MI350X with CDNA4 set for 2025",
+      "content_preview": "VideoCardz reported on 3 June 2024 that the MI325X would get 288 GB of HBM3E memory, with the MI350X and MI400 following in 2025 and 2026. The 288 GB figure was later attached to the MI355X rather than the MI325X.",
+      "tokens_est": 73,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6775,
+      "similarity": 0.0425,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-04-S5",
+      "source_name": "GPULeaksDaily",
+      "publisher_type": "noise",
+      "date": "2024-06-03",
+      "source_url": "",
+      "title": "AMD MI325X Specs Leak: 288GB HBM3E and 8TB/s",
+      "content_preview": "AMD MI325X specs leak: 288GB HBM3E, 8 TB/s and a massive performance jump. Everything we know so far about Team Red's next AI monster. Subscribe for more leaks and exclusive benchmarks. This SEO-style post repeats the pre-launch 288 GB figure and adds an unconfirmed 8 TB/s bandwidth number; AMD's October 2024 product page lists 256 GB of HBM3E and 6 TB/s for the MI325X.",
+      "tokens_est": 105,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.046,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S1",
+      "source_name": "MarketDailyInsider",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Q2 2025 Earnings: The Ultimate Breakdown You Need to See",
+      "content_preview": "NVIDIA Q2 2025 earnings: the ultimate breakdown you need to see. Our proprietary AI score says the stock is a must-own before the next leg higher. Click to discover the three hidden catalysts Wall Street is missing.",
+      "tokens_est": 70,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.062,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S2",
+      "source_name": "StockTrendWire",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Just Dropped Its Q2 Numbers - 5 Things Investors Need to Know",
+      "content_preview": "NVIDIA just dropped its Q2 numbers and the internet is going wild. Here are five things every investor should know, plus our free portfolio checklist. Not financial advice. Read more to unlock the full analysis.",
+      "tokens_est": 70,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.0855,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S3",
+      "source_name": "EarningsWhisperPro",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Earnings Date, Whisper Number and Options Play",
+      "content_preview": "NVIDIA earnings date, whisper number, implied move and options play. Subscribe to unlock the full Q2 FY2025 preview and our exclusive trade alert. Past performance is not indicative of future results.",
+      "tokens_est": 64,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.0527,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S4",
+      "source_name": "FinPulse",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Revenue 2025: Could the AI Giant Hit $50 Billion This Quarter?",
+      "content_preview": "NVIDIA revenue 2025: could the AI giant hit $50 billion this quarter? Read our speculative scenario analysis and price target. This is a hypothetical projection, not a reported result. Click for the full model.",
+      "tokens_est": 70,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.0387,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S5",
+      "source_name": "AutoRecap",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Q2 FY2025 Earnings Recap: Everything You Need to Know",
+      "content_preview": "NVIDIA Q2 FY2025 earnings recap: everything you need to know about the company's latest results, guidance and stock reaction. This article is updated automatically from trending headlines and may not reflect the official filing.",
+      "tokens_est": 73,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.0967,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-05-S6",
+      "source_name": "DealAlerts",
+      "publisher_type": "noise",
+      "date": "2024-08-28",
+      "source_url": "",
+      "title": "NVIDIA Stock Is Moving After Earnings - One Ticker Poised to Explode",
+      "content_preview": "NVIDIA stock is moving after earnings. Our algorithm scanned 1,000 headlines and found one ticker poised to explode. Click here for the free report and join 50,000 subscribers. The page offers no reported revenue figure for NVIDIA's second quarter of fiscal 2025 and does not link to the company's official results release.",
+      "tokens_est": 98,
+      "keep": false,
+      "reason": "spam",
+      "noul_confidence": 0.97,
+      "similarity": 0.0754,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S1",
+      "source_name": "Microsoft (Official Microsoft Blog)",
+      "publisher_type": "official",
+      "date": "2024-03-19",
+      "source_url": "https://blogs.microsoft.com/blog/2024/03/19/mustafa-suleyman-deepmind-and-inflection-co-founder-joins-microsoft-to-lead-copilot/",
+      "title": "Mustafa Suleyman, DeepMind and Inflection Co-founder, joins Microsoft to lead Copilot",
+      "content_preview": "Microsoft's 19 March 2024 post announced that Mustafa Suleyman and Karén Simonyan were joining Microsoft to form Microsoft AI, and that several members of the Inflection team had chosen to join them. It describes the arrangement as hiring and a partnership; it does not state a purchase price or an acquisition amount.",
+      "tokens_est": 101,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6954,
+      "similarity": 0.0246,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S2",
+      "source_name": "Reuters",
+      "publisher_type": "press",
+      "date": "2024-03-21",
+      "source_url": "https://www.reuters.com/technology/microsoft-pays-inflection-650-mln-licensing-deal-while-poaching-top-talents-source-2024-03-21/",
+      "title": "Microsoft pays Inflection $650 mln in licensing deal while poaching top talents, source says",
+      "content_preview": "Reuters reported on 21 March 2024, citing a source, that Microsoft would pay Inflection $650 million in a licensing deal while hiring top talent. The figure is attributed to an unnamed source, not to a Microsoft filing or press release.",
+      "tokens_est": 83,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6946,
+      "similarity": 0.0254,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S3",
+      "source_name": "Bloomberg",
+      "publisher_type": "press",
+      "date": "2024-03-21",
+      "source_url": "https://www.bloomberg.com/news/articles/2024-03-21/microsoft-to-pay-inflection-ai-650-million-after-scooping-up-most-of-staff",
+      "title": "Microsoft to Pay Inflection AI $650 Million After Scooping Up Most of Staff",
+      "content_preview": "Bloomberg reported on 21 March 2024 that Microsoft would pay Inflection AI $650 million after scooping up most of its staff, citing people familiar with the matter. Like the Reuters report, it relies on unnamed sources rather than a disclosed transaction price.",
+      "tokens_est": 85,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6699,
+      "similarity": 0.0501,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S4",
+      "source_name": "Fast Company",
+      "publisher_type": "press",
+      "date": "2024-03-26",
+      "source_url": "https://www.fastcompany.com/91069561/microsofts-inflection-ai-grab-likely-cost-more-than-1-billion-says-an-insider-exclusive",
+      "title": "Microsoft's Inflection AI grab likely cost more than $1 billion, says an insider (exclusive)",
+      "content_preview": "Fast Company reported on 26 March 2024 that Microsoft's Inflection AI grab likely cost more than $1 billion, according to an insider. The estimate directly conflicts with the $650 million figure reported by other outlets.",
+      "tokens_est": 79,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.7083,
+      "similarity": 0.0117,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S5",
+      "source_name": "Techzine Global",
+      "publisher_type": "press",
+      "date": "2024-03-22",
+      "source_url": "https://www.techzine.eu/news/analytics/119004/microsoft-scoops-up-inflection-ai-will-pay-e600-million/",
+      "title": "Microsoft scoops up Inflection AI, will pay EUR 600 million",
+      "content_preview": "Techzine reported on 22 March 2024 that Microsoft was scooping up Inflection AI and would pay EUR 600 million. That euro-denominated figure adds a third amount to the dispute and is not confirmed by Microsoft.",
+      "tokens_est": 68,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.6803,
+      "similarity": 0.0397,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    },
+    {
+      "id": "FC-06-S6",
+      "source_name": "Silicon UK",
+      "publisher_type": "press",
+      "date": "2024-03-25",
+      "source_url": "https://www.silicon.co.uk/e-enterprise/mergers/microsoft-inflection-ai-650m-556060",
+      "title": "Microsoft Pays Inflection AI $650m After Poaching Staff",
+      "content_preview": "Silicon UK reported on 25 March 2024 that Microsoft pays Inflection AI $650m after poaching staff, repeating the figure that had circulated in anonymous-source reports. It does not cite a primary disclosure of the amount.",
+      "tokens_est": 70,
+      "keep": false,
+      "reason": "off-topic",
+      "noul_confidence": 0.7066,
+      "similarity": 0.0134,
+      "rank": null,
+      "relevance": null,
+      "reliability": null,
+      "score": null,
+      "used_in_generation": false
+    }
+  ],
+  "total_ms": 459.502,
+  "budget_ms": 1200.0,
+  "within_budget": true,
+  "gen_calls": 1,
+  "token_count_method": "usage",
+  "totals": {
+    "e2e_ms": 459.502,
+    "llm_calls": 1,
+    "gen_calls": 1,
+    "prompt_tokens": 1390,
+    "completion_tokens": 182,
+    "token_count_method": "usage"
+  },
+  "tokens": {
+    "raw_est": 2686,
+    "kept_est": 997,
+    "curated_est": 918,
+    "generator_prompt": 1390,
+    "generator_completion": 182,
+    "generator_total": 1572,
+    "gen_consumed": 1572,
+    "gen_consumed_measured": true,
+    "saved": 1296,
+    "saved_pct": 48.3,
+    "estimate_method": "chars/4"
+  },
+  "ticker": {
+    "noul": "NOUL: 12/34 keep (22 drop)",
+    "score": "SCORE: top5 ordinati",
+    "choice": "CHOICE: CONFLICT FC-01-S3 vs FC-01-S4",
+    "guard": "GUARD: pass (conf 0.63)",
+    "generator": "GEN: resolved | 3 citations",
+    "total": "TOTAL: 460ms | tokens_gen_consumed: 1572 | tokens_crud_est: 2686"
+  },
+  "throughput": {
+    "mode": "live",
+    "n_runs": 10,
+    "concurrency": 10,
+    "wall_ms": 671.5,
+    "median_e2e_ms": 393.0,
+    "max_e2e_ms": 635.5,
+    "results": [
+      {
+        "query_id": "FC-01",
+        "e2e_ms": 483.7
+      },
+      {
+        "query_id": "FC-02",
+        "e2e_ms": 549.1
+      },
+      {
+        "query_id": "FC-03",
+        "e2e_ms": 29.6
+      },
+      {
+        "query_id": "FC-04",
+        "e2e_ms": 412.8
+      },
+      {
+        "query_id": "FC-05",
+        "e2e_ms": 27.0
+      },
+      {
+        "query_id": "FC-06",
+        "e2e_ms": 26.3
+      },
+      {
+        "query_id": "FC-01",
+        "e2e_ms": 442.4
+      },
+      {
+        "query_id": "FC-02",
+        "e2e_ms": 635.5
+      },
+      {
+        "query_id": "FC-03",
+        "e2e_ms": 18.3
+      },
+      {
+        "query_id": "FC-04",
+        "e2e_ms": 373.1
+      }
+    ],
+    "note": "live parallel batch, 10 runs, concurrency 10 (generator called where guard passes)"
+  }
+}
