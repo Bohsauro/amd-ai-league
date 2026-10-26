@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "case_id": "FC-01",
+  "query": "What EPS did Intel report for Q2 2024, and what is its Q3 2024 EPS guidance?",
+  "model": "meta-llama/llama-3.1-8b-instruct",
+  "calls": [
+    {
+      "n": 1,
+      "purpose": "plan",
+      "prompt_tokens": 1142,
+      "completion_tokens": 99,
+      "ms": 259.79
+    },
+    {
+      "n": 2,
+      "purpose": "rerank",
+      "prompt_tokens": 1263,
+      "completion_tokens": 154,
+      "ms": 345.3
+    },
+    {
+      "n": 3,
+      "purpose": "extract",
+      "prompt_tokens": 1444,
+      "completion_tokens": 699,
+      "ms": 821.07
+    },
+    {
+      "n": 4,
+      "purpose": "reconcile",
+      "prompt_tokens": 2152,
+      "completion_tokens": 831,
+      "ms": 1041.69
+    },
+    {
+      "n": 5,
+      "purpose": "synthesize",
+      "prompt_tokens": 3030,
+      "completion_tokens": 141,
+      "ms": 378.98
+    }
+  ],
+  "totals": {
+    "llm_calls": 5,
+    "prompt_tokens": 9031,
+    "completion_tokens": 1924,
+    "e2e_ms": 2863.66
+  },
+  "answer": "Intel reported a Q2 2024 EPS of $0.02 and Q3 2024 EPS guidance of $(0.03) non-GAAP."
+}

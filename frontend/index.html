@@ -201,7 +201,7 @@
   .baseline {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
   }
 
   .baseline-track {
@@ -242,6 +242,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .baseline-this {
+    color: var(--green);
   }
 
   .odo-wrap {
@@ -1614,6 +1618,7 @@
               <div class="our-marker" id="ourMarker"></div>
             </div>
             <div class="baseline-label" id="baselineLabel">agentic baseline: not measured</div>
+            <div class="baseline-label baseline-this" id="baselineThis"></div>
           </div>
         </section>
 
@@ -2196,7 +2201,7 @@ python pipeline.py "FC-01" --dump-json
       pick(raw, "metrics.tokens_raw", "metrics.tokens_crud")
     );
     const curated = asNum(
-      pick(tokens, "curated_est", "curated_tokens", "tokens_curated"),
+      pick(tokens, "curated_est", "curated_tokens", "tokens_curated", "kept_est"),
       pick(totals, "tokens_curated", "tokens_gen", "curated_tokens", "tokens_sent", "tokens_gen_consumed", "gen_tokens", "output_tokens", "tokensCurated"),
       pick(raw, "tokens_curated", "tokens_gen", "curated_tokens", "tokens_sent", "tokens_gen_consumed", "gen_tokens", "output_tokens"),
       pick(raw, "metrics.tokens_curated", "metrics.tokens_gen")
@@ -2291,7 +2296,7 @@ python pipeline.py "FC-01" --dump-json
         return base ? { ...base, ...item } : item;
       });
     }
-    const tokens = asNum(pick(obj, "tokens", "token_count", "tokens_count"), totals.genPrompt, totals.curated);
+    const tokens = asNum(pick(obj, "tokens", "token_count", "tokens_count"), totals.curated, totals.genPrompt);
     return { sources: list, tokens, measured: totals.genPrompt !== null, reconstructed: fromScore && list.length > 0 };
   }
 
@@ -2421,6 +2426,8 @@ python pipeline.py "FC-01" --dump-json
     setText($("#tokenDetail"), "prompt — · completion —");
     $("#baselineTrack").classList.add("no-data");
     setText($("#baselineLabel"), "agentic baseline: not measured");
+    $("#baselineLabel").title = "";
+    setText($("#baselineThis"), "");
     $("#ourMarker").classList.remove("visible");
     $$(".tab").forEach(t => { t.disabled = true; });
   }
@@ -2543,21 +2550,43 @@ python pipeline.py "FC-01" --dump-json
     const track = $("#baselineTrack");
     const marker = $("#ourMarker");
     const label = $("#baselineLabel");
+    const thisLine = $("#baselineThis");
     const e2e = state.data.totals.e2e;
+    const tokens = state.data.totals.genConsumed;
+    const calls = state.data.totals.llmCalls;
     const hasRange = b.range && b.range.length >= 2;
     const max = b.ms !== null ? b.ms : (hasRange ? Math.max(b.range[0], b.range[1]) : null);
+
+    const runParts = [];
+    if (calls !== null) runParts.push(`${fmtInt(calls)} call${calls === 1 ? "" : "s"}`);
+    if (tokens !== null) runParts.push(`${fmtInt(tokens)} tok`);
+    if (e2e !== null) runParts.push(`${fmtInt(e2e)} ms`);
+    let runText = runParts.length ? `this run: ${runParts.join(" · ")}` : "";
+
     if (max === null || max <= 0) {
       track.classList.add("no-data");
       marker.classList.remove("visible");
       label.textContent = "agentic baseline: not measured in run.json";
+      label.title = "";
+      setText(thisLine, runText);
       return;
     }
     track.classList.remove("no-data");
-    if (hasRange) {
-      label.textContent = `agentic baseline: ${fmtInt(b.range[0])}–${fmtInt(b.range[1])} ms${b.source ? ` · ${b.source}` : ""}`;
-    } else {
-      label.textContent = `agentic baseline: ${fmtInt(max)} ms${b.source ? ` · ${b.source}` : ""}`;
+    const baseParts = [];
+    if (b.calls !== null) baseParts.push(`${fmtInt(b.calls)} call${b.calls === 1 ? "" : "s"}`);
+    if (b.tokens !== null) baseParts.push(`${fmtInt(b.tokens)} tok`);
+    baseParts.push(hasRange ? `${fmtInt(b.range[0])}–${fmtInt(b.range[1])} ms` : `${fmtInt(max)} ms`);
+    label.textContent = `baseline: ${baseParts.join(" · ")}`;
+    label.title = b.source ? `measured source: ${b.source}` : "measured baseline";
+    if (runText && e2e !== null && e2e > 0) {
+      const speed = max / e2e;
+      if (speed >= 1) runText += ` · ${speed.toFixed(1)}× faster`;
+      if (b.tokens !== null && tokens !== null && b.tokens > 0) {
+        const tokPct = 100 * (1 - tokens / b.tokens);
+        if (tokPct > 0) runText += ` · −${tokPct.toFixed(1)}% tokens`;
+      }
     }
+    setText(thisLine, runText);
     if (e2e !== null && e2e >= 0) {
       marker.style.left = `${clamp((e2e / max) * 100, 0, 100)}%`;
       marker.classList.add("visible");
@@ -3228,6 +3257,45 @@ python pipeline.py "FC-01" --dump-json
 
   /* ---------------- load ---------------- */
 
+  async function attachBaseline(raw) {
+    if (!isObj(raw) || isObj(raw.baseline)) return "";
+    const candidates = ["baseline_metrics.json", "../backend/baseline_metrics.json"];
+    for (const path of candidates) {
+      try {
+        const res = await fetch(path, { cache: "no-store" });
+        if (!res.ok) continue;
+        const b = await res.json();
+        if (!isObj(b)) continue;
+        const runCase = asText(pick(raw, "case_id"));
+        const baseCase = asText(pick(b, "case_id"));
+        if (runCase && baseCase && runCase !== baseCase) continue;
+        const runQuery = asText(pick(raw, "query", "query_text", "input", "request", "question"));
+        const baseQuery = asText(pick(b, "query"));
+        if (runQuery && baseQuery && runQuery.trim() !== baseQuery.trim()) continue;
+        const totals = pick(b, "totals") || {};
+        const prompt = asNum(pick(totals, "prompt_tokens"));
+        const completion = asNum(pick(totals, "completion_tokens"));
+        const calls = asNum(pick(totals, "llm_calls"), Array.isArray(b.calls) ? b.calls.length : null);
+        const e2e = asDurationMs(pick(totals, "e2e_ms"));
+        const tokens = prompt !== null && completion !== null ? prompt + completion : null;
+        if (e2e === null && tokens === null) continue;
+        raw.baseline = {
+          source: path,
+          case_id: baseCase,
+          model: asText(pick(b, "model")),
+          e2e_ms: e2e,
+          tokens_total: tokens,
+          llm_calls: calls,
+          measured: true
+        };
+        return path;
+      } catch (err) {
+        /* try next candidate: a missing baseline stays an em dash */
+      }
+    }
+    return "";
+  }
+
   function applyData(raw, sourcePath) {
     state.raw = raw;
     state.data = normalize(raw, sourcePath);
@@ -3243,7 +3311,8 @@ python pipeline.py "FC-01" --dump-json
     renderUnseen();
     renderThroughput();
 
-    setText($("#dataSource"), `source: ${sourcePath}`);
+    const baselineSource = (state.data.baseline && state.data.baseline.source) || "";
+    setText($("#dataSource"), `source: ${sourcePath}${baselineSource ? ` + ${baselineSource}` : ""}`);
     $("#dataSource").classList.add("ok");
     renderTokenMeta();
     setText($("#runQuery"), state.data.meta.query || "Query not present in run.json");
@@ -3281,6 +3350,7 @@ python pipeline.py "FC-01" --dump-json
         if (!res.ok) { lastError = `${path}: HTTP ${res.status}`; continue; }
         const json = await res.json();
         if (isUsable(json)) {
+          await attachBaseline(json);
           await loadRun(json, path);
           return;
         }

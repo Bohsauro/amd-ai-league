@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-26T10:18:14.143616+00:00",
+  "generated_at": "2026-10-26T10:24:08.726989+00:00",
   "query": "What EPS did Intel report for Q2 2024, and what is its Q3 2024 EPS guidance?",
   "query_arg": "FC-01",
   "case_id": "FC-01",
@@ -10,11 +10,11 @@
   "model": "meta-llama/llama-3.1-8b-instruct",
   "stages": {
     "retriever": {
-      "ms": 0.236,
+      "ms": 0.268,
       "snippets": 34
     },
     "noul": {
-      "ms": 2.796,
+      "ms": 3.121,
       "total": 34,
       "kept": 12,
       "dropped": 22,
@@ -772,7 +772,7 @@
       ]
     },
     "score": {
-      "ms": 1.474,
+      "ms": 1.456,
       "ranked_count": 5,
       "top_k": 5,
       "ranking": [
@@ -879,7 +879,7 @@
       ]
     },
     "choice": {
-      "ms": 0.165,
+      "ms": 0.175,
       "label": "CONFLICT",
       "verdict": "Intel Corporation (investor relations): Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02.",
       "claim": "0.02",
@@ -1092,7 +1092,7 @@
       }
     },
     "guard": {
-      "ms": 0.005,
+      "ms": 0.006,
       "expanded": false,
       "expansions_used": 0,
       "triggered": false,
@@ -1105,7 +1105,7 @@
       "threshold": 0.6
     },
     "generator": {
-      "ms": 419.474,
+      "ms": 453.921,
       "called": true,
       "status": "resolved",
       "answer": "Intel reported Q2 2024 GAAP EPS of $(0.38) and non-GAAP EPS of $0.02. Q3 2024 guidance is non-GAAP EPS of $(0.03) on $12.5-13.5B revenue. The claim of $0.02 prevails because it is directly stated in Intel's official release.",
@@ -1149,7 +1149,7 @@
           "audio_tokens": 0
         }
       },
-      "latency_ms": 419.197,
+      "latency_ms": 453.127,
       "prompt_tokens_est": 918,
       "selected_source_ids": [
         "FC-01-S3",
@@ -1807,13 +1807,13 @@
       "used_in_generation": false
     }
   ],
-  "total_ms": 424.319,
+  "total_ms": 459.502,
   "budget_ms": 1200.0,
   "within_budget": true,
   "gen_calls": 1,
   "token_count_method": "usage",
   "totals": {
-    "e2e_ms": 424.319,
+    "e2e_ms": 459.502,
     "llm_calls": 1,
     "gen_calls": 1,
     "prompt_tokens": 1390,
@@ -1839,6 +1839,6 @@
     "choice": "CHOICE: CONFLICT FC-01-S3 vs FC-01-S4",
     "guard": "GUARD: pass (conf 0.63)",
     "generator": "GEN: resolved | 3 citations",
-    "total": "TOTAL: 424ms | tokens_gen_consumed: 1572 | tokens_crud_est: 2686 (-48%)"
+    "total": "TOTAL: 460ms | tokens_gen_consumed: 1572 | tokens_crud_est: 2686"
   }
 }
