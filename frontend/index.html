@@ -1612,6 +1612,7 @@
         <section class="counter" aria-label="End to end latency">
           <div class="counter-head"><span>E2E latency</span><span class="unit">measured</span></div>
           <div class="latency-value" id="latencyValue" aria-live="off"><span class="num">0</span><span class="unit">ms</span></div>
+          <div class="baseline-label baseline-this" id="latencySplit"></div>
           <div class="baseline">
             <div class="baseline-track no-data" id="baselineTrack">
               <div class="baseline-fill"></div>
@@ -2428,6 +2429,7 @@ python pipeline.py "FC-01" --dump-json
     setText($("#baselineLabel"), "agentic baseline: not measured");
     $("#baselineLabel").title = "";
     setText($("#baselineThis"), "");
+    setText($("#latencySplit"), "");
     $("#ourMarker").classList.remove("visible");
     $$(".tab").forEach(t => { t.disabled = true; });
   }
@@ -2602,6 +2604,14 @@ python pipeline.py "FC-01" --dump-json
     const calls = state.data.totals.llmCalls;
     const hasRange = b.range && b.range.length >= 2;
     const max = b.ms !== null ? b.ms : (hasRange ? Math.max(b.range[0], b.range[1]) : null);
+
+    // Onesta' architetturale: quanto del tempo e' la singola chiamata LLM vs il lato discriminativo.
+    const stg = state.data.stages || {};
+    const genMs = asDurationMs(pick(stg.generator || {}, "ms", "latency_ms", "latencyMs"));
+    if (genMs !== null && e2e !== null && e2e > 0) {
+      const discMs = Math.max(0, e2e - genMs);
+      setText($("#latencySplit"), `discriminative ${fmtInt(discMs)} ms · generator ${fmtInt(genMs)} ms`);
+    }
 
     const runParts = [];
     if (calls !== null) runParts.push(`${fmtInt(calls)} call${calls === 1 ? "" : "s"}`);
