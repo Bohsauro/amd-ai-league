@@ -2,6 +2,9 @@
 
 **Assegnatario:** agent-core-dev · **Output:** `backend/*.py`
 
+**Criteri di accettazione:** `PLAN.md` §4.2 (AC-PIPE, P1–P11). Costanti in `backend/config.py` come da
+BUILD_SPEC §2.0; `backend/run.json` deve validare contro `schemas/run.schema.json`.
+
 Leggi `specs/amd-ai-league/BUILD_SPEC.md` PRIMA di scrivere: è il contratto autoritativo,
 non deviare dalle interfacce dei moduli.
 

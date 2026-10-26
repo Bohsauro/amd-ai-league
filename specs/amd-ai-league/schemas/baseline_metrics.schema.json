@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-company.local/schemas/baseline_metrics.schema.json",
+  "title": "AMD AI League — baseline_metrics.json",
+  "description": "Metriche MISURATE della baseline agentica. Contratto: tasks/03-baseline.md + BUILD_SPEC.md §3",
+  "type": "object",
+  "required": ["schema_version", "case_id", "query", "model", "calls", "totals", "answer"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "case_id": {"type": "string"},
+    "query": {"type": "string", "minLength": 1},
+    "model": {"type": "string"},
+    "calls": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["n", "purpose", "prompt_tokens", "completion_tokens", "ms"],
+        "additionalProperties": false,
+        "properties": {
+          "n": {"type": "integer", "minimum": 1},
+          "purpose": {"type": "string"},
+          "prompt_tokens": {"type": "integer", "minimum": 0},
+          "completion_tokens": {"type": "integer", "minimum": 0},
+          "ms": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": ["llm_calls", "prompt_tokens", "completion_tokens", "e2e_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "llm_calls": {"type": "integer", "minimum": 1},
+        "prompt_tokens": {"type": "integer", "minimum": 0},
+        "completion_tokens": {"type": "integer", "minimum": 0},
+        "e2e_ms": {"type": "number", "minimum": 0}
+      }
+    },
+    "answer": {"type": "string"}
+  }
+}

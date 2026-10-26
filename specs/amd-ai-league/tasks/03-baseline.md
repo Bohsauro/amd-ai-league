@@ -2,6 +2,8 @@
 
 **Assegnatario:** agent-core-dev · **Output:** `backend/baseline_agent.py`, `backend/baseline_metrics.json`
 
+**Criteri di accettazione:** `PLAN.md` §4.3 (AC-BASE, B1–B5). Schema macchina: `schemas/baseline_metrics.schema.json`.
+
 Serve per la barra di confronto nella demo (BUILD_SPEC §3): numeri MISURATI di un classico
 workflow agentico generativo sullo STESSO corpus. Nessun numero inventato.
 
