@@ -11,6 +11,9 @@
 
 ## Protocollo Paperclip (Task Lock)
 
+Comandi esatti (get/comment/update/stati) in **`PAPERCLIP_PLAYBOOK.md`** — leggilo prima di
+iniziare un ticket. Il lock lo prende Paperclip all'avvio del run: niente checkout manuale.
+
 1. Ogni attività nasce come issue su Paperclip, assegnata a un agente.
 2. L'agente acquisisce il lock (checkout dell'issue) prima di scrivere.
 3. Si scrive SOLO nei path di propria competenza (tabella sopra).
