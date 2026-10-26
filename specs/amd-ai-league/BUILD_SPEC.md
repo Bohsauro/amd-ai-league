@@ -257,6 +257,11 @@ Schema machine-checkable: `specs/amd-ai-league/schemas/run.schema.json`. Struttu
 }
 ```
 
+> I numeri dell'esempio JSON qui sopra sono **illustrativi del formato**, non un risultato atteso: su FC-01
+> il rapporto `raw_est` vs `generator_prompt` è negativo (−179%) e `saved_pct: 92.5` non è raggiungibile a
+> questa scala di corpus. Il risparmio che va in video è quello like-for-like contro la baseline
+> (`DEMO_SCRIPT.md` §0.5), non questo campo.
+
 Definizioni vincolanti (servono a non barare in UI):
 - `total_ms` = `perf_counter()` attorno all'intero run (retriever→generator), esclusi import/startup.
   I `stages.*.ms` sono misurati singolarmente: la loro somma può essere minore di `total_ms`.
@@ -270,18 +275,20 @@ Definizioni vincolanti (servono a non barare in UI):
   `tokens.generator_prompt` = token di prompt reali dal `usage` API.
 - **`tokens.saved_pct` si calcola su `generator_prompt`, non su `gen_consumed`**:
   `saved_pct = round(100 * (raw_est - generator_prompt) / raw_est, 1)` quando `generator_prompt` è
-  disponibile, altrimenti su `gen_consumed`. È il numero del frame "what the GPU never saw": confronto
-  prompt-vs-crud, non totale-vs-crud.
+  disponibile, altrimenti su `gen_consumed`. È **diagnostica**, non un numero da schermo: il rapporto
+  prompt-vs-crud non è omogeneo (stima dei soli snippet contro prompt reale) e su un corpus da 5-6 sorgenti
+  è negativo. Regola R5 di `DEMO_SCRIPT.md`.
 - Se `generator.called = false` → `usage` = `null`/zeri, `tokens.gen_consumed = 0`, e la UI mostra
   "0 gen calls · typed failure" (mai un risparmio del 100% spacciato per merito).
 - **`saved_pct` non si clampa.** `raw_est` è una *stima* dei soli snippet, `generator_prompt` è il prompt
   *reale* (che include system prompt, istruzioni di citazione e formattazione). Su un caso con pochi snippet
   (~6) l'overhead fisso può superare il contenuto e il rapporto diventa **negativo**: si riporta il valore
   vero (es. `-179.1`), mai `-100`. Lo schema `run.schema.json` non impone più il minimo a `-100`.
-- **Il confronto in video è like-for-like**: prompt contro prompt (`baseline_metrics.json`
-  `totals.prompt_tokens` vs `tokens.gen_consumed`), non stima-snippet contro prompt-reale. La differenza
-  `raw_est` vs `generator_prompt` resta nel `run.json` come diagnostica, ma non è la cifra di apertura
-  (vedi `DEMO_SCRIPT.md` §0.5 variante B).
+- **Il confronto in video è like-for-like, total vs total**: `baseline_metrics.json`
+  `totals.prompt_tokens + totals.completion_tokens` contro `tokens.gen_consumed` (entrambi in+out).
+  Non stima-snippet contro prompt-reale, e non prompt-baseline contro totale-nostro (darebbe un delta
+  più basso del vero). La differenza `raw_est` vs `generator_prompt` resta nel `run.json` come diagnostica,
+  ma non è la cifra di apertura (vedi `DEMO_SCRIPT.md` §0.5).
 
 ### 2.9 CLI e output a terminale (`pipeline.py`)
 
@@ -298,8 +305,11 @@ SCORE: top6 ordinati                       [27ms]
 CHOICE: CONFLICT FC-01-S1 vs FC-01-S2      [41ms]
 GUARD: pass (conf 0.78)                    [0ms]
 GEN: resolved | 1 citations                [640ms]
-TOTAL: 780ms | tokens_gen_consumed: 1002 | tokens_crud_est: 12480 (-92%)
+TOTAL: 780ms | tokens_gen_consumed: 1002 | tokens_crud_est: 12480
 ```
+- **Nessuna percentuale nel ticker**: `(-92%)` derivava da `raw_est` vs prompt, è il numero vietato a schermo
+  (R5). Il ticker è spesso in video: stampa conteggi, non rapporti. Il risparmio si dice solo nel frame
+  like-for-like, contro la baseline.
 - Exit code: `0` successo (anche con `unresolved`/`skipped`/`error` del generatore); `2` errore di input
   (corpus assente/illeggibile, case inesistente). Su exit 2 nessun `run.json` parziale.
 - Se `total_ms > budget_ms`: riga `WARN` su **stderr** e `within_budget: false`. Il ticker resta vero.

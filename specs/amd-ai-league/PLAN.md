@@ -1,10 +1,12 @@
 # PLAN — Consegna demo AMD AI League Match 4 (deadline 27/10)
 
-> Autore: agent-po · Stato: **SPEC_READY** (contratti congelati v1.2 + script v1.1) · Ultimo aggiornamento: 26/10 11:05 UTC
+> Autore: agent-po · Stato: **SPEC_READY** (contratti congelati v1.2 + script v1.2) · Ultimo aggiornamento: 26/10 10:25 UTC
 > Documenti normativi, in ordine: `BUILD_SPEC.md` (§2 contratti) → `CORPUS.md` (dati) → **questo piano**
 > (dipendenze + criteri di accettazione) → `DEMO_SCRIPT.md` (video, §0 = contratto segnaposto dei numeri).
 > Chi sviluppa non deve avere domande aperte: se ne resta una, è un bug di questo piano → commentare su BOH-3.
 > Numeri a schermo: un'unica mappa, `DEMO_SCRIPT.md` §0.4. UI, baseline e video leggono gli stessi percorsi.
+> Il confronto a schermo è **baseline vs noi** (due misure omogenee), non `raw_est` vs `generator_prompt`:
+> quest'ultimo è vietato a schermo (R5) perché il rapporto è negativo su questo corpus.
 
 ## 1. Obiettivo e perimetro
 
@@ -48,7 +50,7 @@ A1/A2/A3 (contratti, PO)  ──┬─> A5 corpus ──> A6 pipeline ──> A7
 
 | Slot | Chi | Cosa | Gate di uscita |
 |---|---|---|---|
-| W0 · T+0 | PO | Contratti v1.1 congelati + schemi + piano | **fatto** (questo commit) |
+| W0 · T+0 | PO | Contratti v1.2 congelati + schemi + piano | **fatto** (questo commit) |
 | W1 · T+0 → T+3h (13:00) | core-dev | A5 `corpus.json` | §AC-CORPUS tutto verde + commento numeri su issue corpus |
 | W2 · T+3h → T+8h (18:00) | core-dev | A6 pipeline + A7 run.json | §AC-PIPE tutto verde + ticker incollato su issue build |
 | W3 · T+0 → T+11h (21:00) | ui-ux | A9 UI (scheletro+empty-state da subito, dati reali appena A7 esiste) | §AC-UI verde + screenshot su issue UI |
@@ -97,7 +99,8 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | P13 | `--offline` è deterministico: due run producono lo stesso `run.json` a meno di `generated_at` e `ms`; `gen.status: skipped`, `called: false`, `gen_consumed: 0` | due run + diff |
 | P14 | `tokens.saved_pct` calcolato su `generator_prompt` (non su `gen_consumed`) quando disponibile, **senza clamp**: se il valore vero è negativo si scrive negativo (mai `-100`) | `jq '.tokens'` |
 | P15 | Gli 8 punti di BUILD_SPEC §2.11 sono applicati e `run.json` valida contro `schemas/run.schema.json` **senza** violazioni | validazione schema (0 errori) |
-| P16 | Contabilità token coerente: `raw_est`, `curated_est`, `generator_prompt`, `gen_consumed` non `null` quando `called: true`; `saved_pct` firmato e non clampato; se `raw_est ≤ generator_prompt` il run è valido ma il frame "never saw" si registra solo in variante B (`DEMO_SCRIPT.md` R5) | `jq '.tokens'` + confronto con `DEMO_SCRIPT.md` §0.5 |
+| P16 | Contabilità token coerente: `raw_est`, `curated_est`, `generator_prompt`, `gen_consumed` non `null` quando `called: true`; `saved_pct` firmato e non clampato. Il run resta valido anche con `raw_est ≤ generator_prompt`, ma quel rapporto **non si mostra a schermo** (R5): l'headline è la coppia like-for-like `baseline.totals.total_tokens → tokens.gen_consumed` (`DEMO_SCRIPT.md` §0.5) | `jq '.tokens'` + confronto con `DEMO_SCRIPT.md` §0.4/§0.5 |
+| P17 | Il ticker stdout **non stampa percentuali** derivate da `raw_est` (formato BUILD_SPEC §2.9 aggiornato: `TOTAL: <ms> · tokens_gen_consumed: N · tokens_crud_est: M`, senza `(-92%)`) — il ticker finisce in video | `python pipeline.py FC-01 \| tail -1` |
 
 ### 4.3 AC-BASE — baseline agentica (owner core-dev)
 
@@ -108,18 +111,19 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | B3 | 4–6 chiamate LLM registrate, token da `usage` reali (nessuna stima) | `jq '.totals'` |
 | B4 | Stesso modello del generatore (`meta-llama/llama-3.1-8b-instruct`) → confronto model-normalized | `jq .model` |
 | B5 | Numeri misurati commentati su issue baseline; nessun valore "stima" spacciato per misurato | commento |
+| B6 | `generated_at` presente (ISO 8601): senza timestamp la provenienza non è dichiarabile a schermo (R6). Se manca, il frame comparativo resta registrabile ma dichiara "baseline: earlier run" | `jq -r '.generated_at' backend/baseline_metrics.json backend/run.json` |
 
 ### 4.4 AC-UI — `frontend/index.html` (owner ui-ux)
 
 | ID | Criterio | Verifica |
 |---|---|---|
 | U1 | `index.html` apre da `file://` senza errori in console (nessun server, nessun build) | aprire e guardare console |
-| U2 | Ogni numero mostrato coincide col valore in `frontend/run.json`, letto **per percorso** dalla mappa `DEMO_SCRIPT.md` §0.4 (spot-check: `total_ms`, `noul.kept`, `noul.dropped`, i 4 `stages.*.ms`, `tokens.saved_pct`, `tokens.generator_prompt`) | confronto a video + `jq` |
+| U2 | Ogni numero mostrato coincide col valore in `frontend/run.json`, letto **per percorso** dalla mappa `DEMO_SCRIPT.md` §0.4 (spot-check: `total_ms`, `noul.kept`, `noul.dropped`, i 4 `stages.*.ms`, `tokens.generator_prompt`, `tokens.gen_consumed`, e — se presente `baseline_metrics.json` — `baseline.total_tokens`, `baseline.saved_pct`, `baseline.latency_x`). `tokens.saved_pct` **non** è un numero da schermo (R5) | confronto a video + `jq` |
 | U3 | Se `run.json` manca o è invalido → empty-state esplicito, **nessun** dato finto | rinominare `run.json` e ricaricare |
 | U4 | Nessun numero hardcoded: cambiando `run.json` (senza toccare l'HTML) la UI mostra i nuovi valori | sostituire `run.json` con un altro caso e ricaricare |
 | U5 | Ogni sezione (pipeline, split-screen, throughput) sta in 1920×1080 senza scroll | screenshot a 1920×1080 |
 | U6 | Zero risorse esterne (no CDN, no font remoti, no fetch di rete); un solo file | `grep -nE "https?://" frontend/index.html` → solo commenti/URL citati, nessun `src=`/`href=` remoto |
-| U7 | Le etichette dei due counter usano gli stessi nomi/percorsi di `DEMO_SCRIPT.md` §0.4 (`tokens.raw_est → tokens.generator_prompt`, `total_ms`) e la barra baseline mostra il valore misurato **o** l'etichetta architetturale, mai un range inventato (D4) | lettura incrociata §0.4 ↔ HTML + screenshot |
+| U7 | Le etichette dei due counter usano gli stessi nomi/percorsi di `DEMO_SCRIPT.md` §0.4 (`baseline.totals.total_tokens → tokens.gen_consumed` come coppia token, `total_ms` come latenza) e la barra baseline mostra il valore misurato **o** l'etichetta architetturale, mai un range inventato (D4). Nessuna etichetta "raw vs curated": il rapporto è vietato (R5) | lettura incrociata §0.4 ↔ HTML + screenshot |
 
 ### 4.5 AC-DEMO — gate finale (owner CEO, PO verifica la provenienza dei numeri)
 
@@ -127,13 +131,13 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 |---|---|
 | D1 | `python pipeline.py FC-01 --dump-json` sotto 1.2s sulla macchina di registrazione, UI aperta subito dopo |
 | D2 | Ogni cifra a schermo ha una provenienza: `run.json` (nostra) o `baseline_metrics.json` (baseline). Zero numeri a mano |
-| D3 | Split-screen coerente: sinistra = `tokens_crud`, destra = `tokens_gen_prompt` dello stesso run |
+| D3 | Split-screen coerente: sinistra = sequenza delle `calls` della baseline (somma `usage` reali → `totals.total_tokens`), destra = una sola chiamata (`tokens.gen_consumed`), della **stessa sessione** (R6). Non è `raw_est` vs `generator_prompt` (R5) | 
 | D4 | Barra baseline etichettata col valore misurato **o** con l'intervallo architetturale dichiarato come tale |
 | D5 | FC-06 (fallimento tipizzato) mostrato o esplicitamente tagliato dallo script — mai simulato |
 | D6 | Il video non mostra nessun valore che non sia riproducibile con un comando del repo |
 | D7 | Copione di registrazione senza segnaposto residui: ogni `{{token}}` sostituito con i valori di `DEMO_SCRIPT.md` §0.3, tutti dallo stesso `run.json` | `grep -c '{{' <copione>` → 0 |
 | D8 | Frame di chiusura senza moltiplicatori non misurati (`5-12x`, `10-30x`, "throughput per GPU"): solo cifre da file + claim architetturale | lettura frame finale + `DEMO_SCRIPT.md` §9 |
-| D9 | Se `tokens.saved_pct ≤ 0`: il frame "never saw" è in variante B (due misure omogenee) o tagliato — mai due lati non confrontabili | `jq .tokens.saved_pct` + `DEMO_SCRIPT.md` R5/§0.5 |
+| D9 | Il frame "never saw" usa **solo** la coppia like-for-like (`baseline.totals.total_tokens` vs `tokens.gen_consumed`); `tokens.saved_pct` non compare a schermo in nessuna forma. Se la baseline non è misurata o non è dello stesso corpus/modello (R2/R6), il frame si **taglia** | `jq .tokens.saved_pct` + `DEMO_SCRIPT.md` R5/R6/§0.5 |
 
 ## 5. Lacune di contratto trovate e chiuse (audit §2, richiesta BOH-3)
 
@@ -142,6 +146,8 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 > `run.json` contro lo schema. Risultato: 17 ambiguità reali in v1.0 (G1–G17), tutte coperte dai rename
 > di §2.11 — nessuna logica da rifare. La v1.2 descrive il codice che gira, non un'idea parallela.
 > G18–G19 sono i due gap trovati dal CEO sullo script (26/10 09:52), chiusi in `DEMO_SCRIPT.md` v1.1.
+> G20–G21 vengono dalla review CEO del 26/10 10:02 (`VERIFIED_NUMBERS.md`) e sono chiusi in v1.2: il
+> problema non erano solo le cifre, era il **frame**.
 
 | # | Ambiguità trovata in v1.0 | Chiusura (v1.2) |
 |---|---|---|
@@ -164,7 +170,8 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | G17 | Nessuno schema per `baseline_metrics.json`: la barra di confronto non aveva un contratto | `schemas/baseline_metrics.schema.json` |
 | G18 | `DEMO_SCRIPT.md` v1.0 con numeri **letterali** (8.4s, −12,480 · −92%, 940, 12.4k): non riproducibili → violazione D6 | `DEMO_SCRIPT.md` §0: 18 segnaposto con percorso/format/fallback + mappa machine-readable §0.4 + comando `jq` di sostituzione §0.3 |
 | G19 | Frame di chiusura con moltiplicatori non misurabili (`5-12x lower latency`, `10-30x throughput per GPU`) | chiusura riscritta: sole cifre da file + claim architetturale senza range (`DEMO_SCRIPT.md` §5, §9; gate D8) |
-| G20 | `saved_pct` clampato a `-100` dallo schema, e confronto `raw_est` (stima snippet) vs `generator_prompt` (prompt reale) **non omogeneo**: con pochi snippet per caso il "risparmio" è negativo o gonfiato | schema senza clamp + regola "no clamp" (§2.8, §2.11 #8); headline in variante B like-for-like (§0.5, R5, D9, P16) |
+| G20 | `saved_pct` clampato a `-100` dallo schema, e confronto `raw_est` (stima snippet) vs `generator_prompt` (prompt reale) **non omogeneo**: con pochi snippet per caso il "risparmio" è negativo o gonfiato | schema senza clamp + regola "no clamp" (§2.8, §2.11 #8); `saved_pct` resta diagnostica in `run.json` e **non va a schermo** (R5) |
+| G21 | `DEMO_SCRIPT.md` v1.1 aveva ancora il **frame** sbagliato, non solo i numeri: "the generator received `generator_prompt` validated tokens, not `raw_est`" e split-screen "raw vs curato" confrontano una stima-snippet con un prompt reale (su FC-01 il rapporto è −179%). Inoltre il frame di chiusura citava il risparmio su `raw_est` e la formula derivata confrontava i soli `prompt_tokens` della baseline col **totale** nostro (−83,9% invece di −86,6%) | frame 0:55–1:20 riscritto su baseline vs noi (§3), coppia total-vs-total `baseline.totals.prompt_tokens + completion_tokens → tokens.gen_consumed`, rapporto latenza `baseline.latency_x` = `e2e_ms`/`total_ms`; R5/R6 + gate D3/D9 + U7 aggiornati; valori di riferimento del CEO in §0.6 (verbale, non testo di scena) |
 
 ## 6. Regole di lavoro
 
@@ -199,8 +206,9 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 
 ## 9. Stato e prossimo passo
 
-- Contratti: **congelati v1.2**; script: **v1.1** con numeri a segnaposto (§0) → i dev possono partire senza
-  domande e il CEO può registrare senza cifre a memoria.
+- Contratti: **congelati v1.2**; script: **v1.2** con numeri a segnaposto (§0) e frame comparativo
+  riscritto su baseline vs noi (§3) → i dev possono partire senza domande e il CEO può registrare senza
+  cifre a memoria.
 - Numeri a schermo: **una sola mappa** (`DEMO_SCRIPT.md` §0.4), consumata da UI (AC-UI U2/U7) e da chi registra
   (AC-DEMO D7). Se un campo serve e non c'è, si aggiunge lì — non nell'HTML.
 - In attesa: nessuna informazione bloccante. G14 (live) e GPU (throughput) sono **non bloccanti** e già

@@ -7,6 +7,10 @@
   "required": ["schema_version", "case_id", "query", "model", "calls", "totals", "answer"],
   "additionalProperties": false,
   "properties": {
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 UTC. Serve a R6: la baseline vale solo se generata nella stessa sessione del run.json mostrato (distanza <= 10 min)."
+    },
     "schema_version": {"const": "1.0"},
     "case_id": {"type": "string"},
     "query": {"type": "string", "minLength": 1},
