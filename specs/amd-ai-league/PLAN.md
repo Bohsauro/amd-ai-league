@@ -77,7 +77,7 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | C3 | Ogni caso ha ≥ 4 sorgenti; `sources[].id` globalmente univoci `<case>-S<n>` | script di conteggio + `len(set(ids))==len(ids)` |
 | C4 | Ogni caso ha `truth_url` che punta a **fonte primaria** (filing/PR/transcript) e la verità è un fatto puntuale (numero/data/nome) | ispezione + URL incollati nel commento issue |
 | C5 | `content` 200–1200 caratteri, testo piano, con nome fonte e data reali (nessun contenuto inventato) | ispezione a campione 100% sui 6 casi |
-| C6 | FC-05 = solo `noise`/blog spazzatura (0 fonti `official|report`); FC-06 = 2 fonti contrarie, **0** `official|report` | query sul JSON |
+| C6 | FC-05 = solo `noise`/blog spazzatura (0 fonti `official\|report`); FC-06 = 2 fonti contrarie, **0** `official\|report` | query sul JSON |
 | C7 | `verdict_in_corpus` coerente col ground truth (il caso `wrong` contiene davvero il numero sbagliato) | confronto `truth` vs `content` per ogni sorgente |
 
 ### 4.2 AC-PIPE — pipeline + `run.json` (owner core-dev)
@@ -87,7 +87,7 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | P1 | `python pipeline.py FC-01` esce 0 e stampa il ticker a 6 righe nel formato BUILD_SPEC §2.9 (senza colori) | incollare output su issue |
 | P2 | `--dump-json` produce `backend/run.json` valido contro `schemas/run.schema.json` | validazione come C2 |
 | P3 | `total_ms < 1200` su FC-01..FC-04 (se sfora: riportare il valore misurato e la causa, **mai** arrotondare) | `jq .total_ms backend/run.json` per ogni caso |
-| P4 | NOUL droppa il 60–70% dei candidati su FC-01..FC-04 con `floor_override: false` | `jq '.stages.noul|{kept,dropped,total}'` |
+| P4 | NOUL droppa il 60–70% dei candidati su FC-01..FC-04 con `floor_override: false` | `jq '.stages.noul\|{kept,dropped,total}'` |
 | P5 | FC-01 → `verdict: CONFLICT`, `confidence ≥ 0.6`, `evidence ⊆ ranked[].id`, `citations ⊆ evidence` | `jq` sui tre insiemi |
 | P6 | FC-05 → `noul.kept: 0`, `choice.label: INSUFFICIENT`, `stages.generator.called: false`, `status: skipped` | `jq` |
 | P7 | FC-06 → `choice.label: INSUFFICIENT`, `called: false`, `guard.action` ∈ {expand→insufficient} coerente con `expanded` | `jq` |
@@ -127,14 +127,14 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 
 ### 4.5 AC-DEMO — gate finale (owner CEO, PO verifica la provenienza dei numeri)
 
-| ID | Criterio |
-|---|---|
-| D1 | `python pipeline.py FC-01 --dump-json` sotto 1.2s sulla macchina di registrazione, UI aperta subito dopo |
-| D2 | Ogni cifra a schermo ha una provenienza: `run.json` (nostra) o `baseline_metrics.json` (baseline). Zero numeri a mano |
-| D3 | Split-screen coerente: sinistra = sequenza delle `calls` della baseline (somma `usage` reali → `totals.total_tokens`), destra = una sola chiamata (`tokens.gen_consumed`), della **stessa sessione** (R6). Non è `raw_est` vs `generator_prompt` (R5) | 
-| D4 | Barra baseline etichettata col valore misurato **o** con l'intervallo architetturale dichiarato come tale |
-| D5 | FC-06 (fallimento tipizzato) mostrato o esplicitamente tagliato dallo script — mai simulato |
-| D6 | Il video non mostra nessun valore che non sia riproducibile con un comando del repo |
+| ID | Criterio | Verifica |
+|---|---|---|
+| D1 | `python pipeline.py FC-01 --dump-json` sotto 1.2s sulla macchina di registrazione, UI aperta subito dopo | `jq .total_ms backend/run.json` |
+| D2 | Ogni cifra a schermo ha una provenienza: `run.json` (nostra) o `baseline_metrics.json` (baseline). Zero numeri a mano | copione compilato + §0.3 |
+| D3 | Split-screen coerente: sinistra = sequenza delle `calls` della baseline (somma `usage` reali → `totals.total_tokens`), destra = una sola chiamata (`tokens.gen_consumed`); stesso corpus/modello, sessione dichiarata a schermo se diversa (R6). Non è `raw_est` vs `generator_prompt` (R5) | screenshot + `jq '.totals, .tokens.gen_consumed'` |
+| D4 | Barra baseline etichettata col valore misurato **o** con l'intervallo architetturale dichiarato come tale | screenshot + `jq .totals.e2e_ms` |
+| D5 | FC-06 (fallimento tipizzato) mostrato o esplicitamente tagliato dallo script — mai simulato | lettura §6 di `DEMO_SCRIPT.md` |
+| D6 | Il video non mostra nessun valore che non sia riproducibile con un comando del repo | `grep -oE '[0-9][0-9.,]*' <copione>` → ogni voce ritrovata nei due file |
 | D7 | Copione di registrazione senza segnaposto residui: ogni `{{token}}` sostituito con i valori di `DEMO_SCRIPT.md` §0.3, tutti dallo stesso `run.json` | `grep -c '{{' <copione>` → 0 |
 | D8 | Frame di chiusura senza moltiplicatori non misurati (`5-12x`, `10-30x`, "throughput per GPU"): solo cifre da file + claim architetturale | lettura frame finale + `DEMO_SCRIPT.md` §9 |
 | D9 | Il frame "never saw" usa **solo** la coppia like-for-like (`baseline.totals.total_tokens` vs `tokens.gen_consumed`); `tokens.saved_pct` non compare a schermo in nessuna forma. Se la baseline non è misurata o non è dello stesso corpus/modello (R2/R6), il frame si **taglia** | `jq .tokens.saved_pct` + `DEMO_SCRIPT.md` R5/R6/§0.5 |
@@ -152,7 +152,7 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | # | Ambiguità trovata in v1.0 | Chiusura (v1.2) |
 |---|---|---|
 | G1 | `run.json` — contratto core-dev↔UI **del tutto assente** (la UI non sapeva cosa leggere) | BUILD_SPEC §2.8 + `schemas/run.schema.json` |
-| G2 | `publisher_type` senza enum; `noise` citato in tasks/01 ma assente in CORPUS.md | enum chiuso `official|press|report|blog|noise` (§2.1) |
+| G2 | `publisher_type` senza enum; `noise` citato in tasks/01 ma assente in CORPUS.md | enum chiuso `official\|press\|report\|blog\|noise` (§2.1) |
 | G3 | `Snippet.id` = `S1` in CORPUS.md → collisione tra casi | id globale `<case>-S<n>` (§2.1) |
 | G4 | `Snippet` richiede `source_url`/`title` ma lo schema corpus non li aveva | CORPUS.md schema aggiornato + schema JSON |
 | G5 | CHOICE senza `confidence`, ma la guardia usa `conf(CHOICE)` | `confidence` obbligatorio + formula (§2.5) |
@@ -162,7 +162,7 @@ owner nel commento sulla issue. Un criterio rosso **non si aggira cambiando lo s
 | G9 | Generatore: conteggio token non definito (il numero 940 è mostrato in video) | `usage` API + `token_count_method` (§2.7) |
 | G10 | Ground truth (`truth`, `verdict_in_corpus`) nel corpus: rischio leakage nella pipeline | regola anti-leakage + AC-P8 (§2.1) |
 | G11 | Nessuna definizione di cosa significhi "1 chiamata" (retry), né gestione errori/timeout | 1 chiamata logica, 1 retry solo 429/5xx, `status: error` (§2.7, §2.9) |
-| G12 | `demo.py` citato in §4 ma inesistente; `pipeline.py "FC-01"` ambiguo (case-id o query?) | CLI canonica con `case_id|query`, `--dump-json`, `--mode` (§2.9); §4 ora rimanda a §2.9 |
+| G12 | `demo.py` citato in §4 ma inesistente; `pipeline.py "FC-01"` ambiguo (case-id o query?) | CLI canonica con `case_id\|query`, `--dump-json`, `--mode` (§2.9); §4 ora rimanda a §2.9 |
 | G13 | FC-05 (corpus rumoroso) collide col floor anti-collasso di NOUL | eccezione `empty_corpus` documentata (§2.3) |
 | G14 | `SERPAPI_KEY` assente in `/srv/ai-company/.env`: la sorgente live non è costruibile | live degrada a replay senza bloccare (§2.2, §7.5) |
 | G15 | "Su quali snippet gira NOUL?" — per caso o sull'intero corpus? Cambia `noul.total` e il senso del drop rate | pool dell'intero corpus + SCORE focalizzato sul caso, invariante in §2.8/AC-P12 |
