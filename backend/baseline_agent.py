@@ -76,6 +76,9 @@ ACTION_BRIEF = {
 
 def resolve_model() -> str:
     """Use the same model as pipeline.py's generator when it is importable."""
+    env_model = os.environ.get("OPENROUTER_MODEL")
+    if env_model and env_model.strip():
+        return env_model.strip()
     try:
         import generator  # type: ignore
 
@@ -85,7 +88,7 @@ def resolve_model() -> str:
                 return value.strip()
     except Exception:
         pass
-    return os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
+    return DEFAULT_MODEL
 
 
 def load_corpus(path: Path = CORPUS_PATH) -> list[dict[str, Any]]:
@@ -107,6 +110,25 @@ def resolve_query(raw: str, corpus: list[dict[str, Any]]) -> tuple[str | None, s
         if needle.lower() == case_id.lower() or needle.lower() == str(case.get("query", "")).lower():
             return case_id or None, str(case.get("query") or needle), list(case.get("sources") or [])
     return None, needle, []
+
+
+def resolve_case(
+    raw: str, corpus_path: Path
+) -> tuple[str | None, str, list[dict[str, Any]], str]:
+    """Resolve exactly like pipeline.py (same retriever, same corpus, same live set)."""
+    try:
+        import retriever  # type: ignore
+    except ImportError:
+        corpus = load_corpus(corpus_path)
+        case_id, query, sources = resolve_query(raw, corpus)
+        return case_id, query, sources, "local"
+
+    cases = retriever.load_corpus(corpus_path)
+    case, snippets, mode = retriever.select_case(cases, raw)
+    snippets = snippets + retriever.load_live_snippets()
+    case_id = str(case.get("id")) if case else None
+    query = str(case.get("query") or raw) if case else raw.strip()
+    return case_id, query, [snippet.to_dict() for snippet in snippets], mode
 
 
 def snippet_block(sources: list[dict[str, Any]]) -> str:
@@ -202,13 +224,16 @@ def call_llm(
     model: str,
     messages: list[dict[str, str]],
     call_no: int,
+    action: str = "plan",
 ) -> tuple[dict[str, Any], dict[str, Any], float]:
     """One real LLM call. Returns (parsed_json, usage, latency_ms)."""
     payload = {
         "model": model,
         "messages": messages,
         "temperature": 0.1,
-        "max_tokens": 700,
+        "max_tokens": 450 if action == "synthesize" else 1500,
+        "response_format": {"type": "json_object"},
+        "provider": {"sort": "latency"},
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -260,6 +285,49 @@ def call_llm(
     return parsed, usage, latency_ms
 
 
+def _candidate_objects(obj: dict[str, Any]) -> list[dict[str, Any]]:
+    """Final-answer shapes vary: top level, nested under result, or JSON string."""
+    out: list[dict[str, Any]] = [obj]
+    pending: list[Any] = [obj.get("result"), obj.get("final"), obj.get("output")]
+    while pending:
+        value = pending.pop(0)
+        if isinstance(value, dict):
+            if value not in out:
+                out.append(value)
+            pending.extend([value.get("result"), value.get("final")])
+        elif isinstance(value, str):
+            parsed = parse_json(value)
+            if isinstance(parsed, dict) and parsed not in out:
+                out.append(parsed)
+    return out
+
+
+def extract_final(final: dict[str, Any]) -> tuple[str, list[Any], str, Any]:
+    candidates = _candidate_objects(final)
+    answer: Any = None
+    status = None
+    confidence = None
+    citations: list[Any] = []
+    for candidate in candidates:
+        if answer is None:
+            value = candidate.get("answer")
+            if isinstance(value, dict):
+                value = value.get("text") or value.get("answer") or json.dumps(
+                    value, ensure_ascii=False
+                )
+            if isinstance(value, str) and value.strip():
+                answer = value.strip()
+        if status is None and candidate.get("status") in ("resolved", "unresolved"):
+            status = candidate["status"]
+        if confidence is None and isinstance(candidate.get("confidence"), (int, float)):
+            confidence = candidate["confidence"]
+        if not citations and isinstance(candidate.get("citations"), list):
+            citations = candidate["citations"]
+    if answer is None:
+        answer = json.dumps(final.get("result", final), ensure_ascii=False)
+    return answer, citations, status or "unresolved", confidence
+
+
 def pick_next(action: str, parsed: dict[str, Any], call_no: int) -> str:
     if call_no >= MAX_CALLS:
         return "synthesize"
@@ -272,7 +340,12 @@ def pick_next(action: str, parsed: dict[str, Any], call_no: int) -> str:
     return "synthesize"
 
 
-def run(query: str, case_id: str | None, sources: list[dict[str, Any]]) -> dict[str, Any]:
+def run(
+    query: str,
+    case_id: str | None,
+    sources: list[dict[str, Any]],
+    selection_mode: str = "case_id",
+) -> dict[str, Any]:
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY is not set")
@@ -293,7 +366,7 @@ def run(query: str, case_id: str | None, sources: list[dict[str, Any]]) -> dict[
                 action = "synthesize"
             messages = build_messages(query, snippets, scratchpad, action, call_no)
             parsed, usage, latency_ms = call_llm(
-                client, api_key, model, messages, call_no
+                client, api_key, model, messages, call_no, action
             )
             input_tokens = usage["prompt_tokens"]
             output_tokens = usage["completion_tokens"]
@@ -324,13 +397,7 @@ def run(query: str, case_id: str | None, sources: list[dict[str, Any]]) -> dict[
     total_latency_ms = (time.perf_counter() - total_started) * 1000.0
 
     final = final_parsed
-    answer = final.get("answer")
-    if not isinstance(answer, str) or not answer.strip():
-        result = final.get("result")
-        answer = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-    citations = final.get("citations") if isinstance(final.get("citations"), list) else []
-    status = final.get("status") if final.get("status") in ("resolved", "unresolved") else "unresolved"
-    confidence = final.get("confidence")
+    answer, citations, status, confidence = extract_final(final)
 
     costs = [c["cost_usd"] for c in calls if isinstance(c["cost_usd"], (int, float))]
     total_cost = round(sum(costs), 8) if costs else None
@@ -345,6 +412,7 @@ def run(query: str, case_id: str | None, sources: list[dict[str, Any]]) -> dict[
             "ALL corpus snippets sent on every call, no filtering"
         ),
         "corpus_sources": len(sources),
+        "selection_mode": selection_mode,
         "total_latency_ms": round(total_latency_ms, 2),
         "llm_calls": len(calls),
         "total_input_tokens": sum(c["input_tokens"] for c in calls),
@@ -373,9 +441,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = parser.parse_args(argv)
 
-    corpus = load_corpus(args.corpus)
-    case_id, query, sources = resolve_query(args.query, corpus)
-    metrics = run(query, case_id, sources)
+    case_id, query, sources, selection_mode = resolve_case(args.query, args.corpus)
+    metrics = run(query, case_id, sources, selection_mode)
 
     args.out.write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
