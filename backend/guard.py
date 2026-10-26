@@ -39,9 +39,11 @@ def check(
     used_count: int,
     already_expanded: bool = False,
     threshold: float = THRESHOLD,
+    primary_support: bool | None = None,
 ) -> GuardResult:
-    triggered = choice.confidence < threshold
-    if not triggered:
+    confidence_low = choice.confidence < threshold
+    provenance_missing = primary_support is False and choice.label != "INSUFFICIENT"
+    if not confidence_low and not provenance_missing:
         return GuardResult(
             triggered=False,
             action="pass",
@@ -53,6 +55,16 @@ def check(
             threshold=threshold,
         )
     if not already_expanded and available_count > used_count:
+        if provenance_missing:
+            reason = (
+                f"no official source supports the winning claim ({choice.claim or 'n/a'}); "
+                f"expando da {used_count} a {available_count} candidati"
+            )
+        else:
+            reason = (
+                f"confidence {choice.confidence:.2f} < {threshold:.2f}; "
+                f"expando da {used_count} a {available_count} candidati"
+            )
         return GuardResult(
             triggered=True,
             action="expand",
@@ -60,12 +72,16 @@ def check(
             confidence=choice.confidence,
             label=choice.label,
             verdict=choice.verdict,
-            reason=(
-                f"confidence {choice.confidence:.2f} < {threshold:.2f}; "
-                f"expando da {used_count} a {available_count} candidati"
-            ),
+            reason=reason,
             threshold=threshold,
         )
+    if provenance_missing:
+        reason = (
+            f"no official source supports the winning claim ({choice.claim or 'n/a'}); "
+            f"confidence {choice.confidence:.2f}, espansione esaurita"
+        )
+    else:
+        reason = f"confidence {choice.confidence:.2f} < {threshold:.2f}; espansione esaurita"
     return GuardResult(
         triggered=True,
         action="insufficient",
@@ -73,6 +89,6 @@ def check(
         confidence=choice.confidence,
         label="INSUFFICIENT",
         verdict="Insufficient evidence: no primary source prevails over the conflict.",
-        reason=f"confidence {choice.confidence:.2f} < {threshold:.2f}; espansione esaurita",
+        reason=reason,
         threshold=threshold,
     )

@@ -67,6 +67,17 @@ def _apply_insufficient(choice: ChoiceResult, guard_result: GuardResult) -> Choi
     return choice
 
 
+def _has_official_support(choice: ChoiceResult, results: list) -> bool:
+    if choice.claim and choice.claim in choice.supporting:
+        winning_ids = set(choice.supporting[choice.claim])
+    else:
+        winning_ids = set(choice.evidence)
+    return any(
+        result.snippet.id in winning_ids and result.snippet.publisher_type == "official"
+        for result in results
+    )
+
+
 def run(
     query_arg: str,
     corpus_path: str | Path | None = None,
@@ -107,7 +118,13 @@ def run(
     choice_ms = _stage_ms(choice_started)
 
     guard_started = time.perf_counter()
-    guard_result = check(choice, len(all_ranked), len(current), already_expanded=False)
+    guard_result = check(
+        choice,
+        len(all_ranked),
+        len(current),
+        already_expanded=False,
+        primary_support=_has_official_support(choice, current),
+    )
     expanded = False
     if guard_result.action == "expand" and MAX_EXPANSIONS >= 1:
         expanded = True
@@ -115,7 +132,13 @@ def run(
         current = all_ranked[: min(expand_k, len(all_ranked))]
         choice = decide(current, query)
         choice_ms += _stage_ms(extra_choice_started)
-        guard_result = check(choice, len(all_ranked), len(current), already_expanded=True)
+        guard_result = check(
+            choice,
+            len(all_ranked),
+            len(current),
+            already_expanded=True,
+            primary_support=_has_official_support(choice, current),
+        )
     if guard_result.action == "insufficient":
         choice = _apply_insufficient(choice, guard_result)
     guard_ms = _stage_ms(guard_started)

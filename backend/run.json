@@ -1840,5 +1840,56 @@
     "guard": "GUARD: pass (conf 0.63)",
     "generator": "GEN: resolved | 3 citations",
     "total": "TOTAL: 460ms | tokens_gen_consumed: 1572 | tokens_crud_est: 2686"
+  },
+  "throughput": {
+    "mode": "live",
+    "n_runs": 10,
+    "concurrency": 10,
+    "wall_ms": 671.5,
+    "median_e2e_ms": 393.0,
+    "max_e2e_ms": 635.5,
+    "results": [
+      {
+        "query_id": "FC-01",
+        "e2e_ms": 483.7
+      },
+      {
+        "query_id": "FC-02",
+        "e2e_ms": 549.1
+      },
+      {
+        "query_id": "FC-03",
+        "e2e_ms": 29.6
+      },
+      {
+        "query_id": "FC-04",
+        "e2e_ms": 412.8
+      },
+      {
+        "query_id": "FC-05",
+        "e2e_ms": 27.0
+      },
+      {
+        "query_id": "FC-06",
+        "e2e_ms": 26.3
+      },
+      {
+        "query_id": "FC-01",
+        "e2e_ms": 442.4
+      },
+      {
+        "query_id": "FC-02",
+        "e2e_ms": 635.5
+      },
+      {
+        "query_id": "FC-03",
+        "e2e_ms": 18.3
+      },
+      {
+        "query_id": "FC-04",
+        "e2e_ms": 373.1
+      }
+    ],
+    "note": "live parallel batch, 10 runs, concurrency 10 (generator called where guard passes)"
   }
 }
