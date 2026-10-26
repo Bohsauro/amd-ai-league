@@ -1,0 +1,3380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMD AI League · Match 4 — Pipeline Instrument</title>
+<style>
+  :root {
+    --bg: #070907;
+    --panel: #0b0e0a;
+    --panel-2: #0f130d;
+    --line: #1e241a;
+    --line-2: #2a3324;
+    --ink: #e2e9da;
+    --ink-2: #9aa391;
+    --muted: #6d7664;
+    --dim: #485143;
+    --green: #77ff8a;
+    --green-soft: rgba(119, 255, 138, 0.12);
+    --green-line: rgba(119, 255, 138, 0.34);
+    --red: #ff6262;
+    --red-soft: rgba(255, 98, 98, 0.12);
+    --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--green); color: #051006; }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 1px solid var(--green);
+    outline-offset: 3px;
+  }
+
+  #fit {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  #stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: center center;
+    background: var(--bg);
+  }
+
+  /* ---------- top bar ---------- */
+
+  .topbar {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 188px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 48px;
+    align-items: stretch;
+    padding: 26px 44px 22px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ident {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .brandline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .brandline .live-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px var(--green-soft);
+  }
+
+  .brandline .sep {
+    width: 1px;
+    height: 11px;
+    background: var(--line-2);
+  }
+
+  .runline {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .run-id {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+
+  .run-query {
+    max-width: 660px;
+    font-size: 21px;
+    line-height: 1.25;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .run-sub {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .counters {
+    display: grid;
+    grid-template-columns: 470px 430px;
+    gap: 52px;
+    align-items: end;
+  }
+
+  .counter {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .counter-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .counter-head .unit {
+    letter-spacing: 0.08em;
+    color: var(--dim);
+  }
+
+  .latency-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    height: 70px;
+    font-size: 68px;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    color: var(--ink);
+  }
+
+  .latency-value .unit {
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .latency-value.is-final { color: var(--green); }
+
+  .baseline {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .baseline-track {
+    position: relative;
+    height: 7px;
+    background: #171b14;
+    border: 1px solid var(--line);
+    overflow: visible;
+  }
+
+  .baseline-fill {
+    position: absolute;
+    inset: 0;
+    background: #3b4236;
+  }
+
+  .baseline-track.no-data .baseline-fill {
+    background: repeating-linear-gradient(90deg, #2c3328 0 6px, transparent 6px 12px);
+    opacity: 0.55;
+  }
+
+  .our-marker {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 2px;
+    background: var(--green);
+    left: 0;
+    opacity: 0;
+  }
+
+  .our-marker.visible { opacity: 1; }
+
+  .baseline-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .odo-wrap {
+    height: 64px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .odo {
+    display: flex;
+    align-items: baseline;
+    height: 64px;
+    font-size: 58px;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    color: var(--ink);
+  }
+
+  .odo-sign {
+    display: inline-block;
+    width: 0.62em;
+    color: var(--green);
+  }
+
+  .odo-digits {
+    display: flex;
+    align-items: baseline;
+    height: 1em;
+    overflow: hidden;
+  }
+
+  .odo-col {
+    display: inline-block;
+    position: relative;
+    width: 0.62em;
+    height: 1em;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .odo-col.leading { opacity: 0.16; }
+
+  .odo-strip {
+    display: flex;
+    flex-direction: column;
+    height: 10em;
+    will-change: transform;
+  }
+
+  .odo-strip > span {
+    display: block;
+    height: 1em;
+    line-height: 1;
+  }
+
+  .odo-sep {
+    display: inline-block;
+    width: 0.34em;
+    height: 1em;
+    line-height: 1;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .odo-empty {
+    font-size: 58px;
+    line-height: 1;
+    color: var(--dim);
+  }
+
+  .token-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 16px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .token-meta .pct {
+    color: var(--green);
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .token-meta .sep { color: var(--dim); }
+
+  /* ---------- scenes ---------- */
+
+  .scene {
+    position: absolute;
+    inset: 188px 0 62px 0;
+    padding: 26px 44px 22px;
+    display: none;
+  }
+
+  .scene.active { display: grid; }
+
+  #scene-pipeline {
+    grid-template-columns: minmax(0, 1.48fr) minmax(0, 0.92fr);
+    gap: 34px;
+  }
+
+  .panel {
+    position: relative;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    height: 34px;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .panel-note {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .panel-note .on { color: var(--green); }
+
+  /* ---------- pipeline ---------- */
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 34px);
+    padding: 6px 22px 10px;
+  }
+
+  .stage-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 142px minmax(0, 1fr);
+    gap: 20px;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .stage-row:first-child { border-top: 0; }
+
+  .stage-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .stage-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .stage-name .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex: none;
+    transition: background 160ms linear, box-shadow 160ms linear;
+  }
+
+  .stage-row.active .stage-name .dot {
+    background: var(--green);
+    box-shadow: 0 0 0 3px var(--green-soft);
+  }
+
+  .stage-row.active .stage-name { color: var(--ink-2); }
+
+  .stage-ms {
+    font-size: 22px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--dim);
+  }
+
+  .stage-row.active .stage-ms { color: var(--ink); }
+
+  .stage-ms .u {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-left: 3px;
+  }
+
+  .stage-detail {
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stage-row.active .stage-detail { color: var(--muted); }
+
+  .stage-body { min-width: 0; align-self: center; }
+
+  /* retriever tick strip */
+  .tick-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-content: center;
+    max-height: 48px;
+    overflow: hidden;
+  }
+
+  .tick {
+    width: 5px;
+    height: 22px;
+    background: #2d3529;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 180ms ease-out, transform 180ms ease-out, background 180ms linear;
+  }
+
+  .tick.on { opacity: 1; transform: translateY(0); }
+  .tick.kept { background: var(--green); opacity: 0.7; }
+  .tick.dropped { background: var(--red); opacity: 0.85; }
+
+  .tick-note {
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* NOUL chips */
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start;
+    max-height: 112px;
+    overflow: hidden;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 7px;
+    border: 1px solid var(--line-2);
+    background: #11150f;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    white-space: nowrap;
+    transition: opacity 180ms linear, transform 320ms cubic-bezier(.2,.8,.2,1), border-color 180ms linear, color 180ms linear, background 180ms linear;
+  }
+
+  .chip .pip {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--dim);
+  }
+
+  .chip.kept { border-color: var(--green-line); color: var(--ink); }
+  .chip.kept .pip { background: var(--green); }
+
+  .chip.flash {
+    border-color: var(--red);
+    background: var(--red-soft);
+    color: var(--red);
+    animation: chip-flash 220ms steps(2, end) 2;
+  }
+
+  .chip.flash .pip { background: var(--red); }
+
+  .chip.fall {
+    opacity: 0;
+    transform: translateY(34px) rotate(5deg);
+    pointer-events: none;
+  }
+
+  @keyframes chip-flash {
+    0%, 100% { background: var(--red-soft); }
+    50% { background: rgba(255, 98, 98, 0.28); }
+  }
+
+  .gate-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 7px;
+    font-size: 10px;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 240ms ease-out;
+  }
+
+  .gate-summary.on { opacity: 1; }
+  .gate-summary strong { color: var(--ink); font-weight: 400; }
+  .gate-summary .drop { color: var(--red); }
+
+  .empty-line {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--dim);
+  }
+
+  /* SCORE bars */
+  .score-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .score-row {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) 58px;
+    gap: 10px;
+    align-items: center;
+    height: 24px;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 220ms ease-out, transform 220ms ease-out;
+  }
+
+  .score-row.on { opacity: 1; transform: translateY(0); }
+
+  .score-id {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .score-track {
+    position: relative;
+    height: 10px;
+    background: #121610;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .score-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background: var(--green);
+    opacity: 0.82;
+    transition: width 680ms cubic-bezier(.16,1,.3,1);
+  }
+
+  .score-row:nth-child(n+4) .score-fill { opacity: 0.52; }
+
+  .score-val {
+    font-size: 11px;
+    text-align: right;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  .score-val .rel {
+    color: var(--dim);
+    font-size: 9px;
+  }
+
+  .score-more {
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  /* CHOICE conflict */
+  .conflict-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .conflict {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 58px 84px;
+    gap: 10px;
+    align-items: center;
+    height: 32px;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+
+  .conflict.on { opacity: 1; }
+
+  .conflict-node {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    border: 1px solid var(--line-2);
+    background: #11150f;
+    font-size: 10px;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 5px;
+  }
+
+  .conflict-rel {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--red);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .zigzag {
+    width: 100%;
+    height: 32px;
+    overflow: visible;
+  }
+
+  .zigzag path {
+    fill: none;
+    stroke: var(--red);
+    stroke-width: 1.5;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 620ms ease-in-out;
+  }
+
+  .conflict.on .zigzag path { stroke-dashoffset: 0; }
+
+  .choice-verdict {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 7px;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .choice-verdict .v {
+    color: var(--ink);
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .choice-verdict .c { color: var(--green); }
+
+  /* GENERATOR */
+  .gen-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 64px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 220ms ease-out, transform 220ms ease-out, border-color 220ms linear;
+  }
+
+  .gen-box.on { opacity: 1; transform: translateY(0); }
+  .gen-box.resolved { border-color: var(--green-line); }
+
+  .pulse {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--dim);
+  }
+
+  .gen-box.resolved .pulse {
+    background: var(--green);
+    animation: pulse 1.6s ease-out infinite;
+  }
+
+  .gen-box.unresolved .pulse { background: var(--muted); }
+  .gen-box.insufficient .pulse { background: var(--red); }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(119, 255, 138, 0.32); }
+    70% { box-shadow: 0 0 0 12px rgba(119, 255, 138, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(119, 255, 138, 0); }
+  }
+
+  .gen-main { min-width: 0; flex: 1; }
+
+  .gen-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border: 1px solid var(--line-2);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .status-badge.resolved { border-color: var(--green-line); color: var(--green); }
+  .status-badge.unresolved { color: var(--muted); }
+  .status-badge.insufficient { border-color: rgba(255,98,98,.4); color: var(--red); }
+
+  .gen-answer {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--ink-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .gen-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    font-size: 9px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .gen-side strong { font-weight: 400; color: var(--ink-2); }
+
+  /* ---------- side panel ---------- */
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .side-block {
+    padding: 14px 20px;
+    border-top: 1px solid var(--line);
+    min-height: 0;
+  }
+
+  .side-block:first-child { border-top: 0; }
+
+  .side-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .side-label .mini { letter-spacing: 0.06em; color: var(--dim); }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 6px 12px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .meta-grid dt { color: var(--dim); letter-spacing: 0.06em; }
+  .meta-grid dd {
+    margin: 0;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ledger {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ledger-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px minmax(0, 0.9fr);
+    gap: 10px;
+    align-items: baseline;
+    height: 27px;
+    border-top: 1px solid var(--line);
+    font-size: 10px;
+  }
+
+  .ledger-row:first-child { border-top: 0; }
+
+  .ledger-row .name {
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ledger-row .ms {
+    text-align: right;
+    color: var(--dim);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .ledger-row.on .ms { color: var(--ink); }
+  .ledger-row.on .name { color: var(--ink-2); }
+
+  .ledger-row .detail {
+    text-align: right;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ledger-row.on .detail { color: var(--muted); }
+
+  .ledger-row.total {
+    margin-top: 4px;
+    border-top: 1px solid var(--line-2);
+  }
+
+  .ledger-row.total .name { color: var(--ink-2); }
+  .ledger-row.total .ms { color: var(--green); font-size: 16px; }
+
+  .token-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 18px;
+  }
+
+  .token-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .token-cell .k {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  .token-cell .v {
+    font-size: 19px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .token-cell .v.green { color: var(--green); }
+  .token-cell .v.dim { color: var(--dim); }
+
+  .verdict-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .verdict-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .verdict-answer {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ink-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .citation-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+    overflow: hidden;
+    max-height: 44px;
+  }
+
+  .citation {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--line-2);
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .citation .claim { color: var(--dim); margin-left: 5px; }
+
+  /* ---------- scene heads ---------- */
+
+  #scene-unseen,
+  #scene-throughput {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .scene-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+    min-height: 62px;
+  }
+
+  .scene-title {
+    margin: 0;
+    font-size: 33px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .scene-sub {
+    max-width: 66ch;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* ---------- what the GPU never saw ---------- */
+
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+    gap: 28px;
+    min-height: 0;
+  }
+
+  .split-divider { background: var(--line-2); }
+
+  .pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+
+  .pane-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+    min-height: 54px;
+  }
+
+  .pane-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .pane-title .sub {
+    display: block;
+    margin-top: 4px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+    text-transform: none;
+  }
+
+  .pane-tokens {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .pane-tokens .num {
+    font-size: 27px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+
+  .pane-tokens .unit {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .pane.curated .pane-tokens .num { color: var(--green); }
+
+  .raw-wall {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 16px 18px 22px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #6b7463;
+    text-align: justify;
+    hyphens: auto;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 88%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 88%, transparent 100%);
+  }
+
+  .raw-wall p {
+    margin: 0 0 9px;
+    word-break: break-word;
+  }
+
+  .raw-wall .wall-note {
+    color: var(--dim);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  .curated-list {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 14px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .source-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 62px;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 260ms ease-out, transform 260ms ease-out;
+  }
+
+  .source-card.on { opacity: 1; transform: translateY(0); }
+
+  .source-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 20px;
+    background: var(--green);
+    color: #061006;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .source-body { min-width: 0; }
+
+  .source-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 9px;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .source-top .name { color: var(--ink-2); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .source-title {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .source-snippet {
+    margin: 3px 0 0;
+    font-size: 10px;
+    line-height: 1.35;
+    color: var(--muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .source-score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 9px;
+    color: var(--dim);
+  }
+
+  .source-score strong {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--green);
+  }
+
+  .curated-note {
+    margin-top: auto;
+    padding-top: 4px;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+  }
+
+  /* ---------- throughput ---------- */
+
+  #scene-throughput { grid-template-rows: auto minmax(0, 1fr) auto; }
+
+  .tp-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    min-height: 0;
+    padding: 8px 0;
+  }
+
+  .tp-row {
+    display: grid;
+    grid-template-columns: 34px 138px minmax(0, 1fr) 86px 62px;
+    gap: 14px;
+    align-items: center;
+    height: 38px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 220ms ease-out, transform 220ms ease-out;
+  }
+
+  .tp-row.on { opacity: 1; transform: translateY(0); }
+
+  .tp-idx {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+
+  .tp-query {
+    min-width: 0;
+    font-size: 11px;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tp-query .qid {
+    color: var(--ink);
+    letter-spacing: 0.04em;
+    margin-right: 7px;
+  }
+
+  .tp-track {
+    position: relative;
+    height: 22px;
+    background: #0d110c;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .tp-bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background: var(--green);
+    opacity: 0.8;
+    transition: width 620ms cubic-bezier(.16,1,.3,1);
+  }
+
+  .tp-bar.over { background: var(--red); opacity: 0.85; }
+
+  .tp-threshold {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    width: 1px;
+    background: var(--red);
+    opacity: 0.6;
+    z-index: 2;
+  }
+
+  .tp-threshold-label {
+    position: absolute;
+    top: -14px;
+    right: -2px;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    color: var(--red);
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+
+  .tp-ms {
+    text-align: right;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .tp-ms.over { color: var(--red); }
+
+  .tp-state {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: right;
+    color: var(--green);
+    white-space: nowrap;
+  }
+
+  .tp-state.over { color: var(--red); }
+
+  .tp-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 30px;
+    min-height: 34px;
+    padding: 0 2px;
+    border-top: 1px solid var(--line);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .tp-summary strong { font-weight: 400; color: var(--ink); }
+  .tp-summary .green { color: var(--green); }
+  .tp-summary .red { color: var(--red); }
+  .tp-summary .right { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .scene-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 30px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .scene-empty .big {
+    font-size: 15px;
+    color: var(--ink-2);
+    letter-spacing: 0.02em;
+  }
+
+  .scene-empty .small {
+    max-width: 78ch;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .scene-empty code {
+    padding: 2px 5px;
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+    font-size: 10px;
+  }
+
+  /* ---------- nav ---------- */
+
+  .navbar {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 0 44px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .scene-tabs {
+    display: flex;
+    gap: 6px;
+  }
+
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: color 150ms linear, border-color 150ms linear, background 150ms linear;
+  }
+
+  .tab:hover { color: var(--ink-2); }
+
+  .tab[aria-selected="true"] {
+    color: var(--ink);
+    border-color: var(--green-line);
+    background: var(--green-soft);
+  }
+
+  .tab .key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--line-2);
+    font-size: 8px;
+    color: var(--dim);
+  }
+
+  .tab[aria-selected="true"] .key { border-color: var(--green-line); color: var(--green); }
+
+  .hints {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .hints .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    margin-right: 4px;
+    border: 1px solid var(--line-2);
+    font-size: 8px;
+    color: var(--muted);
+  }
+
+  .data-source {
+    max-width: 390px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dim);
+  }
+
+  .data-source .ok { color: var(--green); }
+
+  /* ---------- empty / loading overlay ---------- */
+
+  .empty {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    place-items: center;
+    background: var(--bg);
+  }
+
+  .empty.visible { display: grid; }
+
+  .empty-card {
+    width: 760px;
+    padding: 38px 40px 34px;
+    background: var(--panel);
+    border: 1px solid var(--line-2);
+  }
+
+  .empty-kicker {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .empty-kicker .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+
+  .empty-kicker.loading .dot { background: var(--green); animation: blink 1.1s steps(2, end) infinite; }
+
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  .empty h1 {
+    margin: 16px 0 0;
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .empty p {
+    margin: 14px 0 0;
+    max-width: 68ch;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .empty .cmd {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: #080b07;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .empty .cmd .c { color: var(--dim); }
+  .empty .cmd .g { color: var(--green); }
+
+  .empty-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 34px;
+    padding: 0 13px;
+    border: 1px solid var(--green-line);
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background 150ms linear, color 150ms linear;
+  }
+
+  .btn:hover { background: var(--green); color: #061006; }
+
+  .empty-hint {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+  }
+
+  .empty.visible ~ .navbar { display: none; }
+
+  .drop-active::after {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border: 1px solid var(--green);
+    z-index: 60;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage">
+
+    <header class="topbar">
+      <div class="ident">
+        <div class="brandline">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>AMD AI League · Match 4</span>
+          <span class="sep" aria-hidden="true"></span>
+          <span>Asymmetric retrieval instrument</span>
+        </div>
+        <div class="runline">
+          <div class="run-id" id="runId">RUN —</div>
+          <div class="run-query" id="runQuery">No run loaded</div>
+          <div class="run-sub" id="runSub">Waiting for run.json</div>
+        </div>
+      </div>
+
+      <div class="counters">
+        <section class="counter" aria-label="End to end latency">
+          <div class="counter-head"><span>E2E latency</span><span class="unit">measured</span></div>
+          <div class="latency-value" id="latencyValue" aria-live="off"><span class="num">0</span><span class="unit">ms</span></div>
+          <div class="baseline">
+            <div class="baseline-track no-data" id="baselineTrack">
+              <div class="baseline-fill"></div>
+              <div class="our-marker" id="ourMarker"></div>
+            </div>
+            <div class="baseline-label" id="baselineLabel">agentic baseline: not measured</div>
+          </div>
+        </section>
+
+        <section class="counter" aria-label="Generator tokens">
+          <div class="counter-head"><span>Generator tokens</span><span class="unit">measured</span></div>
+          <div class="odo-wrap">
+            <div class="odo" id="odometer" role="img" aria-label="generator tokens"></div>
+          </div>
+          <div class="token-meta">
+            <span class="pct" id="pctValue">—</span>
+            <span class="sep" aria-hidden="true">/</span>
+            <span id="tokenDetail">prompt — · completion —</span>
+          </div>
+        </section>
+      </div>
+    </header>
+
+    <main>
+      <section class="scene active" id="scene-pipeline" aria-label="Pipeline flow">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Pipeline / measured stages</span>
+            <span class="panel-note" id="replayNote">replay · <span class="on">idle</span></span>
+          </div>
+
+          <div class="flow">
+            <div class="stage-row" data-stage="retriever">
+              <div class="stage-meta">
+                <span class="stage-name"><span class="dot"></span>Retriever</span>
+                <span class="stage-ms" id="ms-retriever">—<span class="u">ms</span></span>
+                <span class="stage-detail" id="detail-retriever">snippets in</span>
+              </div>
+              <div class="stage-body">
+                <div class="tick-strip" id="tickStrip"></div>
+                <div class="tick-note" id="tickNote">waiting for run data</div>
+              </div>
+            </div>
+
+            <div class="stage-row" data-stage="noul">
+              <div class="stage-meta">
+                <span class="stage-name"><span class="dot"></span>NOUL gate</span>
+                <span class="stage-ms" id="ms-noul">—<span class="u">ms</span></span>
+                <span class="stage-detail" id="detail-noul">keep / drop</span>
+              </div>
+              <div class="stage-body">
+                <div class="chip-grid" id="chipGrid"></div>
+                <div class="gate-summary" id="gateSummary"></div>
+              </div>
+            </div>
+
+            <div class="stage-row" data-stage="score">
+              <div class="stage-meta">
+                <span class="stage-name"><span class="dot"></span>Score</span>
+                <span class="stage-ms" id="ms-score">—<span class="u">ms</span></span>
+                <span class="stage-detail" id="detail-score">ranked</span>
+              </div>
+              <div class="stage-body">
+                <div class="score-list" id="scoreList"></div>
+                <div class="score-more" id="scoreMore"></div>
+              </div>
+            </div>
+
+            <div class="stage-row" data-stage="choice">
+              <div class="stage-meta">
+                <span class="stage-name"><span class="dot"></span>Choice</span>
+                <span class="stage-ms" id="ms-choice">—<span class="u">ms</span></span>
+                <span class="stage-detail" id="detail-choice">conflict pairs</span>
+              </div>
+              <div class="stage-body">
+                <div class="conflict-list" id="conflictList"></div>
+                <div class="choice-verdict" id="choiceVerdict"></div>
+              </div>
+            </div>
+
+            <div class="stage-row" data-stage="generator">
+              <div class="stage-meta">
+                <span class="stage-name"><span class="dot"></span>Generator</span>
+                <span class="stage-ms" id="ms-generator">—<span class="u">ms</span></span>
+                <span class="stage-detail" id="detail-generator">one call</span>
+              </div>
+              <div class="stage-body">
+                <div class="gen-box" id="genBox">
+                  <span class="pulse" aria-hidden="true"></span>
+                  <div class="gen-main">
+                    <div class="gen-top">
+                      <span>System Two</span>
+                      <span class="status-badge" id="genStatus">—</span>
+                      <span id="genConfidence"></span>
+                    </div>
+                    <div class="gen-answer" id="genAnswer">No generator output in run.json</div>
+                  </div>
+                  <div class="gen-side">
+                    <span>citations <strong id="genCitations">—</strong></span>
+                    <span>llm calls <strong id="genCalls">—</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side">
+          <section class="side-block">
+            <div class="side-label"><span>Run</span><span class="mini" id="runTimestamp">—</span></div>
+            <dl class="meta-grid">
+              <dt>query id</dt><dd id="metaQueryId">—</dd>
+              <dt>source</dt><dd id="metaSource">—</dd>
+              <dt>claim</dt><dd id="metaClaim">—</dd>
+              <dt>verdict</dt><dd id="metaVerdict">—</dd>
+            </dl>
+          </section>
+
+          <section class="side-block">
+            <div class="side-label"><span>Stage ledger</span><span class="mini">measured</span></div>
+            <div class="ledger">
+              <div class="ledger-row" data-ledger="retriever"><span class="name">Retriever</span><span class="ms" id="led-ms-retriever">—</span><span class="detail" id="led-d-retriever">—</span></div>
+              <div class="ledger-row" data-ledger="noul"><span class="name">NOUL</span><span class="ms" id="led-ms-noul">—</span><span class="detail" id="led-d-noul">—</span></div>
+              <div class="ledger-row" data-ledger="score"><span class="name">Score</span><span class="ms" id="led-ms-score">—</span><span class="detail" id="led-d-score">—</span></div>
+              <div class="ledger-row" data-ledger="choice"><span class="name">Choice</span><span class="ms" id="led-ms-choice">—</span><span class="detail" id="led-d-choice">—</span></div>
+              <div class="ledger-row" data-ledger="guard"><span class="name">Guard</span><span class="ms" id="led-ms-guard">—</span><span class="detail" id="led-d-guard">—</span></div>
+              <div class="ledger-row" data-ledger="generator"><span class="name">Generator</span><span class="ms" id="led-ms-generator">—</span><span class="detail" id="led-d-generator">—</span></div>
+              <div class="ledger-row total" data-ledger="total"><span class="name">Total E2E</span><span class="ms" id="led-ms-total">—</span><span class="detail" id="led-d-total">measured</span></div>
+            </div>
+          </section>
+
+          <section class="side-block">
+            <div class="side-label"><span>Token accounting</span><span class="mini">per query</span></div>
+            <div class="token-grid">
+              <div class="token-cell"><span class="k">snippets · est.</span><span class="v" id="tokRaw">—</span></div>
+              <div class="token-cell"><span class="k">context · est.</span><span class="v" id="tokCurated">—</span></div>
+              <div class="token-cell"><span class="k">generator prompt</span><span class="v" id="tokPrompt">—</span></div>
+              <div class="token-cell"><span class="k">generator total</span><span class="v green" id="tokTotal">—</span></div>
+            </div>
+          </section>
+
+          <section class="side-block verdict-block">
+            <div class="side-label"><span>Verdict</span><span class="mini" id="verdictConfidence">—</span></div>
+            <div class="verdict-head">
+              <span class="status-badge" id="verdictStatus">—</span>
+              <span class="mini" id="verdictClaim">—</span>
+            </div>
+            <div class="verdict-answer" id="verdictAnswer">No generator output in run.json</div>
+            <div class="citation-list" id="citationList"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="scene" id="scene-unseen" aria-label="What the GPU never saw">
+        <div class="scene-head">
+          <h1 class="scene-title">What the GPU never saw</h1>
+          <div class="scene-sub">Same query. Left: the context a classic agent sends to the model. Right: the context the generator actually received — reconciled, cited, and paid for.</div>
+        </div>
+        <div class="split">
+          <article class="pane raw">
+            <div class="pane-head">
+              <div class="pane-title">Raw context<span class="sub" id="rawSub">what a classic agent would send</span></div>
+              <div class="pane-tokens"><span class="num" id="rawTokens">—</span><span class="unit">tokens</span></div>
+            </div>
+            <div class="raw-wall" id="rawWall"></div>
+          </article>
+          <div class="split-divider" aria-hidden="true"></div>
+          <article class="pane curated">
+            <div class="pane-head">
+              <div class="pane-title">Curated context<span class="sub" id="curatedSub">what the generator received</span></div>
+              <div class="pane-tokens"><span class="num" id="curatedTokens">—</span><span class="unit">tokens</span></div>
+            </div>
+            <div class="curated-list" id="curatedList"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="scene" id="scene-throughput" aria-label="Throughput">
+        <div class="scene-head">
+          <h1 class="scene-title">Throughput</h1>
+          <div class="scene-sub">Ten analysts ask at once. Every row is a measured parallel run from run.json; the red line is the one-second budget.</div>
+        </div>
+        <div id="throughputBody"></div>
+        <div class="tp-summary" id="tpSummary"></div>
+      </section>
+    </main>
+
+    <nav class="navbar" aria-label="Scenes">
+      <div class="scene-tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-scene="0"><span class="key">1</span>Pipeline</button>
+        <button class="tab" role="tab" aria-selected="false" data-scene="1"><span class="key">2</span>Unseen</button>
+        <button class="tab" role="tab" aria-selected="false" data-scene="2"><span class="key">3</span>Throughput</button>
+      </div>
+      <div class="hints">
+        <span class="data-source" id="dataSource">source: —</span>
+        <span><span class="kbd">←</span><span class="kbd">→</span> scenes</span>
+        <span><span class="kbd">space</span> replay</span>
+        <span><span class="kbd">R</span> reload</span>
+      </div>
+    </nav>
+
+    <div class="empty visible" id="emptyState" role="status" aria-live="polite">
+      <div class="empty-card">
+        <div class="empty-kicker loading" id="emptyKicker"><span class="dot"></span><span id="emptyKickerText">Reading run.json</span></div>
+        <h1 id="emptyTitle">No run data</h1>
+        <p id="emptyBody">The panel only displays measured values. Nothing is generated or invented when the pipeline output is missing.</p>
+        <div class="cmd" id="emptyCmd"><span class="c"># from the repo root</span>
+<span class="g">cd backend</span>
+python pipeline.py "FC-01" --dump-json
+<span class="g">cp run.json ../frontend/run.json</span></div>
+        <div class="empty-actions">
+          <button class="btn" id="loadBtn">Load run.json</button>
+          <span class="empty-hint">or drop the file anywhere on this panel</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+<noscript><p style="padding:24px;font-family:monospace;color:#e2e9da">This panel needs JavaScript to read run.json.</p></noscript>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ------------------------------------------------------------------
+     Expected dump contract (the normalizer below accepts aliases so the
+     UI does not break when the pipeline names a field differently).
+
+     {
+       query_id, query, timestamp, run_id,
+       stages: {
+         retriever: { ms, snippets_in },
+         noul:      { ms, total, kept, dropped, snippets:[{id, keep, reason, confidence}] },
+         score:     { ms, top_k, ranked:[{id, relevance, reliability, score}] },
+         choice:    { ms, verdict, confidence, claim_id,
+                      conflict_pairs:[{a, b, relation}] },
+         guard:     { ms, action, threshold },
+         generator: { ms, status, answer, confidence, citations:[{source_id, claim_id}] }
+       },
+       totals: { e2e_ms, tokens_raw, tokens_curated, tokens_saved, tokens_saved_pct, llm_calls },
+       baseline: { e2e_ms | range:[min,max], source, tokens_total, llm_calls },
+       raw_context: { text, tokens },
+       curated_context: { sources:[{id, source_name, title, date, content, score}], tokens },
+       throughput: { results:[{query_id, e2e_ms}] }
+     }
+     Every field is optional. Missing values render as an em dash, never
+     as a placeholder number.
+     ------------------------------------------------------------------ */
+
+  const STAGE_KEYS = {
+    retriever: ["retriever", "retrieval", "retrieve", "input"],
+    noul: ["noul", "gate", "filter", "noisegate"],
+    score: ["score", "scoring", "rank", "ranking"],
+    choice: ["choice", "reconcile", "reconciliation", "conflict"],
+    guard: ["guard", "guardia", "guardrail", "safety"],
+    generator: ["generator", "gen", "generate", "generation", "llm", "systemtwo"]
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const stageEl = $("#stage");
+  const emptyEl = $("#emptyState");
+  const fileInput = $("#fileInput");
+
+  const state = {
+    raw: null,
+    data: null,
+    scene: 0,
+    playToken: 0,
+    playing: false,
+    sourcePath: "",
+    loaded: false
+  };
+
+  /* ---------------- generic helpers ---------------- */
+
+  function isObj(v) {
+    return v !== null && typeof v === "object" && !Array.isArray(v);
+  }
+
+  function pick(root, ...paths) {
+    for (const path of paths) {
+      if (path == null) continue;
+      const keys = Array.isArray(path) ? path : String(path).split(".");
+      let cur = root;
+      let ok = true;
+      for (const key of keys) {
+        if (cur === null || cur === undefined || typeof cur !== "object") { ok = false; break; }
+        cur = cur[key];
+      }
+      if (ok && cur !== undefined && cur !== null) return cur;
+    }
+    return undefined;
+  }
+
+  function asNum(...values) {
+    for (const v of values) {
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "string" && v.trim() !== "") {
+        const n = Number(v.replace(/,/g, ""));
+        if (Number.isFinite(n)) return n;
+      }
+    }
+    return null;
+  }
+
+  function asDurationMs(v) {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const m = v.trim().match(/^(-?[\d.,]+)\s*(ms|s)?$/i);
+      if (m) {
+        const n = Number(m[1].replace(/,/g, ""));
+        if (Number.isFinite(n)) return m[2] && m[2].toLowerCase() === "s" ? n * 1000 : n;
+      }
+    }
+    return null;
+  }
+
+  function asText(v) {
+    if (typeof v === "string") return v;
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
+    if (isObj(v)) {
+      const inner = pick(v, "text", "content", "value", "label", "name", "answer");
+      if (typeof inner === "string") return inner;
+    }
+    return "";
+  }
+
+  function fmtInt(n) {
+    return n === null || n === undefined || !Number.isFinite(n) ? "—" : Math.round(n).toLocaleString("en-US");
+  }
+
+  function fmtPct(n, digits = 1) {
+    return n === null || n === undefined || !Number.isFinite(n) ? "—" : `${n.toFixed(digits)}%`;
+  }
+
+  function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+
+  function setText(el, text) {
+    if (el) el.textContent = text;
+  }
+
+  function wait(ms, token) {
+    return new Promise(resolve => {
+      setTimeout(() => resolve(token === state.playToken), ms);
+    });
+  }
+
+  function clearStageContent() {
+    ["tickStrip", "chipGrid", "scoreList", "conflictList", "curatedList"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+    $("#gateSummary").textContent = "";
+    $("#gateSummary").classList.remove("on");
+    $("#scoreMore").textContent = "";
+    $("#choiceVerdict").innerHTML = "";
+    $("#rawWall").innerHTML = "";
+    $("#tpSummary").innerHTML = "";
+  }
+
+  /* ---------------- stage extraction ---------------- */
+
+  function stageMap(raw) {
+    const src = pick(raw, "stages", "stage_timings", "stageTimings", "timings", "pipeline.stages", "metrics.stages");
+    const map = {};
+    if (Array.isArray(src)) {
+      for (const item of src) {
+        if (!isObj(item)) continue;
+        const name = String(pick(item, "name", "stage", "id", "key", "label") || "").toLowerCase().replace(/[^a-z]/g, "");
+        if (name) map[name] = item;
+      }
+    } else if (isObj(src)) {
+      for (const [k, v] of Object.entries(src)) {
+        map[String(k).toLowerCase().replace(/[^a-z]/g, "")] = v;
+      }
+    }
+    return map;
+  }
+
+  function findStage(map, aliases) {
+    for (const key of aliases) {
+      const norm = key.replace(/[^a-z]/g, "");
+      if (map[norm] !== undefined) return map[norm];
+    }
+    return undefined;
+  }
+
+  function stageObj(raw, map, aliases) {
+    const found = findStage(map, aliases);
+    if (typeof found === "number") return { ms: found };
+    if (typeof found === "string") return { value: found };
+    if (isObj(found)) return found;
+    const flat = raw[aliases[0]];
+    if (isObj(flat)) return flat;
+    if (typeof flat === "number") return { ms: flat };
+    if (typeof flat === "string") return { value: flat };
+    const ms = asNum(raw[`${aliases[0]}_ms`], raw[`${aliases[0]}Ms`], raw[`${aliases[0]}_latency_ms`]);
+    return ms === null ? {} : { ms };
+  }
+
+  function stageMs(stage) {
+    return asDurationMs(pick(stage, "ms", "latency_ms", "latencyMs", "duration_ms", "durationMs", "elapsed_ms", "elapsedMs", "time_ms", "timeMs", "total_ms", "wall_ms"));
+  }
+
+  function normalizeSnippet(s) {
+    if (typeof s === "string") {
+      return { id: "", title: "", sourceName: "", date: "", publisher: "", content: s, keep: null, reason: "", confidence: null, relevance: null, reliability: null, score: null };
+    }
+    if (!isObj(s)) return null;
+    const id = String(pick(s, "id", "source_id", "snippet_id", "sourceId", "snippetId") ?? "");
+    const content = asText(pick(s, "content", "content_preview", "text", "snippet", "body", "excerpt", "description", "quote"));
+    const title = asText(pick(s, "title", "headline", "name", "label"));
+    const sourceName = asText(pick(s, "source_name", "sourceName", "publisher", "domain", "site", "source", "outlet"));
+    const date = asText(pick(s, "date", "published_at", "publishedAt", "published", "timestamp"));
+    const publisher = asText(pick(s, "publisher_type", "publisherType", "type", "kind"));
+    let keep = null;
+    const k = pick(s, "keep", "kept", "accepted", "is_keep", "isKeep", "survived");
+    if (typeof k === "boolean") keep = k;
+    else if (typeof k === "number") keep = k !== 0;
+    else if (typeof k === "string") keep = /^(true|1|keep|kept|pass|passed|accept|accepted)$/i.test(k.trim());
+    if (keep === null) {
+      const decision = asText(pick(s, "decision", "action", "gate", "status", "result"));
+      if (decision) {
+        if (/keep|kept|pass|accept/i.test(decision)) keep = true;
+        else if (/drop|discard|reject|spam|noise|off-topic|boilerplate|seo/i.test(decision)) keep = false;
+      }
+    }
+    if (keep === null) {
+      const dropped = pick(s, "dropped", "discarded", "rejected");
+      if (typeof dropped === "boolean") keep = !dropped;
+    }
+    const reason = asText(pick(s, "reason", "noul_reason", "gate_reason", "category"));
+    const confidence = asNum(pick(s, "confidence", "conf", "noul_confidence", "keep_confidence"));
+    const relevance = asNum(pick(s, "relevance", "relevance_score", "rel"));
+    const reliability = asNum(pick(s, "reliability", "reliability_score", "rel_score"));
+    let score = asNum(pick(s, "score", "final_score", "rank_score", "combined_score", "rank"));
+    if (score === null && relevance !== null && reliability !== null) score = relevance * reliability;
+    return { id, content, title, sourceName, date, publisher, keep, reason, confidence, relevance, reliability, score };
+  }
+
+  function normalizeNoul(raw, stage, allSnippets) {
+    const listRaw = pick(stage, "snippets", "results", "items", "decisions", "snippet_decisions", "sources") || pick(raw, "noul_results", "gate_results");
+    let list = Array.isArray(listRaw) ? listRaw.map(normalizeSnippet).filter(Boolean) : [];
+    let total = asNum(pick(stage, "total", "snippets_in", "input", "input_count", "snippets_total", "n", "count", "total_snippets", "n_total"));
+    let kept = asNum(pick(stage, "kept", "keep", "kept_count", "output", "snippets_out", "passed", "kept_snippets", "n_kept"));
+    let dropped = asNum(pick(stage, "dropped", "drop", "dropped_count", "discarded", "rejected", "n_dropped"));
+    const hasKeepFlags = list.some(s => s.keep !== null);
+    if (list.length) {
+      if (total === null) total = list.length;
+      if (hasKeepFlags) {
+        if (kept === null) kept = list.filter(s => s.keep === true).length;
+        if (dropped === null) dropped = list.filter(s => s.keep === false).length;
+      }
+    }
+    if (total === null && kept !== null && dropped !== null) total = kept + dropped;
+    if (kept === null && total !== null && dropped !== null) kept = total - dropped;
+    if (dropped === null && total !== null && kept !== null) dropped = total - kept;
+    const confidence = asNum(pick(stage, "confidence", "conf", "avg_confidence"));
+    return { ms: stageMs(stage), total, kept, dropped, list, hasKeepFlags, confidence };
+  }
+
+  function normalizeScore(raw, stage, snippets) {
+    const listRaw = pick(stage, "ranked", "top", "results", "items", "ranking", "sources", "top_k", "topK");
+    let list = Array.isArray(listRaw) ? listRaw.map(normalizeSnippet).filter(Boolean) : [];
+    if (!list.length) {
+      const ids = pick(stage, "top_ids", "ids", "order", "selected");
+      if (Array.isArray(ids)) {
+        list = ids.map(id => {
+          const base = snippets.find(s => s.id === String(id));
+          return base ? { ...base } : { id: String(id), title: "", sourceName: "", date: "", publisher: "", content: "", keep: null, reason: "", confidence: null, relevance: null, reliability: null, score: null };
+        });
+      }
+    }
+    list = list.map(item => {
+      if (!item.id) return item;
+      const base = snippets.find(s => s.id === item.id);
+      if (!base) return item;
+      return {
+        ...base,
+        ...item,
+        content: item.content || base.content,
+        title: item.title || base.title,
+        sourceName: item.sourceName || base.sourceName,
+        date: item.date || base.date
+      };
+    });
+    if (list.some(s => s.score !== null)) {
+      list.sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
+    }
+    const topK = asNum(pick(stage, "top_k", "topK", "k", "limit"));
+    return { ms: stageMs(stage), list, topK };
+  }
+
+  function normalizeChoice(raw, stage) {
+    stage = isObj(stage) ? stage : {};
+    const pairsRaw = pick(stage, "conflict_pairs", "conflicts", "pairs", "conflictPairs", "disagreements");
+    let pairs = [];
+    if (Array.isArray(pairsRaw)) {
+      pairs = pairsRaw.map(p => {
+        if (Array.isArray(p)) return { a: String(p[0] ?? ""), b: String(p[1] ?? ""), relation: "disagree", detail: "" };
+        if (!isObj(p)) return null;
+        const a = pick(p, "a", "source_a", "left", "from", "id_a", "sourceA", "first");
+        const b = pick(p, "b", "source_b", "right", "to", "id_b", "sourceB", "second");
+        const relation = asText(pick(p, "relation", "type", "kind", "verdict", "label")) || "disagree";
+        return {
+          a: a !== undefined && a !== null ? String(a) : "",
+          b: b !== undefined && b !== null ? String(b) : "",
+          relation,
+          detail: asText(pick(p, "detail", "reason", "note"))
+        };
+      }).filter(p => p && (p.a || p.b));
+    }
+    const label = asText(pick(stage, "label", "verdict_label", "outcome"));
+    const verdict = asText(pick(stage, "verdict", "decision", "result", "answer", "status", "value"));
+    const confidence = asNum(pick(stage, "confidence", "conf", "score", "agreement"));
+    const claimId = asText(pick(stage, "claim_id", "claimId", "claim"));
+    const evidence = pick(stage, "evidence", "sources", "used");
+    return { ms: stageMs(stage), label, pairs, verdict, confidence, claimId, evidence };
+  }
+
+  function normalizeGuard(raw, stage) {
+    stage = isObj(stage) ? stage : {};
+    return {
+      ms: stageMs(stage),
+      label: asText(pick(stage, "label", "status", "verdict_label")),
+      action: asText(pick(stage, "action", "decision", "result", "status", "outcome", "value")),
+      threshold: asNum(pick(stage, "threshold", "soglia")),
+      confidence: asNum(pick(stage, "confidence", "conf"))
+    };
+  }
+
+  function normalizeGenerator(raw, stage) {
+    stage = isObj(stage) ? stage : {};
+    const calledRaw = pick(stage, "called", "was_called");
+    const called = typeof calledRaw === "boolean" ? calledRaw : null;
+    let status = asText(pick(stage, "status", "result.status", "verdict", "state", "value")) || asText(pick(raw, "answer_status", "generator_status", "status"));
+    if (called === false && !status) status = "skipped";
+    const answer = asText(pick(stage, "answer", "output", "text", "response", "result.answer", "content")) || asText(pick(raw, "answer", "output", "response"));
+    const confidence = asNum(pick(stage, "confidence", "conf", "result.confidence"));
+    const citationsRaw = pick(stage, "citations", "sources", "evidence", "result.citations") || pick(raw, "citations");
+    let citations = [];
+    if (Array.isArray(citationsRaw)) {
+      citations = citationsRaw.map(c => {
+        if (isObj(c)) {
+          return {
+            sourceId: String(pick(c, "source_id", "sourceId", "id", "source") ?? ""),
+            claimId: String(pick(c, "claim_id", "claimId", "claim") ?? "")
+          };
+        }
+        return { sourceId: String(c), claimId: "" };
+      }).filter(c => c.sourceId || c.claimId);
+    }
+    const usage = pick(stage, "usage") || {};
+    const promptTokens = asNum(pick(usage, "prompt_tokens"), pick(stage, "prompt_tokens_est"), pick(raw, "tokens.generator_prompt"));
+    const completionTokens = asNum(pick(usage, "completion_tokens"), pick(raw, "tokens.generator_completion"));
+    const totalTokens = asNum(pick(usage, "total_tokens"), pick(raw, "tokens.gen_consumed"), pick(raw, "tokens.generator_total"));
+    return {
+      ms: stageMs(stage),
+      called,
+      offline: called === false,
+      status,
+      answer,
+      confidence,
+      citations,
+      promptTokens,
+      completionTokens,
+      totalTokens
+    };
+  }
+
+  function normalizeTotals(raw) {
+    const totals = pick(raw, "totals", "metrics", "summary") || {};
+    const tokens = pick(raw, "tokens") || {};
+    const usage = pick(raw, "stages.generator.usage") || {};
+    const e2e = asDurationMs(pick(totals, "e2e_ms", "total_ms", "latency_ms", "e2eMs", "totalMs", "e2e")) ??
+      asDurationMs(pick(raw, "e2e_ms", "total_ms", "latency_ms", "e2eMs", "totalMs", "e2e")) ??
+      asDurationMs(pick(raw, "metrics.e2e_ms", "metrics.total_ms"));
+    const rawTokens = asNum(
+      pick(tokens, "raw_est", "raw_tokens", "tokens_raw"),
+      pick(totals, "tokens_raw", "tokens_input", "raw_tokens", "tokens_processed", "tokens_crud", "crud_tokens", "input_tokens", "tokensRaw"),
+      pick(raw, "tokens_raw", "tokens_input", "raw_tokens", "tokens_processed", "tokens_crud", "crud_tokens", "input_tokens"),
+      pick(raw, "metrics.tokens_raw", "metrics.tokens_crud")
+    );
+    const curated = asNum(
+      pick(tokens, "curated_est", "curated_tokens", "tokens_curated"),
+      pick(totals, "tokens_curated", "tokens_gen", "curated_tokens", "tokens_sent", "tokens_gen_consumed", "gen_tokens", "output_tokens", "tokensCurated"),
+      pick(raw, "tokens_curated", "tokens_gen", "curated_tokens", "tokens_sent", "tokens_gen_consumed", "gen_tokens", "output_tokens"),
+      pick(raw, "metrics.tokens_curated", "metrics.tokens_gen")
+    );
+    const genPrompt = asNum(
+      pick(tokens, "generator_prompt", "gen_prompt"),
+      pick(usage, "prompt_tokens"),
+      pick(totals, "prompt_tokens")
+    );
+    const genCompletion = asNum(
+      pick(tokens, "generator_completion", "gen_completion"),
+      pick(usage, "completion_tokens"),
+      pick(totals, "completion_tokens")
+    );
+    const genConsumed = asNum(
+      pick(tokens, "gen_consumed", "generator_total", "gen_total"),
+      pick(usage, "total_tokens"),
+      genPrompt !== null && genCompletion !== null ? genPrompt + genCompletion : null
+    );
+    let saved = asNum(
+      pick(tokens, "saved", "tokens_saved"),
+      pick(totals, "tokens_saved", "saved_tokens", "tokens_avoided", "savedTokens"),
+      pick(raw, "tokens_saved", "saved_tokens", "tokens_avoided", "savedTokens"),
+      pick(raw, "metrics.tokens_saved")
+    );
+    let pct = asNum(
+      pick(tokens, "saved_pct", "tokens_saved_pct"),
+      pick(totals, "tokens_saved_pct", "saved_pct", "percent_saved", "saved_percent", "tokensSavedPct"),
+      pick(raw, "tokens_saved_pct", "saved_pct", "percent_saved", "saved_percent"),
+      pick(raw, "metrics.tokens_saved_pct")
+    );
+    if (pct === null && rawTokens !== null && rawTokens > 0 && saved !== null) pct = (saved / rawTokens) * 100;
+    const llmCalls = asNum(
+      pick(totals, "llm_calls", "generative_calls", "calls", "gen_calls", "llmCalls"),
+      pick(raw, "llm_calls", "generative_calls", "gen_calls")
+    );
+    return { e2e, rawTokens, curated, genPrompt, genCompletion, genConsumed, saved, pct, llmCalls };
+  }
+
+  function normalizeBaseline(raw) {
+    const b = pick(raw, "baseline", "baseline_metrics", "comparison.baseline", "comparison.agentic", "agentic_baseline");
+    if (typeof b === "number") return { ms: b, range: null, source: "run.json", tokens: null, calls: null };
+    if (typeof b === "string") {
+      const ms = asDurationMs(b);
+      if (ms !== null) return { ms, range: null, source: "run.json", tokens: null, calls: null };
+    }
+    if (!isObj(b)) {
+      const ms = asDurationMs(pick(raw, "baseline_ms", "agentic_baseline_ms"));
+      return { ms, range: null, source: ms !== null ? "run.json" : "", tokens: null, calls: null };
+    }
+    const ms = asDurationMs(pick(b, "e2e_ms", "total_ms", "latency_ms", "ms", "wall_ms", "total_latency_ms", "latency", "e2e"));
+    const rangeRaw = pick(b, "range", "latency_range", "e2e_range");
+    let range = null;
+    if (Array.isArray(rangeRaw) && rangeRaw.length >= 2) {
+      const vals = rangeRaw.map(asDurationMs).filter(v => v !== null);
+      if (vals.length >= 2) range = vals.slice(0, 2);
+    }
+    return {
+      ms,
+      range,
+      source: asText(pick(b, "source", "kind", "mode", "type")),
+      tokens: asNum(pick(b, "tokens_total", "tokens", "tokens_input", "input_tokens")),
+      calls: asNum(pick(b, "llm_calls", "calls", "generative_calls")),
+      measured: pick(b, "measured", "is_measured", "isMeasured")
+    };
+  }
+
+  function normalizeRawContext(raw, snippets, totals) {
+    const obj = pick(raw, "raw_context", "rawContext", "context.raw");
+    let text = "";
+    if (typeof obj === "string") text = obj;
+    else if (isObj(obj)) text = asText(pick(obj, "text", "content", "raw", "body", "snippet_text"));
+    if (!text) text = asText(pick(raw, "raw_context_text", "raw_text", "raw_tokens_text", "context.raw_text"));
+    let reconstructed = false;
+    if (!text && snippets.length) {
+      text = snippets.map(s => [s.title, s.content].filter(Boolean).join(" — ")).filter(Boolean).join("\n\n");
+      reconstructed = !!text;
+    }
+    const tokens = asNum(pick(obj, "tokens", "token_count", "tokens_count"), totals.rawTokens);
+    return { text, tokens, reconstructed };
+  }
+
+  function normalizeCurated(raw, snippets, scoreList, totals) {
+    const obj = pick(raw, "curated_context", "curatedContext", "context.curated", "generator.context", "generator.input");
+    const sourcesRaw = pick(obj, "sources", "items", "cards", "documents", "snippets") ||
+      pick(raw, "curated_sources", "curatedSources", "generator.sources", "generator.input_sources");
+    let list = Array.isArray(sourcesRaw) ? sourcesRaw.map(normalizeSnippet).filter(Boolean) : [];
+    const fromScore = !list.length;
+    if (!list.length && scoreList.length) {
+      list = scoreList.slice(0, 6).map(item => {
+        const base = snippets.find(s => s.id === item.id);
+        return base ? { ...base, ...item } : item;
+      });
+    }
+    const tokens = asNum(pick(obj, "tokens", "token_count", "tokens_count"), totals.genPrompt, totals.curated);
+    return { sources: list, tokens, measured: totals.genPrompt !== null, reconstructed: fromScore && list.length > 0 };
+  }
+
+  function normalizeThroughput(raw) {
+    const obj = pick(raw, "throughput", "parallel", "throughput_results", "parallel_results", "concurrency");
+    let listRaw = null;
+    if (Array.isArray(obj)) listRaw = obj;
+    else if (isObj(obj)) listRaw = pick(obj, "results", "runs", "queries", "items", "latencies", "samples", "rows");
+    if (!Array.isArray(listRaw)) listRaw = pick(raw, "throughput_results", "parallel_runs", "runs", "queries");
+    if (!Array.isArray(listRaw)) return { rows: [], note: "" };
+    const rows = listRaw.map((item, i) => {
+      if (typeof item === "number") return { id: `Q${String(i + 1).padStart(2, "0")}`, ms: item, query: "" };
+      if (!isObj(item)) return null;
+      const id = asText(pick(item, "query_id", "id", "case_id", "queryId", "label")) || `Q${String(i + 1).padStart(2, "0")}`;
+      const ms = asDurationMs(pick(item, "e2e_ms", "latency_ms", "total_ms", "ms", "duration_ms", "latency", "wall_ms"));
+      const query = asText(pick(item, "query", "query_text", "text", "question"));
+      return { id, ms, query };
+    }).filter(r => r && r.ms !== null);
+    return { rows, note: asText(pick(obj, "note", "description")) };
+  }
+
+  function normalizeMeta(raw, sourcePath) {
+    const query = asText(pick(raw, "query", "query_text", "input", "request", "question", "meta.query"));
+    const queryId = asText(pick(raw, "query_id", "queryId", "case_id", "caseId", "meta.query_id"));
+    const timestamp = asText(pick(raw, "timestamp", "created_at", "createdAt", "generated_at", "generatedAt", "date", "run_at", "meta.timestamp"));
+    const runId = asText(pick(raw, "run_id", "runId", "meta.run_id"));
+    return { query, queryId, timestamp, runId, sourcePath };
+  }
+
+  function normalize(raw, sourcePath) {
+    const map = stageMap(raw);
+    const st = {};
+    for (const [key, aliases] of Object.entries(STAGE_KEYS)) {
+      st[key] = stageObj(raw, map, aliases);
+    }
+
+    const allSnippetsRaw = pick(raw, "snippets", "sources", "corpus.snippets", "retriever.snippets") || pick(st.retriever, "snippets", "results", "items");
+    let allSnippets = Array.isArray(allSnippetsRaw) ? allSnippetsRaw.map(normalizeSnippet).filter(Boolean) : [];
+
+    const noul = normalizeNoul(raw, st.noul, allSnippets) || {};
+    if (!allSnippets.length && noul.list.length) allSnippets = noul.list;
+    const score = normalizeScore(raw, st.score, allSnippets) || {};
+    const choice = normalizeChoice(raw, st.choice) || {};
+    const guard = normalizeGuard(raw, st.guard) || {};
+    const generator = normalizeGenerator(raw, st.generator) || {};
+    const totals = normalizeTotals(raw);
+    const baseline = normalizeBaseline(raw);
+    const rawContext = normalizeRawContext(raw, allSnippets, totals);
+    const curated = normalizeCurated(raw, allSnippets, score.list, totals);
+    const throughput = normalizeThroughput(raw);
+    const meta = normalizeMeta(raw, sourcePath);
+
+    const stageMsList = [noul.ms, score.ms, choice.ms, guard.ms, generator.ms, stageMs(st.retriever)].filter(v => v !== null);
+    const stageSum = stageMsList.length ? stageMsList.reduce((a, b) => a + b, 0) : null;
+    if (totals.e2e === null && stageSum !== null) totals.e2e = stageSum;
+
+    return {
+      raw,
+      meta,
+      stages: {
+        retriever: { ms: stageMs(st.retriever), snippets: allSnippets },
+        noul,
+        score,
+        choice,
+        guard,
+        generator
+      },
+      totals,
+      baseline,
+      rawContext,
+      curated,
+      throughput
+    };
+  }
+
+  /* ---------------- usability ---------------- */
+
+  function isUsable(raw) {
+    if (!isObj(raw)) return false;
+    const status = String(pick(raw, "status", "state") || "").toLowerCase();
+    if (status === "empty" || status === "placeholder" || status === "error") return false;
+    if (pick(raw, "error")) return false;
+    const map = stageMap(raw);
+    const hasStage = Object.keys(map).length > 0;
+    const hasTotals = isObj(pick(raw, "totals", "metrics", "summary"));
+    const hasAnswer = !!asText(pick(raw, "answer", "output", "response"));
+    const hasQuery = !!asText(pick(raw, "query", "query_text", "input", "request", "question"));
+    return hasStage || hasTotals || hasAnswer || hasQuery;
+  }
+
+  function showEmpty(opts = {}) {
+    const {
+      loading = false,
+      title = "No run data",
+      body = "The panel only displays measured values. Nothing is generated or invented when the pipeline output is missing.",
+      cmd = null,
+      kicker = "run.json missing",
+      showActions = true
+    } = opts;
+
+    state.playToken++;
+    state.playing = false;
+    emptyEl.classList.add("visible");
+    $("#emptyKicker").classList.toggle("loading", loading);
+    setText($("#emptyKickerText"), kicker);
+    setText($("#emptyTitle"), title);
+    setText($("#emptyBody"), body);
+    const cmdEl = $("#emptyCmd");
+    if (cmd) {
+      cmdEl.style.display = "block";
+      cmdEl.innerHTML = cmd;
+    } else {
+      cmdEl.style.display = "none";
+    }
+    $("#loadBtn").style.display = showActions ? "" : "none";
+    $(".empty-hint").style.display = showActions ? "" : "none";
+
+    setText($("#runId"), "RUN —");
+    setText($("#runQuery"), "No run loaded");
+    setText($("#runSub"), "Waiting for run.json");
+    setText($("#dataSource"), "source: —");
+    setText($("#latencyValue").querySelector(".num"), "0");
+    $("#latencyValue").classList.remove("is-final");
+    $("#odometer").innerHTML = '<span class="odo-empty">—</span>';
+    $("#odometer").setAttribute("aria-label", "generator tokens not measured");
+    setText($("#pctValue"), "—");
+    setText($("#tokenDetail"), "prompt — · completion —");
+    $("#baselineTrack").classList.add("no-data");
+    setText($("#baselineLabel"), "agentic baseline: not measured");
+    $("#ourMarker").classList.remove("visible");
+    $$(".tab").forEach(t => { t.disabled = true; });
+  }
+
+  function hideEmpty() {
+    emptyEl.classList.remove("visible");
+    $$(".tab").forEach(t => { t.disabled = false; });
+  }
+
+  /* ---------------- rendering: counters ---------------- */
+
+  function setLatency(value) {
+    const el = $("#latencyValue");
+    const num = el.querySelector(".num");
+    setText(num, fmtInt(value));
+    el.setAttribute("aria-label", `${fmtInt(value)} milliseconds end to end latency`);
+  }
+
+  function animateLatency(from, to, duration, token) {
+    return new Promise(resolve => {
+      if (to === null || to === undefined) { setLatency(from); resolve(true); return; }
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+        setLatency(to);
+        resolve(token === state.playToken);
+        return;
+      }
+      const start = performance.now();
+      function frame(now) {
+        if (token !== state.playToken) { resolve(false); return; }
+        const t = clamp((now - start) / duration, 0, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setLatency(from + (to - from) * eased);
+        if (t < 1) requestAnimationFrame(frame);
+        else { setLatency(to); resolve(true); }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function buildOdometer(digits) {
+    const wrap = $("#odometer");
+    wrap.innerHTML = "";
+    const digitWrap = document.createElement("span");
+    digitWrap.className = "odo-digits";
+    digitWrap.setAttribute("aria-hidden", "true");
+    wrap.appendChild(digitWrap);
+    for (let i = 0; i < digits; i++) {
+      const fromRight = digits - i;
+      const col = document.createElement("span");
+      col.className = "odo-col";
+      const strip = document.createElement("span");
+      strip.className = "odo-strip";
+      for (let d = 0; d <= 9; d++) {
+        const s = document.createElement("span");
+        s.textContent = String(d);
+        strip.appendChild(s);
+      }
+      col.appendChild(strip);
+      digitWrap.appendChild(col);
+      if (fromRight > 1 && (fromRight - 1) % 3 === 0) {
+        const sep = document.createElement("span");
+        sep.className = "odo-sep";
+        sep.textContent = ",";
+        digitWrap.appendChild(sep);
+      }
+    }
+    return digitWrap;
+  }
+
+  function setOdometer(value, digits) {
+    const wrap = $("#odometer");
+    const digitWrap = wrap.querySelector(".odo-digits");
+    if (!digitWrap) return;
+    wrap.setAttribute("aria-label", `${fmtInt(value)} generator tokens`);
+    const str = String(Math.max(0, Math.round(value))).padStart(digits, "0");
+    let firstSig = str.search(/[1-9]/);
+    if (firstSig === -1) firstSig = digits - 1;
+    let di = 0;
+    for (const child of digitWrap.children) {
+      if (!child.classList.contains("odo-col")) continue;
+      const d = Number(str[di] || "0");
+      const strip = child.firstElementChild;
+      strip.style.transform = `translateY(${-d * 10}%)`;
+      child.classList.toggle("leading", di < firstSig);
+      di++;
+    }
+  }
+
+  function animateOdometer(target, duration, token) {
+    return new Promise(resolve => {
+      const wrap = $("#odometer");
+      if (target === null || target === undefined) {
+        wrap.innerHTML = '<span class="odo-empty">—</span>';
+        wrap.setAttribute("aria-label", "generator tokens not measured");
+        resolve(true);
+        return;
+      }
+      const digits = Math.max(5, String(Math.max(0, Math.round(target))).length);
+      buildOdometer(digits);
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || duration <= 0) {
+        setOdometer(target, digits);
+        resolve(token === state.playToken);
+        return;
+      }
+      const start = performance.now();
+      function frame(now) {
+        if (token !== state.playToken) { resolve(false); return; }
+        const t = clamp((now - start) / duration, 0, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setOdometer(target * eased, digits);
+        if (t < 1) requestAnimationFrame(frame);
+        else { setOdometer(target, digits); resolve(true); }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function renderBaseline() {
+    const b = state.data.baseline;
+    const track = $("#baselineTrack");
+    const marker = $("#ourMarker");
+    const label = $("#baselineLabel");
+    const e2e = state.data.totals.e2e;
+    const hasRange = b.range && b.range.length >= 2;
+    const max = b.ms !== null ? b.ms : (hasRange ? Math.max(b.range[0], b.range[1]) : null);
+    if (max === null || max <= 0) {
+      track.classList.add("no-data");
+      marker.classList.remove("visible");
+      label.textContent = "agentic baseline: not measured in run.json";
+      return;
+    }
+    track.classList.remove("no-data");
+    if (hasRange) {
+      label.textContent = `agentic baseline: ${fmtInt(b.range[0])}–${fmtInt(b.range[1])} ms${b.source ? ` · ${b.source}` : ""}`;
+    } else {
+      label.textContent = `agentic baseline: ${fmtInt(max)} ms${b.source ? ` · ${b.source}` : ""}`;
+    }
+    if (e2e !== null && e2e >= 0) {
+      marker.style.left = `${clamp((e2e / max) * 100, 0, 100)}%`;
+      marker.classList.add("visible");
+      marker.title = `this run: ${fmtInt(e2e)} ms`;
+    } else {
+      marker.classList.remove("visible");
+    }
+  }
+
+  function renderTokenMeta() {
+    const t = state.data.totals;
+    const generator = (state.data.stages && state.data.stages.generator) || {};
+    setText($("#tokenDetail"), `prompt ${fmtInt(t.genPrompt)} · completion ${fmtInt(t.genCompletion)}`);
+    setText($("#pctValue"), generator.called === false ? "not run" : (t.llmCalls === null ? "—" : `${fmtInt(t.llmCalls)} call${t.llmCalls === 1 ? "" : "s"}`));
+    setText($("#tokRaw"), fmtInt(t.rawTokens));
+    setText($("#tokCurated"), fmtInt(t.curated));
+    setText($("#tokPrompt"), fmtInt(t.genPrompt));
+    setText($("#tokTotal"), fmtInt(t.genConsumed));
+  }
+
+  /* ---------------- rendering: side panel ---------------- */
+
+  function setLedger(key, ms, detail) {
+    const row = document.querySelector(`.ledger-row[data-ledger="${key}"]`);
+    if (row) row.classList.add("on");
+    setText(document.getElementById(`led-ms-${key}`), ms === null || ms === undefined ? "—" : fmtInt(ms));
+    if (detail !== undefined) setText(document.getElementById(`led-d-${key}`), detail || "—");
+  }
+
+  function generatorStatusLabel(g) {
+    if (!g) return "—";
+    if (g.called === false) return "NOT RUN";
+    return String(g.status || "—").toUpperCase();
+  }
+
+  function generatorAnswerText(g) {
+    if (!g) return "No generator output in run.json";
+    if (g.called === false) return "Generator not run in this run.json (offline). No numbers are rendered.";
+    return g.answer || "No generator output in run.json";
+  }
+
+  function renderSide() {
+    const d = state.data;
+    const meta = d.meta || {};
+    const stages = d.stages || {};
+    const totals = d.totals || {};
+    const choice = stages.choice || {};
+    const generator = stages.generator || {};
+    const guard = stages.guard || {};
+    const noul = stages.noul || {};
+    const score = stages.score || {};
+    const retriever = stages.retriever || {};
+    const citationsList = Array.isArray(generator.citations) ? generator.citations : [];
+
+    setText($("#runId"), meta.queryId ? `RUN / ${meta.queryId}` : (meta.runId ? `RUN / ${meta.runId}` : "RUN / MEASURED"));
+    setText($("#runQuery"), meta.query || "Query not present in run.json");
+    const subParts = [];
+    if (meta.timestamp) subParts.push(meta.timestamp);
+    if (meta.runId) subParts.push(`run ${meta.runId}`);
+    if (totals.e2e !== null && totals.e2e !== undefined) subParts.push(`${fmtInt(totals.e2e)} ms e2e`);
+    setText($("#runSub"), subParts.length ? subParts.join(" · ") : "Measured values from run.json");
+    setText($("#runTimestamp"), meta.timestamp || "—");
+    setText($("#metaQueryId"), meta.queryId || "—");
+    setText($("#metaSource"), state.sourcePath || "—");
+    setText($("#metaClaim"), choice.claimId || "—");
+    setText($("#metaVerdict"), choice.label || choice.verdict || generator.status || "—");
+
+    setText($("#verdictStatus"), generatorStatusLabel(generator));
+    $("#verdictStatus").className = `status-badge ${statusClass(generator.status)}`;
+    setText($("#verdictConfidence"), generator.called === false ? "conf —" : (generator.confidence !== null ? `conf ${generator.confidence.toFixed(2)}` : "conf —"));
+    setText($("#verdictClaim"), choice.claimId ? `claim ${choice.claimId}` : "claim —");
+    setText($("#verdictAnswer"), generatorAnswerText(generator));
+
+    const citations = $("#citationList");
+    citations.innerHTML = "";
+    citationsList.slice(0, 8).forEach(c => {
+      const el = document.createElement("span");
+      el.className = "citation";
+      el.textContent = c.sourceId || "source";
+      if (c.claimId) {
+        const claim = document.createElement("span");
+        claim.className = "claim";
+        claim.textContent = c.claimId;
+        el.appendChild(claim);
+      }
+      citations.appendChild(el);
+    });
+    if (!citationsList.length) {
+      const el = document.createElement("span");
+      el.className = "citation";
+      el.textContent = generator.called === false ? "generator not run" : "no citations in run.json";
+      citations.appendChild(el);
+    }
+
+    setText($("#genStatus"), generatorStatusLabel(generator));
+    $("#genStatus").className = `status-badge ${statusClass(generator.status)}`;
+    setText($("#genConfidence"), generator.called === false ? "" : (generator.confidence !== null ? `conf ${generator.confidence.toFixed(2)}` : ""));
+    setText($("#genAnswer"), generatorAnswerText(generator));
+    setText($("#genCitations"), citationsList.length ? String(citationsList.length) : "—");
+    setText($("#genCalls"), generator.called === false ? "—" : (totals.llmCalls !== null && totals.llmCalls !== undefined ? String(totals.llmCalls) : "—"));
+
+    const retrieverSnippets = Array.isArray(retriever.snippets) ? retriever.snippets : [];
+    const noulKept = noul.kept;
+    const noulTotal = noul.total;
+    const scoreList = Array.isArray(score.list) ? score.list : [];
+    const choicePairs = Array.isArray(choice.pairs) ? choice.pairs : [];
+    setLedger("retriever", retriever.ms, retrieverSnippets.length ? `${retrieverSnippets.length} snippets` : "—");
+    setLedger("noul", noul.ms, noulKept !== null && noulKept !== undefined && noulTotal !== null && noulTotal !== undefined ? `${fmtInt(noulKept)} / ${fmtInt(noulTotal)} kept` : "—");
+    setLedger("score", score.ms, scoreList.length ? `top ${Math.min(scoreList.length, 8)}` : "—");
+    setLedger("choice", choice.ms, choicePairs.length ? `${choicePairs.length} conflicts` : "—");
+    setLedger("guard", guard.ms, guard.label || guard.action || "—");
+    setLedger("generator", generator.ms, generatorStatusLabel(generator));
+    setLedger("total", totals.e2e, "measured");
+
+    renderBaseline();
+    renderTokenMeta();
+  }
+
+  function statusClass(status) {
+    const s = String(status || "").toLowerCase();
+    if (/resolved|ok|pass|success/.test(s)) return "resolved";
+    if (/insufficient|insufficiente|fail|error/.test(s)) return "insufficient";
+    if (/unresolved|pending|unknown/.test(s)) return "unresolved";
+    return "";
+  }
+
+  /* ---------------- rendering: pipeline ---------------- */
+
+  function renderTicks() {
+    const d = state.data;
+    const strip = $("#tickStrip");
+    strip.innerHTML = "";
+    const total = d.stages.noul.total ?? d.stages.retriever.snippets.length;
+    const note = $("#tickNote");
+    if (!total) {
+      note.textContent = "snippet count not present in run.json";
+      return;
+    }
+    const shown = Math.min(total, 80);
+    for (let i = 0; i < shown; i++) {
+      const t = document.createElement("span");
+      t.className = "tick";
+      strip.appendChild(t);
+    }
+    note.textContent = total > shown ? `${fmtInt(total)} snippets in · first ${shown} shown` : `${fmtInt(total)} snippets in`;
+    setText($("#detail-retriever"), `${fmtInt(total)} in`);
+  }
+
+  function renderNoul() {
+    const d = state.data;
+    const noul = d.stages.noul;
+    const grid = $("#chipGrid");
+    grid.innerHTML = "";
+    const summary = $("#gateSummary");
+    summary.innerHTML = "";
+    summary.classList.remove("on");
+
+    if (!noul.list.length || !noul.hasKeepFlags) {
+      const line = document.createElement("div");
+      line.className = "empty-line";
+      if (noul.kept !== null || noul.dropped !== null || noul.total !== null) {
+        line.textContent = `Per-snippet decisions are not present in run.json. Gate counts: ${fmtInt(noul.kept)} kept · ${fmtInt(noul.dropped)} dropped.`;
+      } else {
+        line.textContent = "NOUL decisions are not present in run.json.";
+      }
+      grid.appendChild(line);
+      setText($("#detail-noul"), noul.kept !== null && noul.total !== null ? `${fmtInt(noul.kept)}/${fmtInt(noul.total)}` : "—");
+      return;
+    }
+
+    const shown = noul.list.slice(0, 36);
+    shown.forEach((s, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.dataset.keep = s.keep === true ? "true" : s.keep === false ? "false" : "unknown";
+      const pip = document.createElement("span");
+      pip.className = "pip";
+      chip.appendChild(pip);
+      chip.appendChild(document.createTextNode(s.id || `#${i + 1}`));
+      if (s.reason) chip.title = `${s.reason}${s.confidence !== null ? ` · ${s.confidence.toFixed(2)}` : ""}`;
+      grid.appendChild(chip);
+    });
+    if (noul.list.length > shown.length) {
+      const more = document.createElement("span");
+      more.className = "chip";
+      more.textContent = `+${noul.list.length - shown.length}`;
+      grid.appendChild(more);
+    }
+
+    const kept = noul.kept ?? shown.filter(s => s.keep === true).length;
+    const dropped = noul.dropped ?? shown.filter(s => s.keep === false).length;
+    const total = noul.total ?? shown.length;
+    const pass = total > 0 ? (kept / total) * 100 : null;
+    summary.innerHTML = `<strong>${fmtInt(kept)} kept</strong><span>·</span><span class="drop">${fmtInt(dropped)} dropped</span><span>·</span><span>${pass === null ? "—" : `${pass.toFixed(0)}% pass`}</span>`;
+    setText($("#detail-noul"), `${fmtInt(kept)}/${fmtInt(total)}`);
+  }
+
+  function renderScore() {
+    const d = state.data;
+    const score = d.stages.score;
+    const list = $("#scoreList");
+    list.innerHTML = "";
+    const more = $("#scoreMore");
+    more.textContent = "";
+    if (!score.list.length) {
+      const line = document.createElement("div");
+      line.className = "empty-line";
+      line.textContent = "Ranked sources are not present in run.json.";
+      list.appendChild(line);
+      setText($("#detail-score"), "—");
+      return;
+    }
+    const shown = score.list.slice(0, 6);
+    const max = Math.max(...shown.map(s => s.score ?? 0), 0.0001);
+    shown.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "score-row";
+      const id = document.createElement("span");
+      id.className = "score-id";
+      id.textContent = s.id || "—";
+      const track = document.createElement("div");
+      track.className = "score-track";
+      const fill = document.createElement("div");
+      fill.className = "score-fill";
+      fill.dataset.w = `${clamp(((s.score ?? 0) / max) * 100, 0, 100)}%`;
+      track.appendChild(fill);
+      const val = document.createElement("span");
+      val.className = "score-val";
+      val.innerHTML = `${s.score === null ? "—" : s.score.toFixed(2)}${s.relevance !== null || s.reliability !== null ? `<br><span class="rel">${s.relevance === null ? "—" : s.relevance.toFixed(2)} / ${s.reliability === null ? "—" : s.reliability.toFixed(2)}</span>` : ""}`;
+      row.append(id, track, val);
+      list.appendChild(row);
+    });
+    if (score.list.length > shown.length) more.textContent = `+${score.list.length - shown.length} more ranked sources in run.json`;
+    setText($("#detail-score"), score.topK !== null ? `top ${fmtInt(score.topK)}` : `top ${Math.min(score.list.length, 8)}`);
+  }
+
+  function renderChoice() {
+    const d = state.data;
+    const choice = (d.stages && d.stages.choice) || {};
+    const pairs = Array.isArray(choice.pairs) ? choice.pairs : [];
+    const list = $("#conflictList");
+    list.innerHTML = "";
+    const verdictEl = $("#choiceVerdict");
+    verdictEl.innerHTML = "";
+    if (!pairs.length) {
+      const line = document.createElement("div");
+      line.className = "empty-line";
+      line.textContent = "No conflict pairs in run.json.";
+      list.appendChild(line);
+    } else {
+      pairs.slice(0, 2).forEach(pair => {
+        const row = document.createElement("div");
+        row.className = "conflict";
+        const a = document.createElement("span");
+        a.className = "conflict-node";
+        a.textContent = pair.a || "—";
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "zigzag");
+        svg.setAttribute("viewBox", "0 0 220 32");
+        svg.setAttribute("preserveAspectRatio", "none");
+        svg.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M0 16 L18 5 L36 27 L54 5 L72 27 L90 5 L108 27 L126 5 L144 27 L162 5 L180 27 L198 5 L216 16");
+        path.setAttribute("pathLength", "1");
+        svg.appendChild(path);
+        const b = document.createElement("span");
+        b.className = "conflict-node";
+        b.textContent = pair.b || "—";
+        const rel = document.createElement("span");
+        rel.className = "conflict-rel";
+        rel.textContent = pair.relation || "disagree";
+        row.append(a, svg, b, rel);
+        list.appendChild(row);
+      });
+      if (pairs.length > 2) {
+        const more = document.createElement("div");
+        more.className = "score-more";
+        more.textContent = `+${pairs.length - 2} more conflict pairs in run.json`;
+        list.appendChild(more);
+      }
+    }
+    const parts = [];
+    if (choice.label) parts.push(`<span>choice</span><span class="v">${escapeHtml(choice.label)}</span>`);
+    if (choice.verdict && choice.verdict !== choice.label) parts.push(`<span>verdict</span><span class="v">${escapeHtml(choice.verdict)}</span>`);
+    if (choice.confidence !== null && choice.confidence !== undefined) parts.push(`<span>conf</span><span class="c">${choice.confidence.toFixed(2)}</span>`);
+    if (choice.claimId) parts.push(`<span>claim</span><span class="v">${escapeHtml(choice.claimId)}</span>`);
+    if (parts.length) verdictEl.innerHTML = parts.join("<span>·</span>");
+    setText($("#detail-choice"), pairs.length ? `${pairs.length} pairs` : "—");
+  }
+
+  function renderGenerator() {
+    const d = state.data;
+    const g = (d.stages && d.stages.generator) || {};
+    const citations = Array.isArray(g.citations) ? g.citations : [];
+    const box = $("#genBox");
+    box.classList.remove("resolved", "unresolved", "insufficient");
+    const cls = statusClass(g.status);
+    if (cls) box.classList.add(cls);
+    setText($("#genStatus"), generatorStatusLabel(g));
+    $("#genStatus").className = `status-badge ${cls}`;
+    setText($("#genConfidence"), g.called === false ? "" : (g.confidence !== null ? `conf ${g.confidence.toFixed(2)}` : ""));
+    setText($("#genAnswer"), generatorAnswerText(g));
+    setText($("#genCitations"), citations.length ? String(citations.length) : "—");
+    setText($("#genCalls"), g.called === false ? "—" : (d.totals && d.totals.llmCalls !== null ? String(d.totals.llmCalls) : "—"));
+    setText($("#detail-generator"), g.called === false ? "not run" : (g.status || (g.ms !== null ? `${fmtInt(g.ms)} ms` : "—")));
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  }
+
+  /* ---------------- rendering: unseen ---------------- */
+
+  function renderUnseen() {
+    const d = state.data;
+    const raw = d.rawContext;
+    const curated = d.curated;
+
+    setText($("#rawTokens"), fmtInt(raw.tokens));
+    setText($("#curatedTokens"), fmtInt(curated.tokens));
+    setText($("#rawSub"), raw.reconstructed ? "reconstructed from run.json snippets" : "what a classic agent would send");
+    setText($("#curatedSub"), curated.reconstructed ? "top-ranked sources from run.json" : "what the generator received");
+
+    const wall = $("#rawWall");
+    wall.innerHTML = "";
+    if (raw.text) {
+      const paragraphs = raw.text.split(/\n{2,}/).filter(Boolean);
+      const maxChars = 60000;
+      let used = 0;
+      for (const p of paragraphs) {
+        if (used >= maxChars) break;
+        const text = p.slice(0, maxChars - used);
+        const el = document.createElement("p");
+        el.textContent = text;
+        wall.appendChild(el);
+        used += text.length;
+      }
+      if (used >= maxChars) {
+        const note = document.createElement("p");
+        note.className = "wall-note";
+        note.textContent = "wall truncated for rendering · measured token count unchanged";
+        wall.appendChild(note);
+      }
+    } else {
+      const note = document.createElement("p");
+      note.className = "wall-note";
+      note.textContent = "Raw context text is not present in run.json. Add raw_context.text to the dump to render the wall. No placeholder text is shown.";
+      wall.appendChild(note);
+    }
+
+    const list = $("#curatedList");
+    list.innerHTML = "";
+    if (!curated.sources.length) {
+      const note = document.createElement("div");
+      note.className = "empty-line";
+      note.textContent = "Curated sources are not present in run.json.";
+      list.appendChild(note);
+      return;
+    }
+    curated.sources.slice(0, 5).forEach((s, i) => {
+      const card = document.createElement("article");
+      card.className = "source-card";
+      const tag = document.createElement("span");
+      tag.className = "source-tag";
+      tag.textContent = s.id || `S${i + 1}`;
+      const body = document.createElement("div");
+      body.className = "source-body";
+      const top = document.createElement("div");
+      top.className = "source-top";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = s.sourceName || "source";
+      const date = document.createElement("span");
+      date.textContent = s.date || "";
+      top.append(name, date);
+      const title = document.createElement("div");
+      title.className = "source-title";
+      title.textContent = s.title || s.content || "Untitled source";
+      const snippet = document.createElement("p");
+      snippet.className = "source-snippet";
+      snippet.textContent = s.content || "";
+      body.append(top, title, snippet);
+      const score = document.createElement("div");
+      score.className = "source-score";
+      const strong = document.createElement("strong");
+      strong.textContent = s.score === null ? "—" : s.score.toFixed(2);
+      const label = document.createElement("span");
+      label.textContent = s.reliability !== null ? `rel ${s.reliability.toFixed(2)}` : "score";
+      score.append(strong, label);
+      card.append(tag, body, score);
+      list.appendChild(card);
+    });
+    if (curated.sources.length > 5) {
+      const note = document.createElement("div");
+      note.className = "curated-note";
+      note.textContent = `+${curated.sources.length - 5} more curated sources in run.json`;
+      list.appendChild(note);
+    }
+  }
+
+  /* ---------------- rendering: throughput ---------------- */
+
+  function renderThroughput() {
+    const d = state.data;
+    const body = $("#throughputBody");
+    const summary = $("#tpSummary");
+    body.innerHTML = "";
+    summary.innerHTML = "";
+    const rows = d.throughput.rows;
+    if (!rows.length) {
+      const empty = document.createElement("div");
+      empty.className = "scene-empty";
+      empty.innerHTML = `<div class="big">Throughput was not measured in this run.json.</div>
+        <div class="small">Add a <code>throughput.results</code> array (one entry per parallel query, with <code>e2e_ms</code>) to the dump. This section never synthesizes rows.</div>`;
+      body.appendChild(empty);
+      return;
+    }
+    const shown = rows.slice(0, 10);
+    const maxMs = Math.max(...shown.map(r => r.ms), 1000);
+    const scale = maxMs * 1.08;
+    const threshold = (1000 / scale) * 100;
+    const list = document.createElement("div");
+    list.className = "tp-list";
+    shown.forEach((r, i) => {
+      const row = document.createElement("div");
+      row.className = "tp-row";
+      const idx = document.createElement("span");
+      idx.className = "tp-idx";
+      idx.textContent = String(i + 1).padStart(2, "0");
+      const q = document.createElement("span");
+      q.className = "tp-query";
+      const qid = document.createElement("span");
+      qid.className = "qid";
+      qid.textContent = r.id;
+      q.append(qid, document.createTextNode(r.query || ""));
+      const track = document.createElement("div");
+      track.className = "tp-track";
+      const bar = document.createElement("div");
+      bar.className = "tp-bar" + (r.ms > 1000 ? " over" : "");
+      bar.dataset.w = `${clamp((r.ms / scale) * 100, 0.4, 100)}%`;
+      const th = document.createElement("div");
+      th.className = "tp-threshold";
+      th.style.left = `${threshold}%`;
+      const thLabel = document.createElement("span");
+      thLabel.className = "tp-threshold-label";
+      thLabel.textContent = "1s";
+      th.appendChild(thLabel);
+      track.append(bar, th);
+      const ms = document.createElement("span");
+      ms.className = "tp-ms" + (r.ms > 1000 ? " over" : "");
+      ms.textContent = fmtInt(r.ms);
+      const st = document.createElement("span");
+      st.className = "tp-state" + (r.ms > 1000 ? " over" : "");
+      st.textContent = r.ms > 1000 ? "over" : "ok";
+      row.append(idx, q, track, ms, st);
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+    const under = shown.filter(r => r.ms <= 1000).length;
+    const sorted = shown.map(r => r.ms).sort((a, b) => a - b);
+    const median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    const max = sorted[sorted.length - 1];
+    const countNote = rows.length < 10 ? `only ${rows.length} of 10 rows present in run.json` : "10 of 10 rows measured";
+    summary.innerHTML = `<span><strong class="${under === shown.length ? "green" : "red"}">${under}/${shown.length}</strong> under 1s · <strong>${fmtInt(median)} ms</strong> median · <strong>${fmtInt(max)} ms</strong> max</span><span class="right">${countNote}${d.throughput.note ? ` · ${escapeHtml(d.throughput.note)}` : ""}</span>`;
+  }
+
+  /* ---------------- playback ---------------- */
+
+  function setStageActive(key, on = true) {
+    const row = document.querySelector(`.stage-row[data-stage="${key}"]`);
+    if (row) row.classList.toggle("active", on);
+    const led = document.querySelector(`.ledger-row[data-ledger="${key}"]`);
+    if (led) led.classList.toggle("on", on);
+  }
+
+  function setStageMs(key, ms) {
+    const el = document.getElementById(`ms-${key}`);
+    if (el) el.innerHTML = `${ms === null || ms === undefined ? "—" : fmtInt(ms)}<span class="u">ms</span>`;
+    setText(document.getElementById(`led-ms-${key}`), ms === null || ms === undefined ? "—" : fmtInt(ms));
+  }
+
+  function cumulative(keys) {
+    let sum = 0;
+    let any = false;
+    for (const k of keys) {
+      const ms = state.data.stages[k].ms;
+      if (ms !== null) { sum += ms; any = true; }
+    }
+    return any ? sum : null;
+  }
+
+  async function playPipeline() {
+    if (!state.data) return;
+    const token = ++state.playToken;
+    state.playing = true;
+    state.scene = 0;
+    showSceneDom(0);
+    clearStageContent();
+    renderTicks();
+    renderNoul();
+    renderScore();
+    renderChoice();
+    renderGenerator();
+
+    const d = state.data;
+    const noul = d.stages.noul;
+    const score = d.stages.score;
+    const choice = d.stages.choice;
+
+    // reset
+    $$(".stage-row").forEach(r => r.classList.remove("active"));
+    $$(".ledger-row").forEach(r => r.classList.remove("on"));
+    setLatency(0);
+    $("#latencyValue").classList.remove("is-final");
+    $("#odometer").innerHTML = '<span class="odo-empty">—</span>';
+    $("#odometer").setAttribute("aria-label", "generator tokens not measured");
+    setText($("#pctValue"), "—");
+    setText($("#tokenDetail"), `prompt ${fmtInt(d.totals.genPrompt)} · completion ${fmtInt(d.totals.genCompletion)}`);
+    ["retriever", "noul", "score", "choice", "guard", "generator"].forEach(k => setStageMs(k, null));
+    setStageMs("total", null);
+    setText($("#replayNote").querySelector(".on"), "running");
+
+    // RETRIEVER
+    setStageActive("retriever");
+    const ticks = $$("#tickStrip .tick");
+    ticks.forEach((t, i) => {
+      setTimeout(() => t.classList.add("on"), 30 + i * 12);
+    });
+    setStageMs("retriever", d.stages.retriever.ms);
+    const lat1 = cumulative(["retriever"]);
+    await animateLatency(0, lat1, 420, token);
+    if (token !== state.playToken) return;
+
+    // NOUL
+    const noulStart = lat1 ?? 0;
+    setStageActive("noul");
+    const chips = $$("#chipGrid .chip");
+    const drops = chips.filter(c => c.dataset.keep === "false");
+    const dropDur = Math.min(2400, 700 + drops.length * 95);
+    drops.forEach((chip, i) => {
+      setTimeout(() => {
+        if (token !== state.playToken) return;
+        chip.classList.add("flash");
+        setTimeout(() => chip.classList.add("fall"), 160);
+      }, 120 + i * 90);
+    });
+    const keptChips = chips.filter(c => c.dataset.keep === "true");
+    keptChips.forEach((chip, i) => setTimeout(() => chip.classList.add("kept"), 90 + i * 22));
+    setTimeout(() => $("#gateSummary").classList.add("on"), Math.min(dropDur, 900));
+    setStageMs("noul", noul.ms);
+    await wait(Math.max(dropDur, 700), token);
+    if (token !== state.playToken) return;
+    const lat2 = cumulative(["retriever", "noul"]) ?? noulStart;
+    await animateLatency(noulStart, lat2, 380, token);
+    if (token !== state.playToken) return;
+
+    // SCORE
+    setStageActive("score");
+    const scoreRows = $$("#scoreList .score-row");
+    scoreRows.forEach((row, i) => {
+      setTimeout(() => {
+        row.classList.add("on");
+        const fill = row.querySelector(".score-fill");
+        if (fill) requestAnimationFrame(() => { fill.style.width = fill.dataset.w; });
+      }, 80 + i * 70);
+    });
+    setStageMs("score", score.ms);
+    await wait(Math.max(700, scoreRows.length * 70 + 420), token);
+    if (token !== state.playToken) return;
+    const lat3 = cumulative(["retriever", "noul", "score"]) ?? lat2;
+    await animateLatency(lat2, lat3, 380, token);
+    if (token !== state.playToken) return;
+
+    // CHOICE
+    setStageActive("choice");
+    const conflicts = $$("#conflictList .conflict");
+    conflicts.forEach((row, i) => setTimeout(() => row.classList.add("on"), 100 + i * 180));
+    setStageMs("choice", choice.ms);
+    await wait(Math.max(650, conflicts.length * 180 + 420), token);
+    if (token !== state.playToken) return;
+    const lat4 = cumulative(["retriever", "noul", "score", "choice"]) ?? lat3;
+    await animateLatency(lat3, lat4, 380, token);
+    if (token !== state.playToken) return;
+
+    // GUARD
+    setStageActive("guard");
+    setStageMs("guard", d.stages.guard.ms);
+    await wait(420, token);
+    if (token !== state.playToken) return;
+    const lat5 = cumulative(["retriever", "noul", "score", "choice", "guard"]) ?? lat4;
+    await animateLatency(lat4, lat5, 300, token);
+    if (token !== state.playToken) return;
+
+    // GENERATOR
+    setStageActive("generator");
+    $("#genBox").classList.add("on");
+    setStageMs("generator", d.stages.generator.ms);
+    setStageMs("total", d.totals.e2e);
+    const finalMs = d.totals.e2e ?? cumulative(["retriever", "noul", "score", "choice", "guard", "generator"]) ?? lat5;
+    await animateLatency(lat5, finalMs, 520, token);
+    if (token !== state.playToken) return;
+    $("#latencyValue").classList.add("is-final");
+    setText($("#replayNote").querySelector(".on"), "complete");
+
+    // token counter runs only after the pipeline has landed
+    const genTarget = d.stages.generator && d.stages.generator.called === false ? null : d.totals.genConsumed;
+    await animateOdometer(genTarget, 1500, token);
+    if (token !== state.playToken) return;
+    renderTokenMeta();
+    state.playing = false;
+  }
+
+  async function playUnseen() {
+    if (!state.data) return;
+    const token = ++state.playToken;
+    state.playing = true;
+    state.scene = 1;
+    showSceneDom(1);
+    renderUnseen();
+    const wall = $("#rawWall");
+    wall.style.opacity = "0";
+    wall.style.transition = "opacity 420ms ease-out";
+    requestAnimationFrame(() => { wall.style.opacity = "1"; });
+    const cards = $$("#curatedList .source-card");
+    cards.forEach((card, i) => setTimeout(() => card.classList.add("on"), 120 + i * 80));
+    await wait(Math.max(500, cards.length * 80 + 260), token);
+    state.playing = false;
+  }
+
+  async function playThroughput() {
+    if (!state.data) return;
+    const token = ++state.playToken;
+    state.playing = true;
+    state.scene = 2;
+    showSceneDom(2);
+    renderThroughput();
+    const rows = $$(".tp-row");
+    rows.forEach((row, i) => {
+      setTimeout(() => {
+        row.classList.add("on");
+        const bar = row.querySelector(".tp-bar");
+        if (bar) requestAnimationFrame(() => { bar.style.width = bar.dataset.w; });
+      }, 70 + i * 55);
+    });
+    await wait(Math.max(450, rows.length * 55 + 500), token);
+    state.playing = false;
+  }
+
+  function showSceneDom(index) {
+    $$(".scene").forEach((s, i) => s.classList.toggle("active", i === index));
+    $$(".tab").forEach((t, i) => t.setAttribute("aria-selected", String(i === index)));
+  }
+
+  function goScene(index) {
+    if (!state.loaded) return;
+    index = clamp(index, 0, 2);
+    if (index === 0) playPipeline();
+    else if (index === 1) playUnseen();
+    else playThroughput();
+  }
+
+  function replayCurrent() {
+    if (!state.loaded) return;
+    if (state.scene === 0) playPipeline();
+    else if (state.scene === 1) playUnseen();
+    else playThroughput();
+  }
+
+  /* ---------------- load ---------------- */
+
+  function applyData(raw, sourcePath) {
+    state.raw = raw;
+    state.data = normalize(raw, sourcePath);
+    state.sourcePath = sourcePath;
+    state.loaded = true;
+    hideEmpty();
+
+    renderSide();
+    renderNoul();
+    renderScore();
+    renderChoice();
+    renderGenerator();
+    renderUnseen();
+    renderThroughput();
+
+    setText($("#dataSource"), `source: ${sourcePath}`);
+    $("#dataSource").classList.add("ok");
+    renderTokenMeta();
+    setText($("#runQuery"), state.data.meta.query || "Query not present in run.json");
+    setText($("#runId"), state.data.meta.queryId ? `RUN / ${state.data.meta.queryId}` : "RUN / MEASURED");
+    setText($("#replayNote").querySelector(".on"), "ready");
+
+    playPipeline();
+  }
+
+  async function loadRun(raw, sourcePath) {
+    if (!isUsable(raw)) {
+      const status = String(pick(raw, "status", "state") || "").toLowerCase();
+      showEmpty({
+        kicker: status === "empty" || status === "placeholder" ? "placeholder run.json" : "invalid run.json",
+        title: status === "empty" || status === "placeholder" ? "run.json is a placeholder" : "Run data is not usable",
+        body: status === "empty" || status === "placeholder"
+          ? "frontend/run.json currently contains an empty-state placeholder. Run the pipeline with --dump-json and copy the real backend/run.json here. The panel will not invent numbers."
+          : "The file was read but no pipeline stages, totals, or answer were found. Check the dump and try again.",
+        cmd: null,
+        showActions: true
+      });
+      return false;
+    }
+    applyData(raw, sourcePath);
+    return true;
+  }
+
+  async function boot() {
+    showEmpty({ loading: true, kicker: "reading run.json", title: "Reading run data", body: "Looking for frontend/run.json. No numbers are rendered until a real dump is found.", cmd: null, showActions: false });
+    const candidates = ["run.json"];
+    let lastError = null;
+    for (const path of candidates) {
+      try {
+        const res = await fetch(path, { cache: "no-store" });
+        if (!res.ok) { lastError = `${path}: HTTP ${res.status}`; continue; }
+        const json = await res.json();
+        if (isUsable(json)) {
+          await loadRun(json, path);
+          return;
+        }
+        lastError = `${path}: empty or unrecognized dump`;
+      } catch (err) {
+        lastError = `${path}: ${err && err.message ? err.message : "unreadable"}`;
+      }
+    }
+    const fileMode = location.protocol === "file:";
+    showEmpty({
+      kicker: fileMode ? "file:// blocks fetch" : "run.json missing",
+      title: "No run data",
+      body: fileMode
+        ? "This panel was opened directly from disk, so the browser blocks reading run.json. Drop run.json on the panel or use the Load run.json button. You can also serve the folder with a static HTTP server."
+        : `No usable run.json was found. ${lastError ? `Last attempt: ${lastError}.` : ""} The panel only displays measured values.`,
+      cmd: `<span class="c"># option A: drop run.json on the panel</span>
+<span class="c"># option B: serve the folder</span>
+<span class="g">cd frontend && python3 -m http.server 8080</span>
+<span class="c"># then open http://localhost:8080</span>`,
+      showActions: true
+    });
+  }
+
+  async function reload() {
+    state.loaded = false;
+    await boot();
+  }
+
+  /* ---------------- events ---------------- */
+
+  $$(".tab").forEach(tab => {
+    tab.addEventListener("click", () => goScene(Number(tab.dataset.scene)));
+  });
+
+  document.addEventListener("keydown", e => {
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === "ArrowRight") { e.preventDefault(); goScene(state.scene + 1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); goScene(state.scene - 1); }
+    else if (e.key === " " || e.code === "Space") { e.preventDefault(); replayCurrent(); }
+    else if (e.key === "1") goScene(0);
+    else if (e.key === "2") goScene(1);
+    else if (e.key === "3") goScene(2);
+    else if (e.key.toLowerCase() === "r") reload();
+  });
+
+  $("#loadBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const ok = await loadRun(json, file.name);
+      if (!ok) {
+        showEmpty({ kicker: "invalid file", title: "Run data is not usable", body: `The file ${file.name} does not contain a recognizable pipeline dump.`, cmd: null, showActions: true });
+      }
+    } catch (err) {
+      showEmpty({ kicker: "parse error", title: "Could not read that file", body: `${file.name}: ${err && err.message ? err.message : "invalid JSON"}.`, cmd: null, showActions: true });
+    } finally {
+      fileInput.value = "";
+    }
+  });
+
+  window.addEventListener("dragover", e => {
+    e.preventDefault();
+    document.body.classList.add("drop-active");
+  });
+  window.addEventListener("dragleave", e => {
+    if (e.relatedTarget === null) document.body.classList.remove("drop-active");
+  });
+  window.addEventListener("drop", async e => {
+    e.preventDefault();
+    document.body.classList.remove("drop-active");
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      await loadRun(json, file.name);
+    } catch (err) {
+      showEmpty({ kicker: "parse error", title: "Could not read that file", body: `${file.name}: ${err && err.message ? err.message : "invalid JSON"}.`, cmd: null, showActions: true });
+    }
+  });
+
+  function fitStage() {
+    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stageEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+  window.addEventListener("resize", fitStage);
+  fitStage();
+
+  boot();
+})();
+</script>
+</body>
+</html>
