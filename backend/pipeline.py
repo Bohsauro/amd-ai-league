@@ -292,13 +292,6 @@ def _ticker_lines(data: dict[str, Any]) -> dict[str, str]:
     else:
         consumed_label = f"~{consumed} (est)"
     raw_label = f"{tokens.get('raw_est', 0)}"
-    saved_pct = float(tokens.get("saved_pct", 0.0))
-    if saved_pct == 0:
-        savings_label = "0%"
-    elif saved_pct > 0:
-        savings_label = f"-{saved_pct:.0f}%"
-    else:
-        savings_label = f"+{abs(saved_pct):.0f}% overhead"
     return {
         "noul": f"NOUL: {noul['kept']}/{noul['total']} keep ({noul['dropped']} drop)",
         "score": f"SCORE: top{score['top_k']} ordinati",
@@ -307,7 +300,7 @@ def _ticker_lines(data: dict[str, Any]) -> dict[str, str]:
         "generator": f"GEN: {gen_label}",
         "total": (
             f"TOTAL: {data['total_ms']:.0f}ms | tokens_gen_consumed: {consumed_label} | "
-            f"tokens_crud_est: {raw_label} ({savings_label})"
+            f"tokens_crud_est: {raw_label}"
         ),
     }
 
