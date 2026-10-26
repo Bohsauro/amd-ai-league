@@ -2,6 +2,10 @@
 
 **Assegnatario:** agent-core-dev · **Output:** `backend/corpus.json`
 
+**Criteri di accettazione:** `PLAN.md` §4.1 (AC-CORPUS, C1–C7). Schema macchina: `schemas/corpus.schema.json`.
+Gli id delle sorgenti sono globali (`FC-0X-S<n>`), `publisher_type` è un enum chiuso, e `truth`/`verdict_in_corpus`
+non devono mai raggiungere la pipeline (regola anti-leakage, BUILD_SPEC §2.1).
+
 Riempi i template FC-01..FC-06 di `specs/amd-ai-league/CORPUS.md` con dati reali.
 Regole (non negoziabili):
 
