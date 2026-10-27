@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-26T15:21:35.595625+00:00",
+  "generated_at": "2026-10-27T21:16:50.272414+00:00",
   "query": "What EPS did Intel report for Q2 2024, and what is its Q3 2024 EPS guidance?",
   "query_arg": "FC-01",
   "case_id": "FC-01",
@@ -10,11 +10,11 @@
   "model": "meta-llama/llama-3.1-8b-instruct",
   "stages": {
     "retriever": {
-      "ms": 0.249,
+      "ms": 0.25,
       "snippets": 53
     },
     "noul": {
-      "ms": 4.876,
+      "ms": 4.882,
       "total": 53,
       "kept": 19,
       "dropped": 34,
@@ -1190,7 +1190,7 @@
       ]
     },
     "score": {
-      "ms": 1.378,
+      "ms": 1.355,
       "ranked_count": 5,
       "top_k": 5,
       "ranking": [
@@ -1297,7 +1297,7 @@
       ]
     },
     "choice": {
-      "ms": 0.16,
+      "ms": 0.184,
       "label": "CONFLICT",
       "verdict": "Intel Corporation (investor relations): Intel's 1 August 2024 release reports second-quarter GAAP EPS attributable to Intel of $(0.38) and non-GAAP EPS of $0.02.",
       "claim": "0.02",
@@ -1510,7 +1510,7 @@
       }
     },
     "guard": {
-      "ms": 0.007,
+      "ms": 0.009,
       "expanded": false,
       "expansions_used": 0,
       "triggered": false,
@@ -1523,7 +1523,7 @@
       "threshold": 0.6
     },
     "generator": {
-      "ms": 407.592,
+      "ms": 432.542,
       "called": true,
       "status": "resolved",
       "answer": "Intel reported Q2 2024 GAAP EPS of $(0.38) and non-GAAP EPS of $0.02. Q3 2024 guidance is non-GAAP EPS of $(0.03) on $12.5-13.5B revenue. The claim of $0.02 prevails because it is directly stated in Intel's official release.",
@@ -1567,7 +1567,7 @@
           "audio_tokens": 0
         }
       },
-      "latency_ms": 406.831,
+      "latency_ms": 431.859,
       "prompt_tokens_est": 918,
       "selected_source_ids": [
         "FC-01-S3",
@@ -2586,13 +2586,13 @@
       "used_in_generation": false
     }
   ],
-  "total_ms": 414.902,
+  "total_ms": 439.856,
   "budget_ms": 1200.0,
   "within_budget": true,
   "gen_calls": 1,
   "token_count_method": "usage",
   "totals": {
-    "e2e_ms": 414.902,
+    "e2e_ms": 439.856,
     "llm_calls": 1,
     "gen_calls": 1,
     "prompt_tokens": 1390,
@@ -2618,55 +2618,55 @@
     "choice": "CHOICE: CONFLICT FC-01-S3 vs FC-01-S4",
     "guard": "GUARD: pass (conf 0.63)",
     "generator": "GEN: resolved | 3 citations",
-    "total": "TOTAL: 415ms | tokens_gen_consumed: 1572 | tokens_crud_est: 5033"
+    "total": "TOTAL: 440ms | tokens_gen_consumed: 1572 | tokens_crud_est: 5033"
   },
   "throughput": {
     "mode": "live",
     "n_runs": 10,
     "concurrency": 10,
-    "wall_ms": 719.3,
-    "median_e2e_ms": 205.5,
-    "max_e2e_ms": 717.3,
+    "wall_ms": 528.3,
+    "median_e2e_ms": 234.7,
+    "max_e2e_ms": 525.9,
     "results": [
       {
         "query_id": "FC-01",
-        "e2e_ms": 717.3
+        "e2e_ms": 525.9
       },
       {
         "query_id": "FC-02",
-        "e2e_ms": 542.8
+        "e2e_ms": 511.1
       },
       {
         "query_id": "FC-03",
-        "e2e_ms": 19.3
+        "e2e_ms": 27.0
       },
       {
         "query_id": "FC-04",
-        "e2e_ms": 374.6
+        "e2e_ms": 477.1
       },
       {
         "query_id": "FC-05",
-        "e2e_ms": 36.4
+        "e2e_ms": 17.6
       },
       {
         "query_id": "FC-06",
-        "e2e_ms": 7.7
+        "e2e_ms": 35.5
       },
       {
         "query_id": "FC-07",
-        "e2e_ms": 490.4
+        "e2e_ms": 487.5
       },
       {
         "query_id": "FC-08",
-        "e2e_ms": 471.8
+        "e2e_ms": 433.9
       },
       {
         "query_id": "FC-09",
-        "e2e_ms": 14.9
+        "e2e_ms": 9.9
       },
       {
         "query_id": "FC-10",
-        "e2e_ms": 11.5
+        "e2e_ms": 10.8
       }
     ],
     "note": "live parallel batch, 10 runs, concurrency 10 (generator called where guard passes)"

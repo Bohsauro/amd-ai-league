@@ -16,12 +16,12 @@ Fonte: `specs/amd-ai-league/VERIFIED_NUMBERS.md` — rigenerare con `bin/gen-ver
 |---|---|---|
 | chiamate LLM | **1** | 5 |
 | token | **1,572** (1,390+182) | 46,563 (43,127+3,436) |
-| latenza e2e | **415 ms** | 30,570 ms |
+| latenza e2e | **440 ms** | 30,570 ms |
 | esito | CONFLICT · resolved · 3 citazioni | prosa che collassa GAAP/non-GAAP |
 
-NOUL: **19/53 keep** (34 scartati, 64,2%) · CHOICE conf 0,63 · **discriminative 7 ms · generator 408 ms**
-Modello: `meta-llama/llama-3.1-8b-instruct` (provider: **Groq**, pinnato). Costo: $0,000076 vs $0,0102.
-Batch: 10 run paralleli, max 717 ms. run.json sha256 `bc7e989af415` · baseline sha256 `02adbf40c2a9`.
+NOUL: **19/53 keep** (34 scartati, 64,2%) · CHOICE conf 0,63 · **discriminative 7 ms · generator 433 ms**
+Modello: `meta-llama/llama-3.1-8b-instruct` (provider: **Groq**, pinnato). Costo baseline: $0,0102 (3 run).
+Batch: 10 run paralleli, max 526 ms. run.json sha256 `1d5c70e7aab1` · baseline sha256 `02adbf40c2a9`.
 
 ## Comandi
 
@@ -54,6 +54,9 @@ Demo UI: `bin/demo --serve` o `python3 -m http.server 8500 --bind 0.0.0.0` in `f
 5. **Cleanup**: validazione corpus unica; `textutil.py` duplicato era solo una copia di review in
    `agents/ceo/` (fuori repo); `grow_corpus.py` (builder one-shot) rimosso.
 6. **Reviewer obbligatorio**: `bin/close-ticket` — `done` solo da `in_review` con APPROVE di agent-reviewer.
+7. **Repo self-contained per la submission**: `bin/verify|demo|gen-verified-numbers` spostati in
+   `workspace/bin/` (path relativi, funzionano da clone senza `.env`); `/srv/ai-company/bin/*` sono
+   ora symlink. README.md riscritto per GitHub (inglese, numeri misurati, quick start da clone).
 
 ## Cosa resta (in ordine di valore)
 

@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+"""verify - gate oggettivo sui Definition of Done. Non si fida degli agenti.
+
+Uso: bin/verify            (exit 0 = tutto ok, 1 = qualcosa fallisce)
+
+Controlla: corpus.json (>=6 casi, fonti reali, schema), run.json (stage, tempi,
+token), baseline_metrics.json, frontend, test unitari e che tutti i .py compilino.
+La validazione del corpus vive in backend/corpus_validation.py: la usano sia il
+gate sia i test, cosi' le due copie non possono divergere.
+"""
+import glob
+import json
+import os
+import py_compile
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+WS = str(Path(__file__).resolve().parents[1])  # repo root (self-contained, funziona anche da clone)
+BACKEND = os.path.join(WS, 'backend')
+MIN_CASES = 10
+
+sys.path.insert(0, BACKEND)
+from corpus_validation import (  # noqa: E402
+    FAKE_DOMAIN,
+    expected_case_ids,
+    load_corpus_cases,
+    validate_corpus,
+)
+
+results = []  # (livello, check, dettaglio)
+
+
+def ok(name, detail=''):
+    results.append(('PASS', name, detail))
+
+
+def fail(name, detail=''):
+    results.append(('FAIL', name, detail))
+
+
+def warn(name, detail=''):
+    results.append(('WARN', name, detail))
+
+
+def load_json(path):
+    with open(path) as f:
+        return json.load(f)
+
+
+def check_corpus():
+    path = os.path.join(BACKEND, 'corpus.json')
+    if not os.path.exists(path):
+        fail('corpus.json esiste', 'manca: il corpus e\' la dipendenza della pipeline')
+        return
+    try:
+        cases = load_corpus_cases(path)
+    except Exception as e:  # noqa: BLE001
+        fail('corpus.json valido', str(e))
+        return
+
+    report = validate_corpus(cases)
+    if report.n_cases < MIN_CASES:
+        fail(f'corpus >= {MIN_CASES} casi', f'trovati {report.n_cases}: {report.ids}')
+    else:
+        ok(f'corpus >= {MIN_CASES} casi', f'{report.n_cases} casi')
+
+    expected = expected_case_ids(report.n_cases)
+    if sorted(report.ids) != expected:
+        fail('id casi sequenziali FC-01..FC-N', f'trovati: {report.ids}')
+    else:
+        ok('id casi sequenziali FC-01..FC-N', f'{expected[0]}..{expected[-1]}')
+
+    if report.fake_urls:
+        fail('fonti reali (no placeholder)', f'{len(report.fake_urls)} URL finti, es. {report.fake_urls[:3]}')
+    else:
+        ok('fonti reali (no placeholder)')
+    if report.thin_cases:
+        fail('ogni caso >= 4 sorgenti', '; '.join(report.thin_cases))
+    else:
+        ok('ogni caso >= 4 sorgenti')
+    if report.source_problems:
+        fail('schema sorgenti', f'{len(report.source_problems)} problemi, es. {report.source_problems[:3]}')
+    else:
+        ok('schema sorgenti (id, date, publisher_type, content)')
+    if report.case_id_problems:
+        fail('id di caso univoci e conformi', '; '.join(report.case_id_problems[:3]))
+    else:
+        ok('id di caso univoci e conformi')
+
+
+def check_run():
+    path = os.path.join(BACKEND, 'run.json')
+    if not os.path.exists(path):
+        fail('run.json esiste', 'serve un run reale della pipeline (--dump-json)')
+        return
+    try:
+        d = load_json(path)
+    except Exception as e:  # noqa: BLE001
+        fail('run.json valido', str(e))
+        return
+    stages = d.get('stages') or {}
+    need = {'retriever', 'noul', 'score', 'choice'}
+    gen = {'generator', 'gen'} & set(stages)
+    missing = need - set(stages)
+    if missing or not gen:
+        fail('run.json stage completi', f'mancano: {sorted(missing) or "generator"}')
+    else:
+        ok('run.json stage completi', f'{sorted(stages)}')
+    total = d.get('total_ms')
+    if isinstance(total, (int, float)):
+        if total < 1200:
+            ok('latenza < 1.2s', f'{total:.0f} ms')
+        else:
+            fail('latenza < 1.2s', f'{total:.0f} ms (budget {d.get("budget_ms")})')
+    else:
+        fail('latenza misurata', 'total_ms assente')
+    if d.get('within_budget') is True:
+        ok('within_budget')
+    elif d.get('within_budget') is False:
+        fail('within_budget', 'run fuori budget')
+    if d.get('tokens'):
+        ok('token contati', str({k: d['tokens'].get(k) for k in list(d['tokens'])[:3]}))
+    else:
+        fail('token contati', 'campo tokens vuoto')
+    blob = json.dumps(d.get('sources') or [])
+    if FAKE_DOMAIN.search(blob):
+        fail('run.json su corpus reale', 'contiene URL placeholder (corpus stub)')
+    else:
+        ok('run.json su corpus reale')
+
+
+def check_baseline():
+    path = os.path.join(BACKEND, 'baseline_metrics.json')
+    if not os.path.exists(path):
+        fail('baseline_metrics.json', 'manca (task 03)')
+        return
+    try:
+        d = load_json(path)
+    except Exception as e:  # noqa: BLE001
+        fail('baseline_metrics.json valido', str(e))
+        return
+    blob = json.dumps(d)
+    has_tokens = re.search(r'"(prompt_tokens|completion_tokens|total_tokens|input_tokens|output_tokens)"', blob)
+    has_calls = re.search(r'"(calls|llm_calls|n_calls)"', blob)
+    if has_tokens and has_calls:
+        ok('baseline: token + chiamate misurati')
+    else:
+        warn('baseline: campi attesi', 'mancano token o numero chiamate')
+
+
+def check_frontend():
+    idx = os.path.join(WS, 'frontend', 'index.html')
+    rj = os.path.join(WS, 'frontend', 'run.json')
+    if os.path.exists(idx):
+        html = open(idx, encoding='utf-8', errors='replace').read()
+        ok('frontend/index.html', f'{len(html)} char')
+        if re.search(r'(fetch\s*\(|XMLHttpRequest)', html):
+            ok('frontend legge run.json')
+        else:
+            warn('frontend legge run.json', 'nessun fetch/XHR trovato: numeri hardcoded?')
+        if re.search(r'(example\.(com|org|net)|acme\.|test\.local)', html, re.I):
+            warn('frontend senza placeholder', 'contiene domini placeholder')
+    else:
+        fail('frontend/index.html', 'manca (task 04)')
+    if os.path.exists(rj):
+        ok('frontend/run.json (copia per la UI)')
+    else:
+        warn('frontend/run.json', 'la UI mostrera\' empty-state')
+
+
+def check_python():
+    bad = []
+    for f in glob.glob(os.path.join(BACKEND, '*.py')):
+        try:
+            py_compile.compile(f, doraise=True, cfile='/tmp/_v.pyc')
+        except Exception as e:  # noqa: BLE001
+            bad.append(f'{os.path.basename(f)}: {e}')
+    if bad:
+        fail('python compila', '; '.join(bad[:2]))
+    else:
+        ok('python compila')
+
+
+def check_tests():
+    """I test unitari sono parte del DoD: se sono rossi il gate e' rosso."""
+    tests_dir = os.path.join(BACKEND, 'tests')
+    if not os.path.isdir(tests_dir):
+        fail('test unitari', 'manca backend/tests/')
+        return
+    try:
+        proc = subprocess.run(
+            [sys.executable, '-m', 'pytest', tests_dir, '-q', '--no-header', '-p', 'no:cacheprovider'],
+            cwd=WS,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired:
+        fail('test unitari', 'timeout dopo 180s')
+        return
+    except Exception as e:  # noqa: BLE001
+        fail('test unitari', f'{type(e).__name__}: {e}')
+        return
+    tail = (proc.stdout or '').strip().splitlines()
+    summary = tail[-1] if tail else 'nessun output'
+    if proc.returncode == 0:
+        ok('test unitari passano', summary[:60])
+    else:
+        fail('test unitari passano', summary[:60])
+
+
+def main():
+    check_corpus()
+    check_run()
+    check_baseline()
+    check_frontend()
+    check_python()
+    check_tests()
+
+    print('VERIFY — gate Definition of Done')
+    print('-' * 62)
+    for lvl, name, detail in results:
+        icon = {'PASS': 'OK  ', 'FAIL': 'FAIL', 'WARN': 'WARN'}[lvl]
+        print(f'{icon}  {name:42} {detail[:60]}')
+    fails = sum(1 for r in results if r[0] == 'FAIL')
+    warns = sum(1 for r in results if r[0] == 'WARN')
+    print('-' * 62)
+    print(f'{len(results)-fails-warns} pass, {fails} fail, {warns} warn')
+    return 1 if fails else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

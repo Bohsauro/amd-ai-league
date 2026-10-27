@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""gen-verified-numbers — scrive specs/amd-ai-league/VERIFIED_NUMBERS.md dai dati reali.
+
+Uso: bin/gen-verified-numbers   (rigenerabile a ogni run; mai numeri a mano)
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+
+WS = str(Path(__file__).resolve().parents[1])  # repo root (self-contained, funziona anche da clone)
+BACKEND = os.path.join(WS, 'backend')
+OUT = os.path.join(WS, 'specs', 'amd-ai-league', 'VERIFIED_NUMBERS.md')
+
+
+def sha(path):
+    return hashlib.sha256(open(path, 'rb').read()).hexdigest()[:12]
+
+
+def fmt(n):
+    return f'{round(n):,}'.replace(',', ',')
+
+
+def main():
+    run = json.load(open(os.path.join(BACKEND, 'run.json')))
+    base = json.load(open(os.path.join(BACKEND, 'baseline_metrics.json')))
+
+    t = run.get('tokens', {})
+    st = run.get('stages', {})
+    noul = st.get('noul', {})
+    gen = st.get('generator', {})
+    choice = st.get('choice', {})
+    thru = run.get('throughput', {}) or {}
+    bt = base.get('totals', {})
+
+    base_total = (bt.get('prompt_tokens') or 0) + (bt.get('completion_tokens') or 0)
+    total_ms = run.get('total_ms') or 0
+    base_ms = bt.get('e2e_ms') or 0
+    saved_pct = round((base_total - (t.get('gen_consumed') or 0)) / base_total * 100, 1) if base_total else None
+    speed = round(base_ms / total_ms, 1) if total_ms else None
+    gen_ms = gen.get('ms') or 0
+    disc_ms = max(0, total_ms - gen_ms)
+
+    rows = [
+        ('total_ms', fmt(total_ms) + ' ms', 'run.json total_ms'),
+        ('budget_ms', fmt(run.get('budget_ms') or 1200) + ' ms', 'run.json budget_ms'),
+        ('noul.total', fmt(noul.get('total')), 'run.json stages.noul.total'),
+        ('noul.kept', fmt(noul.get('kept')), 'run.json stages.noul.kept'),
+        ('noul.dropped', fmt(noul.get('dropped')), 'run.json stages.noul.dropped'),
+        ('choice.label', choice.get('label') or '-', 'run.json stages.choice.label'),
+        ('gen.status', gen.get('status') or '-', 'run.json stages.generator.status'),
+        ('tokens.gen_consumed', fmt(t.get('gen_consumed') or 0), 'run.json tokens.gen_consumed'),
+        ('tokens.generator_prompt', fmt(t.get('generator_prompt') or 0), 'run.json tokens.generator_prompt'),
+        ('gen.prompt_tokens', fmt(t.get('generator_prompt') or 0), 'run.json tokens.generator_prompt'),
+        ('gen.total_tokens', fmt(t.get('generator_total') or 0), 'run.json tokens.generator_total'),
+        ('tokens.raw_est', fmt(t.get('raw_est') or 0), 'run.json tokens.raw_est'),
+        ('tokens.saved', fmt(t.get('saved') or 0), 'run.json tokens.saved (diagnostica)'),
+        ('tokens.saved_pct', f"{t.get('saved_pct')}%", 'run.json tokens.saved_pct (diagnostica)'),
+        ('baseline.llm_calls', fmt(bt.get('llm_calls') or 0), 'baseline_metrics.json totals.llm_calls'),
+        ('baseline.prompt_tokens', fmt(bt.get('prompt_tokens') or 0), 'baseline_metrics.json totals.prompt_tokens'),
+        ('baseline.total_tokens', fmt(base_total), 'baseline_metrics.json prompt+completion'),
+        ('baseline.e2e_ms', fmt(base_ms) + ' ms', 'baseline_metrics.json totals.e2e_ms'),
+        ('baseline.saved_pct', f'{saved_pct}%', 'calcolato: (baseline - gen_consumed) / baseline'),
+        ('baseline.latency_x', f'{speed}×', 'calcolato: baseline.e2e_ms / total_ms'),
+        ('batch.n_runs', fmt(thru.get('n_runs') or 0), 'run.json throughput.n_runs'),
+        ('batch.max_total_ms', fmt(thru.get('max_e2e_ms') or 0) + ' ms', 'run.json throughput.max_e2e_ms'),
+    ]
+
+    lines = [
+        '# VERIFIED NUMBERS — fonte unica per DEMO_SCRIPT',
+        '',
+        '> Generato da `bin/gen-verified-numbers` leggendo i file reali. **Non modificare a mano.**',
+        '',
+        f"- run: `{run.get('case_id')}` · {run.get('generated_at')}",
+        f"- modello: `{run.get('model')}` (provider: {(gen.get('provider') or '-')})",
+        f"- run.json sha256: `{sha(os.path.join(BACKEND, 'run.json'))}` · baseline_metrics.json sha256: `{sha(os.path.join(BACKEND, 'baseline_metrics.json'))}`",
+        '',
+        '## Valori per placeholder',
+        '',
+        '| placeholder | valore | fonte |',
+        '|---|---|---|',
+    ]
+    lines += [f'| `{{{{{name}}}}}` | **{val}** | {src} |' for name, val, src in rows]
+
+    lines += [
+        '',
+        '## I cinque numeri da dire ad alta voce',
+        '',
+        f"1. **{fmt(bt.get('llm_calls') or 0)} chiamate LLM** la baseline, **1** la pipeline.",
+        f"2. **{fmt(base_total)} token** vs **{fmt(t.get('gen_consumed') or 0)}** → **−{saved_pct}%**.",
+        f"3. **{fmt(base_ms)} ms** vs **{fmt(total_ms)} ms** → **{speed}× più veloce**.",
+        f"4. **{fmt(noul.get('dropped'))} snippet scartati su {fmt(noul.get('total'))}** prima del generativo ({(noul.get('drop_pct') or 0)}%).",
+        f"5. **{fmt(disc_ms)} ms** tutto il lato discriminativo, **{fmt(gen_ms)} ms** la singola chiamata LLM.",
+        '',
+        '## Verità da non nascondere',
+        '',
+        f"- Il tempo è quasi tutto la chiamata LLM ({fmt(gen_ms)} su {fmt(total_ms)} ms): il valore sta nel **numero di chiamate e nei token**, non nel tempo del lato discriminativo.",
+        f"- La baseline è un loop agentico classico (5 chiamate su tutto il pool di {fmt(noul.get('total'))} sorgenti), non ottimizzata: dichiaralo.",
+        '- Se un numero non è nel run, non si dice: si usa l\'etichetta architetturale.',
+    ]
+
+    open(OUT, 'w').write('\n'.join(lines) + '\n')
+    print('scritto', OUT, f'({len(rows)} placeholder)')
+
+
+if __name__ == '__main__':
+    main()
