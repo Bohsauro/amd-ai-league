@@ -4,8 +4,9 @@
 > Esegue: agent-core-dev (backend) + agent-ui-ux (solo task 4C-C9 frontend)
 > Prerequisito: leggere `01-gap-analysis.md` (stessa cartella) per i dettagli.
 > Regola ferrea: test offline con mock, MAI secrets reali nel workspace.
-> Alla fine: `python -m pytest` in `backend/spesemed/` deve restare **verde**
-> (oggi 135/135) e il backend live :8000 NON va mai toccato.
+> Alla fine: `python -m pytest -q` in `backend/spesemed/` deve restare **verde**
+> (oggi 141/141 — misura riproducibile: `141 passed` nell'ultima riga di pytest)
+> e il backend live :8000 NON va mai toccato.
 
 ---
 
@@ -140,7 +141,8 @@ Chiamarla nel lifespan e loggare il risultato (WARNING/ERROR); NON crashare il b
 esplicito e SMOKE_TEST può alertare).
 
 **Step 3 — verifica:** `pytest tests/test_rate_limit_redis_readiness.py -v` → pass.
-Poi `python -m pytest` completo → 135+ verdi.
+Poi `python -m pytest -q` completo → 141+ verdi (il gate è "nessun test rotto";
+il numero è la misura attuale, verificarla con l'ultima riga di pytest).
 
 **Criterio di accettazione:** boot con Redis down → ERROR nei log entro 5s; boot
 con memory → nessun log Redis; test offline verdi senza Redis.
@@ -633,6 +635,10 @@ class BillingStatusResponse(BaseModel):
 
 **Criterio di accettazione:** mai 5xx; `billing_enabled=false` non rompe il client;
 dati letti per `user_id` dal token.
+
+> NOTA CONTRATTO: **non** esiste un endpoint pubblico `GET /api/v1/billing/plan`.
+> L'unico contratto billing letto dal client è `GET /api/v1/billing/status` (auth).
+> L'E2E (03-e2e-plan.md + script) usa `billing/status` — nessuna route extra.
 
 ---
 

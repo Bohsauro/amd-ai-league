@@ -133,7 +133,7 @@ Legenda: 🟢 = fatto e verificato · 🟡 = parzialmente fatto, gap puntuali ·
 - **Subscription mensile** con **allowance mensile di estrazioni** (non crediti puri): piano "Pro" → N estrazioni/mese (default suggerito 100), conteggio resettato a inizio periodo. Semplice da implementare, testare offline e spiegare all'utente italiano (micro-copy calma).
 - **Checkout hosted da Stripe** (Checkout Session): zero PCI scope, nessuna carta gestita dal backend.
 - **Gating**: `POST /api/v1/extract` (il vero driver di costo, chiamate AI OpenRouter). Export NON gated nell'MVP (costo marginale ~0).
-- **Kill switch**: `BILLING_ENABLED=false` (default) → comportamento attuale identico (tutti i 135 test verdi restano verdi). Con `true`, utenti senza entitlement attivo ricevono **402 Payment Required** (`code="payment_required"`).
+- **Kill switch**: `BILLING_ENABLED=false` (default) → comportamento attuale identico (tutti i 141 test verdi restano verdi — misura: `python -m pytest -q` in `backend/spesemed/`). Con `true`, utenti senza entitlement attivo ricevono **402 Payment Required** (`code="payment_required"`).
 - **Stato utente** derivato da webhook Stripe → tabella `entitlements` (no chiamate Stripe on-read).
 
 ### 3.3 Gap enumerati (tutti da costruire)
@@ -263,7 +263,7 @@ Legenda: 🟢 = fatto e verificato · 🟡 = parzialmente fatto, gap puntuali ·
 ## 4. Cosa NON è un gap (già coperto)
 
 - ✅ 429 handler JSON custom (`main.py:283-306`)
-- ✅ Rate-limit per endpoint (auth 2/h, login 5/min, refresh 30/min, logout 20/min, extract 10/min, jobs 30/min, summary, export 10/min)
+- ✅ Rate-limit per endpoint (auth 2/h, login 5/min, refresh 30/min, logout 20/min, extract 10/min, jobs 60/min via `rate_limit_jobs` — `config.py:167-170`, `routes/jobs.py:39,115`; anche `/summary` lo riusa, `routes/summary.py:53` — export 10/min)
 - ✅ Warning startup multi-worker + memory (`main.py:64-80`)
 - ✅ ACL /metrics completa con test
 - ✅ Admin endpoint con rate-limit e fail-closed

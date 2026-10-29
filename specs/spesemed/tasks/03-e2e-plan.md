@@ -25,7 +25,7 @@ eseguirlo ovunque (anche da un host remoto) senza maneggiare credenziali.
 | 4 | Signup abilitato | `ALLOW_SIGNUP=true` | altrimenti `POST /auth/signup` -> 403 |
 | 5 | Storage bucket e policies | bucket `SUPABASE_BUCKET` (default `receipts`) + storage e auth attivi | proiettare `auth.users` / `storage.objects` nel dashboard |
 | 6 | Worker attivo (solo se si testa l'async con N>3 file) | processo worker separato | vedere log worker / job completati |
-| 7 | (4C opzionale) Stripe configurato | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` | `GET /api/v1/billing/plan` -> `stripe_configured=true` |
+| 7 | (4C opzionale) Stripe configurato | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` | `GET /api/v1/billing/status` (Bearer) -> `billing_enabled=true` |
 | 8 | (4C opzionale) `/metrics` visibile | `PROMETHEUS_METRICS_ENABLED=true`, `METRICS_IP_ALLOWLIST` include l'IP dello script | `curl -s http://localhost:8000/metrics` |
 
 > NOTA: in caso di progetti Supabase con **email confirmation obbligatoria**,
@@ -49,7 +49,7 @@ Step eseguiti (in ordine):
 | 4 | jobs | `GET /api/v1/jobs` (Bearer) | 200 + lista job |
 | 5 | extract | `POST /api/v1/extract` (multipart `files=`) | 200 sync (N<=3) oppure 202 async + poll fino a `done` |
 | 6 | export | `POST /api/v1/export` body `{}` | 200, ZIP valido (`PK` magic), salvato su `--outdir` |
-| 7 | billing/plan (opz.) | `GET /api/v1/billing/plan` | 200 + flag config |
+| 7 | billing/status (opz.) | `GET /api/v1/billing/status` (Bearer) | 200 + flag config |
 | 8 | metrics (opz.) | `GET /metrics` | 200 (o 403/404 atteso se non permesso) |
 
 Exit codes: `0` tutto PASS · `2` config locale errata (es. `--file` mancante) ·
@@ -123,7 +123,7 @@ validare rapidamente health+signup+login+jobs senza consumare crediti LLM.
 | C6 | Extract async (opz.) | 4+ file → 202 → poll | `[PASS] extract (async done)` con `completed_count` corretto |
 | C7 | Export | vedere output step 6 | `[PASS] export` con zip salvato e magic `PK` |
 | C8 | Contenuto ZIP | `unzip -l e2e_output/e2e_export_*.zip` | presenza `SPESEMED_riepilogo.xlsx` e ricevute |
-| C9 | (4C) Piano pubblico | `curl -s http://localhost:8000/api/v1/billing/plan` | 200, `stripe_configured` coerente con env |
+| C9 | (4C) Stato piano | `curl -s http://localhost:8000/api/v1/billing/status -H "Authorization: Bearer <TOKEN>"` | 200, `billing_enabled` coerente con env |
 | C10 | (4C) Checkout | `curl -s -X POST http://localhost:8000/api/v1/billing/checkout -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{}'` | 201 + `checkout_url` (se Stripe configurato) oppure 503 con messaggio chiaro |
 | C11 | (4C) Metrica | `curl -s http://localhost:8000/metrics \| head -30` | testo `text/plain` con metriche `spesemed_*` (o 403 se IP non in allowlist) |
 
@@ -151,8 +151,8 @@ validare rapidamente health+signup+login+jobs senza consumare crediti LLM.
 
 Lo script include due probe non bloccanti per la 4C:
 
-1. `GET /api/v1/billing/plan` — conferma che il modulo billing risponde e
-   NON espone secrets (flag booleani soltanto).
+1. `GET /api/v1/billing/status` (auth) — conferma che lo stato piano risponde e
+   NON espone secrets (flag booleani e numeri soltanto, costruiti dal token).
 2. `GET /metrics` — conferma che l'exposition Prometheus risponde (o che i
    guard ACL funzionano: 403/404 su IP non autorizzati).
 

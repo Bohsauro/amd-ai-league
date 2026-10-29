@@ -233,13 +233,13 @@ def step_export(token: str, outdir: Path) -> bool:
     return False
 
 
-def step_billing_plan() -> bool:
-    """Step 4C opzionale (non bloccante): info pubbliche del piano."""
-    status, data = api_json("GET", "/api/v1/billing/plan")
+def step_billing_status(token: str) -> bool:
+    """Step 4C opzionale (non bloccante): stato piano dell'utente autenticato."""
+    status, data = api_json("GET", "/api/v1/billing/status", token=token)
     ok = status == 200 and isinstance(data, dict)
-    detail = f"stripe_configured={data.get('stripe_configured')} webhook_configured={data.get('webhook_configured')}" \
+    detail = f"billing_enabled={data.get('billing_enabled')} plan={data.get('plan')}" \
         if isinstance(data, dict) else str(data)[:120]
-    record("billing/plan (opzionale)", ok, detail, status)
+    record("billing/status (opzionale)", ok, detail, status)
     return ok
 
 
@@ -247,8 +247,12 @@ def step_metrics() -> bool:
     """Step opzionale (non bloccante): /metrics esposto solo a IP allowlist."""
     status, data, _ = _request("GET", f"{BASE}/metrics", timeout=15)
     if status == 200 and isinstance(data, bytes):
-        has_spesemed = any(l.startswith(b"spesemed_") for l in data.splitlines()[:200]) or len(data) > 0
-        record("metrics /metrics (opzionale)", True, f"exposition bytes={len(data)}", status)
+        lines = data.splitlines()
+        has_prom_format = any(l.startswith(b"# ") for l in lines[:20])
+        has_spesemed = any(l.startswith(b"spesemed_") for l in lines[:200])
+        record("metrics /metrics (opzionale)", True,
+               f"exposition bytes={len(data)} prometheus_format={has_prom_format} spesemed_metrics={has_spesemed}",
+               status)
     elif status in (403, 404):
         record("metrics", True, f"{status}: atteso se IP non in allowlist o disabilitato (non bloccante)", status)
     else:
@@ -296,7 +300,7 @@ def run(api_url: str, email: str, password: str, file_path: Path | None, outdir:
         print(">> --no-extract: salto extract/export")
 
     # Step 4C opzionali (mai bloccanti)
-    step_billing_plan()
+    step_billing_status(token)
     step_metrics()
 
     # Riepilogo
