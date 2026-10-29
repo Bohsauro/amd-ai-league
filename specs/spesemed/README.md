@@ -42,7 +42,7 @@
    sviluppano in `backend/spesemed/`, si testano con pytest offline (mock Supabase) e si
    consegnano per la review. Niente curl di scrittura contro :8000.
 2. **Secrets**: mai chiedere/leggere `/home/bohsauro/SPESEMED/.env`. Test offline con mock
-   (come `tests/conftest.py`). `ALLOW_DEV_MOCK_AUTH=false` in produzione → niente fallback
+   (come `tests/conftest.py`). ALLOW_DEV_MOCK_AUTH=false in produzione → niente fallback
    `X-User-Id`: serve login Supabase reale.
 3. **CORS**: `config.py` cors_origins default = localhost:3000 e :8501. La Vite dev DEVE
    restare su **porta 3000** (`vite.config.ts` ha già `host: true` per LAN/Tailscale).
