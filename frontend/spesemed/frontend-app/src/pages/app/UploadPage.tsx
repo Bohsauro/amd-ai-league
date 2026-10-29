@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { SpesaMedica } from '../../types/api';
-import { SpinnerIcon, CheckIcon, AlertCircleIcon, UploadIcon } from '../../components/Icons';
+import { SpinnerIcon, CheckIcon, AlertCircleIcon, UploadIcon, CloseIcon } from '../../components/Icons';
+import { TrustBadgePrivacy } from '../../components/TrustBadges';
 
 const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -181,7 +182,9 @@ export const UploadPage: React.FC = () => {
 
   return (
     <div className="container ctr" style={{ paddingTop: '2.5rem' }}>
-      <span className="chip chip-neut" style={{ marginBottom: '1rem', display: 'inline-flex' }}>
+      <TrustBadgePrivacy />
+
+      <span className="chip chip-neut" style={{ marginTop: '1rem', display: 'inline-flex' }}>
         Carica ricevute
       </span>
       <h2 style={{ margin: '0.4rem 0 0.6rem' }}>Mettile qui. Ce ne occupiamo noi.</h2>
@@ -191,19 +194,11 @@ export const UploadPage: React.FC = () => {
 
       {errorMsg && (
         <div
-          className="chip-err"
-          style={{
-            padding: '0.9rem 1.1rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.4rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            fontSize: '0.9rem',
-          }}
+          className="banner banner-err"
+          style={{ marginBottom: '1.4rem' }}
           role="alert"
         >
-          <AlertCircleIcon size={18} style={{ flexShrink: 0 }} />
+          <AlertCircleIcon size={18} />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -218,6 +213,8 @@ export const UploadPage: React.FC = () => {
             marginBottom: '1.5rem',
             textAlign: 'left',
           }}
+          role="status"
+          aria-live="polite"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
@@ -287,10 +284,10 @@ export const UploadPage: React.FC = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--green-deep)', lineHeight: 1 }}>
-          ＋
-        </div>
-        <h3 style={{ marginTop: '0.5rem' }}>Trascina i file qui</h3>
+        <span aria-hidden="true" style={{ display: 'inline-flex', color: 'var(--green-deep)' }}>
+          <UploadIcon size={40} />
+        </span>
+        <h3 style={{ marginTop: '0.6rem' }}>Trascina i file qui</h3>
         <p>oppure clicca per selezionarli · max 20 alla volta</p>
       </div>
 
@@ -308,12 +305,12 @@ export const UploadPage: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                className="btn btn-ghost btn-icon"
                 onClick={() => handleRemoveFile(idx)}
-                style={{ padding: '0.2rem 0.6rem', minHeight: '32px' }}
-                title="Rimuovi file"
+                aria-label={`Rimuovi ${file.name}`}
+                title={`Rimuovi ${file.name}`}
               >
-                ✕
+                <CloseIcon size={18} />
               </button>
             </div>
           ))}

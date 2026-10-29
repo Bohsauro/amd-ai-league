@@ -24,9 +24,9 @@ export const ProfilePage: React.FC = () => {
     setNotice(null);
     try {
       await refreshToken();
-      setNotice({ text: 'Sessione e token di accesso rinnovati con successo!' });
+      setNotice({ text: 'Sessione rinnovata. La tua protezione è aggiornata.' });
     } catch {
-      setNotice({ text: 'Impossibile rinnovare il token. Effettua nuovamente l’accesso.', error: true });
+      setNotice({ text: 'Impossibile rinnovare la sessione. Effettua nuovamente l’accesso.', error: true });
     } finally {
       setIsRefreshing(false);
     }
@@ -62,15 +62,9 @@ export const ProfilePage: React.FC = () => {
 
       {notice && (
         <div
-          className={notice.error ? 'chip-err' : 'chip-ok'}
-          style={{
-            padding: '0.85rem 1.1rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.4rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
+          className={notice.error ? 'banner banner-err' : 'banner banner-ok'}
+          style={{ marginBottom: '1.4rem' }}
+          role={notice.error ? 'alert' : 'status'}
         >
           {notice.error ? <AlertCircleIcon size={16} /> : <CheckIcon size={16} />}
           <span>{notice.text}</span>
@@ -78,7 +72,7 @@ export const ProfilePage: React.FC = () => {
       )}
 
       {/* Scheda Utente */}
-      <div className="surface" style={{ padding: '1.8rem', backgroundColor: '#ffffff', marginBottom: '1.5rem' }}>
+      <div className="surface" style={{ padding: '1.8rem', backgroundColor: 'var(--bg)', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
           <div
             style={{
@@ -141,7 +135,7 @@ export const ProfilePage: React.FC = () => {
               </>
             ) : (
               <>
-                <RefreshIcon size={14} /> Rinnova sessione (Refresh token)
+                <RefreshIcon size={14} /> Rinnova sessione
               </>
             )}
           </button>
@@ -173,9 +167,9 @@ export const ProfilePage: React.FC = () => {
           <span>Garanzia di riservatezza SPESEMED</span>
         </div>
         <p className="dim" style={{ fontSize: '0.86rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
-          Tutte le richieste all’API sono autenticate tramite token JWT a rotazione. I documenti medici e
-          gli scontrini risiedono in un bucket Storage privato accessibile esclusivamente dal proprietario
-          dei dati. Nessun dato viene venduto o utilizzato per fini terzi.
+          Ogni accesso è protetto da credenziali che si rinnovano automaticamente. I documenti medici e
+          gli scontrini restano in un archivio privato, accessibile solo a te. Nessun dato viene venduto
+          o usato da terzi.
         </p>
       </div>
     </div>

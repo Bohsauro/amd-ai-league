@@ -89,7 +89,7 @@ export const Layout: React.FC = () => {
           <div style={{ display: 'flex', gap: '1.2rem' }}>
             <Link to="/" style={{ color: 'var(--ink-3)' }}>Landing</Link>
             <Link to="/app/export" style={{ color: 'var(--ink-3)' }}>Esporta</Link>
-            <Link to="/app/profile" style={{ color: 'var(--ink-3)' }}>Sessione</Link>
+            <Link to="/app/profile" style={{ color: 'var(--ink-3)' }}>Profilo</Link>
           </div>
         </div>
       </footer>

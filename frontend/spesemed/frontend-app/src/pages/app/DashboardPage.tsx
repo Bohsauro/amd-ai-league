@@ -1,44 +1,48 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError } from '../../lib/api';
+import { api } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { JobListItem, UsageSummaryResponse } from '../../types/api';
 import { CheckIcon, SpinnerIcon, ArrowRightIcon, UploadIcon } from '../../components/Icons';
+import { TrustBadgePrivacy } from '../../components/TrustBadges';
 
 export const DashboardPage: React.FC = () => {
   const { expenses, summaryRefreshTrigger } = useApp();
   const [summary, setSummary] = useState<UsageSummaryResponse | null>(null);
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadDashboardData() {
       setIsLoading(true);
-      setApiError(null);
+      let summaryOk = false;
+      let jobsOk = false;
 
       // Carica summary dal backend (se disponibile)
       try {
         const sumData = await api.getSummary();
         if (isMounted) setSummary(sumData);
-      } catch (err: unknown) {
-        if (err instanceof ApiError) {
-          // Se Supabase non è configurato o backend offline, calcola sommario locale
-          console.warn('GET /summary non disponibile:', err.detail);
-        }
+        summaryOk = true;
+      } catch {
+        // Backend non raggiungibile o Supabase non configurato: resta il riepilogo locale
       }
 
       // Carica jobs recenti
       try {
         const jobList = await api.listJobs(5, 0);
         if (isMounted) setJobs(jobList.jobs);
-      } catch (err: unknown) {
-        console.warn('GET /jobs non disponibile:', err);
+        jobsOk = true;
+      } catch {
+        // Nessuno storico disponibile: resta lo stato locale
       }
 
-      if (isMounted) setIsLoading(false);
+      if (isMounted) {
+        setIsOffline(!summaryOk && !jobsOk);
+        setIsLoading(false);
+      }
     }
 
     loadDashboardData();
@@ -91,6 +95,10 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <TrustBadgePrivacy />
+      </div>
+
       {/* Banda Riepilogo */}
       <div className="sumband">
         <div className="top">
@@ -117,28 +125,21 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <p className="note">
-          Tutti gli importi vengono aggregati automaticamente da{' '}
-          <span className="mono">GET /api/v1/summary</span> per il 730 e le detrazioni sanitarie.
+          Tutti gli importi vengono aggregati in automatico per il 730 e le detrazioni sanitarie.
         </p>
       </div>
 
-      {apiError && (
-        <div className="chip-err" style={{ marginTop: '1rem', padding: '0.8rem 1rem', borderRadius: 'var(--radius-sm)' }}>
-          {apiError}
+      {isOffline && (
+        <div className="banner banner-info" style={{ marginTop: '1rem' }} role="status">
+          <span>
+            Server non raggiungibile: mostriamo le spese salvate su questo browser. Ricarica quando la
+            connessione è attiva.
+          </span>
         </div>
       )}
 
       {/* Griglia a 2 colonne: Ultime spese + Job recenti */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.6fr 1fr',
-          gap: 'clamp(1rem, 3vw, 2rem)',
-          alignItems: 'start',
-          marginTop: '2rem',
-        }}
-        className="dashgrid"
-      >
+      <div className="dashgrid">
         {/* Colonna Sinistra: Ultime Spese */}
         <div>
           <div
@@ -176,7 +177,9 @@ export const DashboardPage: React.FC = () => {
                         <CheckIcon size={13} /> Validato
                       </span>
                     ) : (
-                      <span className="chip chip-run">● In attesa</span>
+                      <span className="chip chip-run">
+                        <i className="dot" aria-hidden="true"></i> In attesa
+                      </span>
                     )}
                   </div>
                 </div>
@@ -222,7 +225,15 @@ export const DashboardPage: React.FC = () => {
                           : 'chip-run'
                       }`}
                     >
-                      {j.status === 'done' ? 'Fatto' : j.status === 'failed' ? 'Errore' : '● In corso'}
+                      {j.status === 'done' ? (
+                        'Fatto'
+                      ) : j.status === 'failed' ? (
+                        'Errore'
+                      ) : (
+                        <>
+                          <i className="dot" aria-hidden="true"></i> In corso
+                        </>
+                      )}
                     </span>
                   </div>
                   <div className="meta" style={{ fontSize: '0.82rem', color: 'var(--ink-3)', marginTop: '0.2rem' }}>

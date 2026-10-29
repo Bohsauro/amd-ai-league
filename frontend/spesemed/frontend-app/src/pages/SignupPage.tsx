@@ -51,7 +51,7 @@ export const SignupPage: React.FC = () => {
           setErrorMsg('Le registrazioni pubbliche sono temporaneamente disabilitate.');
         } else if (err.status === 429) {
           setErrorMsg('Troppe richieste di registrazione. Attendi prima di riprovare.');
-        } else if (err.status === 400) {
+        } else if (err.status === 400 || err.status === 422) {
           setErrorMsg('Indirizzo email o password non validi. Verifica i dati.');
         } else {
           setErrorMsg(err.detail);
@@ -65,7 +65,7 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div style={{
+    <main style={{
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
@@ -90,12 +90,12 @@ export const SignupPage: React.FC = () => {
           width: '100%',
           maxWidth: '480px',
           padding: 'clamp(1.8rem, 5vw, 2.6rem)',
-          backgroundColor: '#ffffff',
-          boxShadow: '0 4px 24px rgba(22, 33, 26, 0.07)',
+          backgroundColor: 'var(--bg)',
+          boxShadow: 'var(--shadow-card)',
         }}
       >
         <div style={{ marginBottom: '1.6rem' }}>
-          <h2>Crea un account</h2>
+          <h1 style={{ fontSize: 'clamp(1.6rem, 4vw, 2rem)' }}>Crea un account</h1>
           <p className="dim" style={{ fontSize: '0.95rem', marginTop: '0.3rem' }}>
             Inizia a organizzare le tue ricevute mediche in modo semplice.
           </p>
@@ -103,19 +103,11 @@ export const SignupPage: React.FC = () => {
 
         {errorMsg && (
           <div
-            className="chip-err"
-            style={{
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              fontSize: '0.9rem',
-            }}
+            className="banner banner-err"
+            style={{ marginBottom: '1.4rem' }}
             role="alert"
           >
-            <AlertCircleIcon size={18} style={{ flexShrink: 0 }} />
+            <AlertCircleIcon size={18} />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -208,9 +200,9 @@ export const SignupPage: React.FC = () => {
       </div>
 
       <div style={{ marginTop: '1.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.86rem', color: 'var(--ink-3)' }}>
-        <ShieldCheckIcon size={16} style={{ color: 'var(--success)' }} />
+        <ShieldCheckIcon size={16} style={{ color: 'var(--success-strong)' }} />
         <span>Spazio riservato e privato · Nessuna spesa pubblica</span>
       </div>
-    </div>
+    </main>
   );
 };

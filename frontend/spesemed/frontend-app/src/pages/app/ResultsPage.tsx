@@ -51,7 +51,7 @@ export const ResultsPage: React.FC = () => {
           </span>
           <h2 style={{ marginTop: '0.4rem' }}>Risultati estrazione</h2>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <span className="chip chip-neut">Ogni campo si può correggere in un tocco</span>
           <Link to="/app/export" className="btn btn-green btn-sm">
             Vai all’esportazione <ArrowRightIcon size={14} />
@@ -61,16 +61,9 @@ export const ResultsPage: React.FC = () => {
 
       {successNotice && (
         <div
-          className="chip-ok"
-          style={{
-            padding: '0.8rem 1.2rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.4rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontWeight: 600,
-          }}
+          className="banner banner-ok"
+          style={{ marginBottom: '1.4rem' }}
+          role="status"
         >
           <CheckIcon size={16} />
           <span>{successNotice}</span>
@@ -100,7 +93,7 @@ export const ResultsPage: React.FC = () => {
               style={{
                 padding: '1.4rem 1.6rem',
                 marginBottom: '1.4rem',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--bg)',
               }}
             >
               {/* Header Card Spesa */}
@@ -114,10 +107,10 @@ export const ResultsPage: React.FC = () => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1.15rem' }}>
+                  <h3 style={{ fontSize: '1.15rem' }}>
                     {spesa.esercente || 'Esercente non riconosciuto'}
-                  </div>
-                  <div className="meta dim" style={{ fontSize: '0.85rem' }}>
+                  </h3>
+                  <div className="meta dim" style={{ fontSize: '0.85rem', marginTop: '0.2rem' }}>
                     {spesa.source_file_name || `documento-${index + 1}.pdf`}
                   </div>
                 </div>
@@ -137,7 +130,9 @@ export const ResultsPage: React.FC = () => {
                       <CheckIcon size={13} /> Confermato
                     </span>
                   ) : (
-                    <span className="chip chip-run">● In attesa di conferma</span>
+                    <span className="chip chip-run">
+                      <i className="dot" aria-hidden="true"></i> In attesa di conferma
+                    </span>
                   )}
                 </div>
               </div>

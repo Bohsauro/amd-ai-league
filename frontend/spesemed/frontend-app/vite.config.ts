@@ -6,6 +6,6 @@ export default defineConfig({
   server: {
     host: true, // bind su 0.0.0.0: raggiungibile da LAN e Tailscale (no solo localhost)
     port: 3000,
-    strictPort: false,
+    strictPort: true, // la porta DEVE restare 3000 (CORS backend su :8000)
   },
 });
