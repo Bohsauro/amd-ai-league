@@ -20,7 +20,8 @@ def test_root(test_client):
     body = r.json()
     assert body["service"] == "SPESEMED API"
     assert "version" in body
-    assert body["phase"].startswith("3")  # Fase 3
+    assert body["phase"].startswith("4C")  # Fase 4C (Redis + Prometheus + Stripe)
+    assert "billing" in body  # Fase 4C: sezione billing nel meta
     assert "endpoints" in body
     # Verifica che refresh e logout siano elencati
     endpoints = body["endpoints"]["auth"]

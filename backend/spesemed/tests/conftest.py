@@ -249,14 +249,18 @@ def _reset_prometheus_metrics():
     for counter in (
         metrics.jwt_failures_total,
         metrics.jwks_cache_resets_total,
+        metrics.http_requests_total,
     ):
         _reset_counter(counter)
 
     # Histogram reset (no-label nel nostro caso).
-    hist = metrics.jwt_decode_duration_seconds
-    if hasattr(hist, "_sum"):
-        _safe_set_value(hist._sum)
-    if hasattr(hist, "_buckets") and isinstance(hist._buckets, dict):
-        hist._buckets.clear()
+    for hist in (
+        metrics.jwt_decode_duration_seconds,
+        metrics.http_request_duration_seconds,
+    ):
+        if hasattr(hist, "_sum"):
+            _safe_set_value(hist._sum)
+        if hasattr(hist, "_buckets") and isinstance(hist._buckets, dict):
+            hist._buckets.clear()
 
     yield

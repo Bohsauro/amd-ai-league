@@ -25,9 +25,10 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from .config import settings
 from .jwt_decoder import reset_jwks_cache
+from .metrics import prometheus_http_metrics
 from .metrics_acl import check_metrics_authorization
 from .rate_limit import limiter
-from .routes import auth, export, extract, health, jobs, summary, waitlist
+from .routes import auth, billing, export, extract, health, jobs, summary, waitlist
 from .worker import JobWorker
 
 # Singleton del worker: istanziato al module-load, startato nello lifespan.
@@ -246,7 +247,12 @@ app = FastAPI(
         "- Persistenza: Storage Supabase + tabelle `jobs` e `extractions`\n"
         "- Idempotency: cache (user_id, file_hash) per evitare doppi addebiti\n"
         "- Worker async: polling tabella jobs con retry+jitter\n"
-        "- Monitoring: Sentry (opzionale) + Prometheus /metrics (default on)"
+        "- Monitoring: Sentry (opzionale) + Prometheus /metrics (default on)\n"
+        "\n"
+        "**Fase 4C features:**\n"
+        "- Redis rate-limit storage opzionale (multi-worker) con fallback memory\n"
+        "- /metrics Prometheus con HTTP metrics (cardinalita' bassa, no user data)\n"
+        "- Stripe billing skeleton: plan, checkout, webhook (no-op mode senza secrets)"
     ),
     version=settings.api_version,
     lifespan=lifespan,
@@ -275,6 +281,18 @@ app.add_middleware(
 # Rate limiter (slowapi): singleton + middleware per Security Headers.
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+
+
+# =============================================================================
+# Prometheus HTTP metrics middleware (Fase 4C)
+# =============================================================================
+@app.middleware("http")
+async def _prometheus_http_metrics(request: Request, call_next):
+    """Registra metriche HTTP generiche (method + status_class, NO path/utente).
+
+    Path /metrics escluso (lo scraper non deve inquinare i suoi stessi conteggi).
+    """
+    return await prometheus_http_metrics(request, call_next)
 
 
 # =============================================================================
@@ -315,11 +333,15 @@ def root() -> dict:
     return {
         "service": "SPESEMED API",
         "version": settings.api_version,
-        "phase": "3 (refresh+logout, rate-limit slowapi, Sentry, Prometheus, gunicorn-ready)",
+        "phase": "4C (Redis rate-limit storage, Prometheus /metrics, Stripe billing skeleton)",
         "docs": "/docs",
         "openapi": "/openapi.json",
         "health": "/api/v1/health",
         "metrics": "/metrics (se PROMETHEUS_METRICS_ENABLED=True)",
+        "billing": (
+            "Stripe billing: GET /api/v1/billing/plan, POST /api/v1/billing/checkout, "
+            "POST /api/v1/billing/webhook (no-op finche' STRIPE_SECRET_KEY non e' configurata)"
+        ),
         "endpoints": {
             "auth": [
                 "POST /api/v1/auth/signup", "POST /api/v1/auth/login",
@@ -329,6 +351,11 @@ def root() -> dict:
             "jobs": "GET /api/v1/jobs/{id}",
             "export": "POST /api/v1/export (ZIP Excel + ricevute per commercialista)",
             "summary": "GET /api/v1/summary (riepilogo spese + usage per il Profilo)",
+            "billing": [
+                "GET /api/v1/billing/plan",
+                "POST /api/v1/billing/checkout",
+                "POST /api/v1/billing/webhook",
+            ],
         },
     }
 
@@ -440,6 +467,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
 app.include_router(summary.router, prefix="/api/v1")
 app.include_router(waitlist.router, prefix="/api/v1")
+app.include_router(billing.router, prefix="/api/v1")
 
 # Mount Landing Page
 from pathlib import Path

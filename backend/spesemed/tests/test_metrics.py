@@ -24,6 +24,7 @@ from fastapi.testclient import TestClient
 from spesemed.api import jwt_decoder
 from spesemed.api.config import settings
 from spesemed.api.metrics import (
+    http_requests_total,
     jwks_cache_resets_total,
     jwt_decode_duration_seconds,
     jwt_failures_total,
@@ -438,3 +439,59 @@ class TestMetricsEndpoint:
         # Counter incrementato
         after = _get_counter_value(jwks_cache_resets_total, "")
         assert after >= before + 1
+
+
+class TestHTTPMetrics:
+    """Metriche HTTP generiche (Fase 4C): counter+histogram, NO user data."""
+
+    def test_health_request_increments_http_counter_status_class(self, test_client):
+        r = test_client.get("/api/v1/health")
+        assert r.status_code == 200
+        # Il counter labelizzato per (GET, 2xx) deve essere >= 1.
+        assert http_requests_total.labels(method="GET", status_class="2xx")._value.get() >= 1.0
+
+    def test_404_gets_4xx_status_class(self, test_client):
+        r = test_client.get("/questa-rotta-non-esiste")
+        assert r.status_code == 404
+        assert http_requests_total.labels(method="GET", status_class="4xx")._value.get() >= 1.0
+
+    def test_metrics_body_exposes_http_metrics(self):
+        # Chiama prima un endpoint reale per far generare almeno un sample.
+        with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
+            client.get("/api/v1/health")
+            resp = client.get("/metrics")
+        assert resp.status_code == 200
+        assert b"spesemed_http_requests_total" in resp.content
+        assert b'spesemed_http_request_duration_seconds_bucket' in resp.content
+
+    def test_metrics_no_user_data_leakage(self):
+        """L'exposition NON deve contenere path con dati utente ne' UUID."""
+        with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
+            client.get("/api/v1/health")
+            resp = client.get("/metrics")
+        assert resp.status_code == 200
+        body = resp.content.decode()
+        # Nessuna label path (cardinalita' + PII), nessun UUID/email/utente.
+        assert 'path=' not in body
+        assert 'user_id' not in body
+        assert "8000-000000000001" not in body
+        for token in ("/api/v1/health", "job_id", "sub="):
+            assert token not in body
+
+    def test_metrics_scrape_not_counted_itself(self):
+        """/metrics (lo scraper) non deve incrementare il suo stesso counter."""
+        with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
+            before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+            for _ in range(3):
+                client.get("/metrics")
+            after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        # Se /metrics fosse conteggiato, +3; qui nessun incremento.
+        assert after == before
+
+
+def _app_for_metrics():
+    """Import dell'app con settings ACL di default (loopback) per i test HTTP metrics."""
+    from spesemed.api.main import app
+    settings.metrics_ip_allowlist = ["127.0.0.1", "::1"]
+    settings.api_env = "development"
+    return app
