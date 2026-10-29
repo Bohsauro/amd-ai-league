@@ -257,6 +257,48 @@ class Settings(BaseSettings):
     )
 
     # =====================================================================
+    # Stripe billing (Fase 4C)
+    # =====================================================================
+    stripe_secret_key: str = Field(
+        default="",
+        description=(
+            "Chiave segreta Stripe (sk_live_... / sk_test_...). Vuota = billing "
+            "disabilitato: gli endpoint restituiscono 503 (no-op mode). "
+            "MAI committata: solo via env/.env del deploy."
+        ),
+    )
+    stripe_webhook_secret: str = Field(
+        default="",
+        description=(
+            "Whsec_... generato da Stripe per verificare la firma dei webhook. "
+            "Vuota = webhook endpoint 503 (no-op)."
+        ),
+    )
+    stripe_price_id: str = Field(
+        default="",
+        description="Price ID Stripe del piano PRO (es. price_1Q...). Richiesto da /billing/checkout.",
+    )
+    stripe_currency: str = Field(
+        default="eur",
+        description="Valuta di fatturazione ISO 4217 (es. eur, usd).",
+    )
+    stripe_success_url: str = Field(
+        default="https://app.spesemed.local/billing/success?session_id={CHECKOUT_SESSION_ID}",
+        description=(
+            "Redirect dopo checkout riuscito. Placeholder {CHECKOUT_SESSION_ID} "
+            "viene sostituito da Stripe con l'ID sessione reale."
+        ),
+    )
+    stripe_cancel_url: str = Field(
+        default="https://app.spesemed.local/billing/cancel",
+        description="Redirect se l'utente annulla il checkout.",
+    )
+    billing_plan_name: str = Field(
+        default="SPESEMED PRO",
+        description="Nome commerciale del piano in fatturazione (mostrato in /billing/plan).",
+    )
+
+    # =====================================================================
     # API metadata
     # =====================================================================
     api_version: str = "0.3.0"

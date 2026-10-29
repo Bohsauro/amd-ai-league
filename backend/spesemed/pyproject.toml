@@ -51,6 +51,12 @@ dependencies = [
     # === Export Excel/ZIP (Fase 4B) ===
     # openpyxl: generazione Excel (.xlsx) riepilogativo per categoria.
     "openpyxl>=3.1.2,<4.0.0",
+
+    # === Stripe billing (Fase 4C) ===
+    # Client ufficiale Stripe: checkout session + webhook signature verification.
+    # Import LAZY in api/billing.py: senza questa dipendenza l'API resta
+    # utilizzabile (no-op mode con 503), senza secrets reali nel workspace.
+    "stripe>=9.0.0,<14.0.0",
 ]
 
 [project.optional-dependencies]

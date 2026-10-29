@@ -1,0 +1,171 @@
+"""SPESEMED API - Billing endpoints (Fase 4C Stripe skeleton).
+
+GET  /api/v1/billing/plan      -> info pubbliche piano (200, nessun secret)
+POST /api/v1/billing/checkout  -> Stripe Checkout Session (201, auth richiesto)
+POST /api/v1/billing/webhook   -> riceve eventi Stripe (200, firma verificata)
+
+No-op mode:
+    Se STRIPE_SECRET_KEY e' vuota / libreria mancante => /checkout risponde 503
+    con messaggio chiaro. Se STRIPE_WEBHOOK_SECRET vuota => /webhook 503.
+    Questo permette di deployare il codice PRIMA che Stripe venga configurato,
+    senza rompere il resto dell'API (test offline con mock).
+"""
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from pydantic import BaseModel, Field
+
+from .. import billing
+from ..dependencies import get_current_user
+from ..rate_limit import limiter
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["billing"])
+
+
+class CheckoutRequest(BaseModel):
+    """Body per POST /billing/checkout."""
+    price_id: str = Field(
+        default="",
+        description="Price ID Stripe (default: STRIPE_PRICE_ID del server).",
+    )
+
+
+class CheckoutResponse(BaseModel):
+    """Response con l'URL di checkout per il redirect del client."""
+    checkout_url: str = Field(..., description="URL Stripe Checkout (redirect del browser).")
+    session_id: str = Field(..., description="ID della sessione checkout (per polling webhook).")
+    amount_total: int | None = Field(default=None, description="Importo totale in centesimi (se noto).")
+    currency: str = Field(default="eur", description="Valuta di fatturazione.")
+
+
+class WebhookResponse(BaseModel):
+    """Ack per /billing/webhook (Stripe si aspetta 2xx)."""
+    received: bool = Field(default=True)
+    action: str | None = Field(
+        default=None,
+        description="Azione eseguita: subscription_created | ignored.",
+    )
+    event_type: str | None = Field(
+        default=None,
+        description="Tipo di evento Stripe processato (per il logging client).",
+    )
+
+
+class BillingPlanResponse(BaseModel):
+    """Info pubbliche del piano per la UI di pricing (nessun secret)."""
+    stripe_configured: bool = Field(...)
+    webhook_configured: bool = Field(...)
+    currency: str = Field(...)
+    plans: list = Field(default_factory=list, description="Lista piani (name, features, price_id,...).")
+
+
+# =============================================================================
+# Plan / pricing info (pubblico, la UI lo usa per la landing)
+# =============================================================================
+@router.get(
+    "/billing/plan",
+    response_model=BillingPlanResponse,
+    summary="Info pubbliche del piano (nessun segreto esposto).",
+)
+def billing_plan() -> dict:
+    """Ritorna nome, prezzo e feature del piano attivo.
+
+    NOTA: NON espone STRIPE_SECRET_KEY ne' altre credenziali: solo meta
+    pubblico (nome piano, price_id, valuta) + flag di configurazione.
+    """
+    return billing.build_public_plan_info()
+
+
+# =============================================================================
+# Checkout (richiede utente autenticato)
+# =============================================================================
+@router.post(
+    "/billing/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"model": CheckoutResponse, "description": "Checkout session creata."},
+        401: {"description": "Non autenticato."},
+        503: {"description": "Stripe non configurato o STRIPE_PRICE_ID mancante."},
+    },
+)
+@limiter.limit("10/minute")
+async def billing_checkout(
+    request: Request,
+    response: Response,  # richiesto da slowapi (X-RateLimit headers)
+    body: CheckoutRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Crea una Stripe Checkout Session (modalita' subscription).
+
+    Il client deve redirigere il browser su ``checkout_url``. Il result viene
+    notificato via webhook (da configurare lato Stripe).
+    """
+    try:
+        result = billing.create_checkout_session(user_id=user_id, price_id=body.price_id or None)
+    except billing.StripeNotConfiguredError as e:
+        logger.warning("Billing checkout rifiutato: %s (user=%s)", e, user_id[:12])
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Billing non configurato (Stripe). Contatta l'amministratore.",
+        ) from e
+    except Exception as e:  # include stripe.error.StripeError
+        logger.error("Checkout Stripe fallito (user=%s): %s", user_id[:12], e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Impossibile creare la sessione di pagamento.",
+        ) from e
+    return result
+
+
+# =============================================================================
+# Webhook (NO auth: la firma Stripe E' l'autenticazione)
+# =============================================================================
+@router.post(
+    "/billing/webhook",
+    response_model=WebhookResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {"model": WebhookResponse, "description": "Evento ricevuto e processato."},
+        400: {"description": "Firma Stripe non valida."},
+        503: {"description": "Webhook non configurato (STRIPE_WEBHOOK_SECRET mancante)."},
+    },
+)
+@limiter.limit("120/minute")
+async def billing_webhook(
+    request: Request,
+    response: Response,  # richiesto da slowapi (X-RateLimit headers)
+    stripe_signature: str = Header(default="", alias="Stripe-Signature"),
+) -> dict:
+    """Riceve eventi Stripe (checkout.session.completed, ...).
+
+    La firma viene verificata con ``stripe.Webhook.construct_event`` usando
+    STRIPE_WEBHOOK_SECRET: nessun JWT/Bearer richiesto (by design).
+
+    IMPORTANTE per Stripe Dashboard: configure endpoint
+    ``https://<api>/api/v1/billing/webhook`` con almeno gli eventi
+    ``checkout.session.completed`` e ``customer.subscription.deleted``.
+    """
+    payload = await request.body()
+    try:
+        event = billing.verify_webhook_signature(payload=payload, sig_header=stripe_signature)
+    except billing.StripeNotConfiguredError as e:
+        logger.warning("Webhook non configurato: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe webhook non configurato (STRIPE_WEBHOOK_SECRET mancante).",
+        ) from e
+    except Exception as e:
+        logger.warning("Webhook Stripe: firma non valida (400). %s", type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Webhook sign check failed.",
+        ) from e
+
+    result = billing.handle_webhook_event(event)
+    logger.info("Webhook Stripe processato: %s", result)
+    return {"received": True, **result}
