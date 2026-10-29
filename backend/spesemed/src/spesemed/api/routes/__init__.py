@@ -1,0 +1,1 @@
+"""SPESEMED API routes."""

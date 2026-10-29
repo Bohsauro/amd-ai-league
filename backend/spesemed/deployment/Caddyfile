@@ -1,0 +1,142 @@
+# =============================================================================
+# SPESEMED Production Caddyfile v2
+# =============================================================================
+# Stack: Caddy 2.x davanti a FastAPI uvicorn su 127.0.0.1:8000.
+#
+# SECURITY (audit pre-go-live + security audit 2025):
+#   - HTTPS automatico via Let's Encrypt (Caddy built-in ACME)
+#   - Strict-Transport-Security (HSTS) preload-ready
+#   - X-Frame-Options / X-Content-Type-Options / Referrer-Policy / Permissions-Policy
+#   - /admin/*: IP allowlist (Ops IPs statici). Default: localhost + 2x IPV4 placeholder.
+#   - /metrics: IP allowlist (Prometheus scrapers interni).
+#   - Tutto il resto: rate-limit light + body size check.
+#
+# Genera ADMIN_TOKEN produzione con:
+#   python -c "import secrets; print(secrets.token_urlsafe(32))"
+# e impostalo in .env del container FastAPI (/etc/spesemed/.env).
+# =============================================================================
+
+# Sostituisci api.spesemed.it con il tuo dominio produzione.
+api.spesemed.it, www.spesemed.it {
+    # --------------------------------------------------------------
+    # Encode + HTTPS settings
+    # --------------------------------------------------------------
+    encode gzip zstd
+    tls {
+        # Caddy richiede automaticamente Let's Encrypt. Per self-signed
+        # lab/testing, sostituisci con ondemand + tls internal:
+        #   tls internal
+    }
+
+    # --------------------------------------------------------------
+    # Security headers (applicati a TUTTE le response)
+    # --------------------------------------------------------------
+    header {
+        # HSTS preload-ready: 2 anni + includeSubDomains + preload.
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        # Anti-MIME-sniffing (XSS hardening).
+        X-Content-Type-Options "nosniff"
+        # Anti-clickjacking (per futuri HTML responses).
+        X-Frame-Options "DENY"
+        # Referrer leakage minimization.
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Permissions: API-only backend, niente feature browser inutili.
+        Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+        # CSP: API returns JSON only, no inline scripts/objects. Strong default-deny.
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+        # Server header minimizzato.
+        -Server
+    }
+
+    # --------------------------------------------------------------
+    # Reverse proxy to FastAPI (uvicorn su 127.0.0.1:8000)
+    # --------------------------------------------------------------
+    reverse_proxy 127.0.0.1:8000 {
+        # Health check passivo: Caddy rimuove backend KO dal pool.
+        health_uri /api/v1/health
+        health_interval 30s
+        health_timeout 5s
+        # Fail tolerance in modalita' lab (disattivare in produzione).
+        # Unhealthy_status 503
+        # Header pass-through (per X-Forwarded-For / X-Real-IP).
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # --------------------------------------------------------------
+    # Security: /admin/* IP allowlist (replace con i tuoi IP Ops)
+    # --------------------------------------------------------------
+    @admin path /admin/*
+    handle @admin {
+        # IMPORTANTE: sostituisci con gli IP REALI del tuo team Ops / VPN.
+        # Default sicuro: solo localhost (reverse proxy container stesso).
+        @opsip1 remote_ip 127.0.0.1
+        # @opsip2 remote_ip 203.0.113.10  # ESEMPIO - da personalizzare
+        # @opsip3 remote_ip 203.0.113.11  # ESEMPIO - da personalizzare
+
+        # Nego default; permetto solo @opsip1 (e altri se aggiunti).
+        # NB: Caddy processa le regole in ordine; negazione esplicita precede.
+        handle_response {
+            # Se non matcha nessun @opsipN, ritorna 403.
+            @notallowed not remote_ip 127.0.0.1
+            respond @notallowed 403
+        }
+
+        # Proxy admin requests (se IP autorizzato).
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # --------------------------------------------------------------
+    # Security: /metrics IP allowlist (Prometheus scrapers interni)
+    # NB: defense-in-depth — anche il backend FastAPI implementa un IP
+    # allowlist applicativo via `metrics_ip_allowlist` (config.py).
+    # Questa regola edge e' la protezione PRIMARIA; il filtro in app chiude
+    # il gap quando il deployment espone l'API direttamente (es. lab) o
+    # il proxy e' misconfigurato (FIX M6 audit 2025, smoke test [E3]).
+    # --------------------------------------------------------------
+    @metrics path /metrics
+    handle @metrics {
+        @promip remote_ip 127.0.0.1
+        # @promip2 remote_ip 10.0.0.5   # ESEMPIO - Prometheus container IP
+
+        handle_response {
+            @notallowed not remote_ip 127.0.0.1
+            respond @notallowed 403
+        }
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # --------------------------------------------------------------
+    # Rate limit globale (light protection)
+    # --------------------------------------------------------------
+    # In produzione, il backend slowapi gia' gestisce rate-limit per user.
+    # Cadding aggiunge un layer edge per DDoS mitigation.
+    rate_limit {
+        # 100 richieste al minuto per IP dopo la prima "explore".
+        zone api_zone {
+            key    {remote_host}
+            events 100
+            window 1m
+        }
+    }
+
+    # --------------------------------------------------------------
+    # Logging (JSON strutturato per ingestion)
+    # --------------------------------------------------------------
+    log {
+        output file /var/log/caddy/spesemed-access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+        format json
+    }
+}
+
+# --------------------------------------------------------------
+# HTTP -> HTTPS redirect (best practice, ma Custom Domains
+# gia' HTTPS by default in Caddy. Mantieni per chiarezza.)
+# --------------------------------------------------------------
+http://api.spesemed.it {
+    redir https://api.spesemed.it{uri} permanent
+}

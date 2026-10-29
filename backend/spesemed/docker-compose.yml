@@ -1,0 +1,71 @@
+# =============================================================================
+# SPESEMED API - Docker Compose (dev locale)
+# =============================================================================
+# Usage:
+#   docker compose up --build       # avvia l'API + Redis
+#   docker compose down              # spegne
+#   docker compose logs -f api       # logs in follow
+#   docker compose exec api bash     # shell nel container
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redis - rate-limit storage condiviso (Fase 4, FIX H1 audit).
+  # Necessario per multi-worker (API_WORKERS > 1). In dev single-worker
+  # puoi commentarlo e usare RATE_LIMIT_STORAGE_BACKEND=memory.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: spesemed-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - spesemed-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spesemed-api:dev
+    container_name: spesemed-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - API_ENV=development
+      # Fase 4 - Redis per rate-limit multi-worker (FIX H1 audit).
+      # Rimuovere per usare memory backend (single-worker dev).
+      - RATE_LIMIT_STORAGE_BACKEND=redis
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      # Hot reload in dev (commentare in produzione)
+      - ./src:/app/src:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - spesemed-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health', timeout=3).raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  spesemed-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

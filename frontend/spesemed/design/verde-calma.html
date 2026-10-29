@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPESEMED — Verde Calma (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --surface:#f3f6ef; --surface-2:#e6eeda;
+    --ink:#16211a; --ink-2:#44523f; --ink-3:#56624e;
+    --line:#d8e2cd; --line-strong:#c1d0b2;
+    --green:#9fe870; --green-deep:#143300; --green-bg:#e2f6d5;
+    --success:#1c6b25; --danger:#b3261e; --warn:#6e5500; --info:#0f6f8f;
+    --ring:0 0 0 1px rgba(22,33,26,.06);
+    --radius:20px; --radius-sm:12px;
+    --ease:cubic-bezier(.2,.7,.3,1);
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Manrope',system-ui,sans-serif;
+    color:var(--ink); background:var(--bg);
+    font-size:17px; line-height:1.55;
+    -webkit-font-smoothing:antialiased; text-wrap:pretty;
+    font-variant-numeric:tabular-nums;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.85em;}
+  h1,h2,h3{line-height:1.08;letter-spacing:-.02em;font-weight:800;color:var(--ink)}
+  h2{font-size:clamp(1.7rem,3.6vw,2.3rem)}
+  h3{font-size:clamp(1.08rem,1.6vw,1.18rem)}
+  .eyebrow{font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.78rem;color:var(--ink-2)}
+  p.lead{font-size:1.15rem;color:var(--ink-2);line-height:1.5;font-weight:500}
+  p.dim{color:var(--ink-3)}
+  a{color:var(--green-deep);text-decoration:none;font-weight:600}
+  .container{max-width:var(--maxw);margin:0 auto;padding:0 clamp(1rem,4vw,2rem)}
+  section{padding:clamp(3rem,7vw,5.5rem) 0}
+  .muted-on-dark{color:rgba(243,246,239,.82)}
+
+  /* Buttons — pill, green, no-gray-on-dark */
+  .btn{
+    display:inline-flex;align-items:center;gap:.5rem;justify-content:center;
+    font-family:inherit;font-weight:700;font-size:1rem;
+    min-height:48px;padding:.8rem 1.5rem;border-radius:9999px;border:1px solid transparent;
+    cursor:pointer;transition:transform .18s var(--ease),background-color .18s var(--ease),box-shadow .18s var(--ease);
+  }
+  .btn:hover{transform:scale(1.03)}
+  .btn:active{transform:scale(.97)}
+  .btn:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .btn-green{background:var(--green);color:var(--green-deep)}
+  .btn-green:hover{background:#b0f281}
+  .btn-ghost{background:transparent;color:var(--green-deep);border-color:var(--line-strong)}
+  .btn-ghost:hover{background:var(--green-bg)}
+  .btn-dark{background:var(--ink);color:#fff}
+  .btn-light{background:var(--surface-2);color:var(--ink)}
+  .btn-block{width:100%}
+
+  /* Chips — readable fg on tinted bg (never gray on color) */
+  .chip{display:inline-flex;align-items:center;gap:.35rem;font-weight:600;font-size:.8rem;
+    padding:.3rem .7rem;border-radius:9999px;white-space:nowrap}
+  .chip-ok{background:var(--green-bg);color:var(--success)}
+  .chip-run{background:#fdf0c2;color:var(--warn)}
+  .chip-err{background:#fbe9e7;color:var(--danger)}
+  .chip-neut{background:var(--surface-2);color:var(--ink-2)}
+  .chip-info{background:var(--surface-2);color:var(--info)}
+
+  /* Surfaces */
+  .surface{background:var(--surface);border:1px solid var(--line);box-shadow:var(--ring)}
+  .band{background:var(--surface-2);border:1px solid var(--line)}
+  .band-full{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:2.5rem}
+
+  /* ============ Surface switcher (prototype chrome, not part of design) ============ */
+  .tabsbar{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line)}
+  .tabsbar .container{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;padding:14px 1.25rem}
+  .tabsbar .cap{font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin-right:.4rem}
+  .tabsbar button{font:inherit;font-weight:600;font-size:.85rem;border-radius:9999px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink-2);padding:.42rem .85rem;cursor:pointer;min-height:38px;transition:all .16s var(--ease)}
+  .tabsbar button:hover{border-color:var(--line-strong)}
+  .tabsbar button[aria-selected="true"]{background:var(--green);color:var(--green-deep);border-color:transparent;font-weight:700}
+  .tabsbar button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .surface-view{display:none}
+  .surface-view.show{display:block}
+
+  /* ============ LANDING ============ */
+  .l-nav{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 0}
+  .brand{display:flex;align-items:center;gap:.55rem;font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--green);position:relative;flex:0 0 auto}
+  .brand .mark::after{content:"";position:absolute;inset:8px;border-radius:5px;background:var(--ink)}
+  .l-links{display:flex;gap:1.4rem;align-items:center}
+  .l-links a{color:var(--ink-2);font-weight:600;font-size:.95rem}
+  .l-links a:hover{color:var(--ink)}
+  .l-cta{display:flex;gap:.6rem;align-items:center}
+  @media(max-width:760px){.l-links{display:none}.l-cta .btn-ghost{display:none}}
+
+  .hero{padding:clamp(3.5rem,8vw,6.5rem) 0 clamp(2.5rem,5vw,4rem)}
+  .hero .inner{max-width:820px}
+  .hero h1{font-size:clamp(2.4rem,5.2vw,3.7rem);font-weight:800;margin:1.1rem 0 1.2rem}
+  .hero h1 span{color:var(--green-deep);background:linear-gradient(180deg,transparent 62%,var(--green) 62%);padding:0 .1em}
+  .hero .actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin:1.8rem 0 .4rem}
+  .hero .trust{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;margin-top:1.6rem;color:var(--ink-3);font-size:.9rem;font-weight:600}
+  .hero .trust span{display:inline-flex;gap:.4rem;align-items:center}
+  .hero .trust svg{flex:0 0 auto}
+
+  .steprail{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(1rem,3vw,2rem);margin-top:2.2rem}
+  @media(max-width:820px){.steprail{grid-template-columns:1fr}}
+  .step{padding:0;border-top:3px solid var(--green);padding-top:1.4rem}
+  .step .n{font:'JetBrains Mono',monospace;font-weight:700;color:var(--green-deep);background:var(--green);
+    display:inline-flex;width:30px;height:30px;border-radius:50%;align-items:center;justify-content:center;font-size:.85rem;margin-bottom:.9rem}
+  .step h3{margin-bottom:.5rem}
+  .step p{color:var(--ink-2);font-size:.98rem}
+  .step .sub{display:block;margin-top:.6rem;font-size:.83rem;color:var(--ink-3)}
+
+  .darkband{background:#0f2410;color:#f3f6ef;border-radius:var(--radius);padding:clamp(2rem,5vw,3.5rem)}
+  .darkband h2{color:#fff}
+  .darkband .lead{color:rgba(243,246,239,.85)}
+  .darkband .trustgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.2rem 2.5rem;margin-top:2.2rem}
+  @media(max-width:760px){.darkband .trustgrid{grid-template-columns:1fr}}
+  .darkband .titem{border-left:3px solid var(--green);padding-left:1rem}
+  .darkband .titem h3{color:#fff;font-size:1.05rem;margin-bottom:.25rem;letter-spacing:0}
+  .darkband .titem p{color:rgba(243,246,239,.75);font-size:.92rem;margin:0}
+
+  .waitlist .field{display:flex;gap:.6rem;flex-wrap:wrap;max-width:560px;margin-top:1.4rem}
+  .waitlist input{flex:1 1 260px;font-family:inherit;font-size:1rem;padding:.85rem 1.1rem;
+    border:1px solid var(--line-strong);border-radius:12px;background:#fff;color:var(--ink);min-height:48px}
+  .waitlist input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .waitlist label{display:block;margin:.9rem 0 .35rem;font-weight:700;font-size:.9rem}
+
+  .foot{border-top:1px solid var(--line);padding:2.5rem 0 3.5rem;color:var(--ink-3);font-size:.9rem}
+  .foot .row{display:flex;gap:2rem;flex-wrap:wrap;justify-content:space-between}
+  .foot a{color:var(--ink-3)} .foot a:hover{color:var(--ink)}
+
+  /* ============ APP ============ */
+  .app-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 0;flex-wrap:wrap}
+  .app-nav{display:flex;gap:.25rem;flex-wrap:wrap}
+  .app-nav button{font:inherit;font-weight:600;font-size:.92rem;color:var(--ink-2);background:transparent;border:none;
+    padding:.55rem .85rem;border-radius:12px;cursor:pointer;min-height:44px}
+  .app-nav button:hover{background:var(--surface)}
+  .app-nav button[aria-selected="true"]{background:var(--ink);color:#fff;font-weight:600}
+  .app-nav button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .user-chip{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;font-size:.9rem;color:var(--ink-2)}
+  .user-chip .av{width:36px;height:36px;border-radius:50%;background:var(--green);color:var(--green-deep);display:flex;align-items:center;justify-content:center;font-weight:800}
+  @media(max-width:760px){.app-bar{flex-direction:column;align-items:flex-start}}
+
+  .screen{display:none}
+  .screen.show{display:block}
+
+  .sumband{background:linear-gradient(135deg,var(--surface-2),var(--green-bg));border:1px solid var(--line);
+    border-radius:var(--radius);padding:2rem}
+  .sumband .top{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+  .sumband .label{font-weight:700;color:var(--ink-2);font-size:.95rem}
+  .sumband .big{font-size:clamp(2.4rem,6vw,3.4rem);font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1}
+  .sumband .big small{font-size:1rem;font-weight:700;color:var(--ink-2)}
+  .sumband .cats{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.4rem}
+  .sumband .note{margin-top:1.1rem;font-size:.9rem;color:var(--ink-2)}
+
+  .seg{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--line)}
+  .seg:last-child{border-bottom:none}
+  .seg .who{font-weight:700}
+  .seg .meta{font-size:.86rem;color:var(--ink-3);margin-top:.15rem}
+  .seg .amt{font-weight:800;white-space:nowrap}
+  .seg .right{display:flex;align-items:center;gap:.8rem;flex-shrink:0}
+  @media(max-width:560px){.seg{flex-wrap:wrap}.seg .right{width:100%;justify-content:space-between}}
+
+  .drop{border:2px dashed var(--line-strong);border-radius:var(--radius);padding:3rem 2rem;
+    text-align:center;background:var(--surface);cursor:pointer;transition:border-color .16s var(--ease),background .16s var(--ease)}
+  .drop:hover,.drop.over{border-color:var(--green);background:var(--green-bg)}
+  .drop h3{margin-bottom:.4rem}
+  .drop p{color:var(--ink-3);font-size:.92rem}
+  .uplist{margin-top:1.4rem;display:grid;gap:.7rem}
+  .uprow{display:flex;align-items:center;gap:.9rem;padding:.9rem 1rem;background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm)}
+  .uprow .name{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .uprow .size{color:var(--ink-3);font-size:.82rem}
+  .uprow .bar{flex:1 1 100%;height:5px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+  .uprow .bar i{display:block;height:100%;width:65%;background:var(--green);border-radius:4px}
+  .hint{margin-top:1rem;font-size:.85rem;color:var(--ink-3)}
+
+  .field{margin-bottom:1.1rem}
+  .field label{display:block;font-weight:700;font-size:.9rem;margin-bottom:.35rem}
+  .field .in{width:100%;font-family:inherit;font-size:1rem;padding:.8rem 1rem;border:1px solid var(--line-strong);
+    border-radius:12px;background:#fff;color:var(--ink);min-height:48px}
+  .field textarea.in{min-height:120px;resize:vertical}
+  .field .in:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .authtabs{display:flex;gap:.4rem;margin:.4rem 0 1.6rem} .authtabs button{border:none;background:none;font:inherit;font-weight:700;padding:.4rem;cursor:pointer;color:var(--ink-3)} .authtabs button[aria-selected="true"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--green)} .authtabs button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+
+  .export .why{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(1.2rem,3vw,2rem);align-items:start}
+  @media(max-width:820px){.export .why{grid-template-columns:1fr}}
+  .pret{background:var(--ink);color:var(--green-bg);border-radius:var(--radius-sm);padding:1rem 1.1rem;font-size:.84rem;line-height:1.9;overflow-x:auto}
+  .pret b{color:#fff}
+  .pret .g{color:#b0f281}
+
+  .foot.mono-note{font-size:.82rem}
+  .tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
+  .ctr{max-width:540px;margin:0 auto}
+  .two{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}@media(max-width:760px){.two{grid-template-columns:1fr}}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<!-- ================= PROTOTYPE CHROME (not part of the design) ================= -->
+<div class="tabsbar">
+  <div class="container">
+    <span class="cap">Prototipo</span>
+    <button data-group="surface" data-view="surface-landing" aria-selected="true">Landing</button>
+    <button data-group="surface" data-view="surface-app" aria-selected="false">App</button>
+    <span style="flex:1"></span>
+    <span class="tag" style="color:var(--ink-3)">Direzione “Verde Calma” · base Wise temperata</span>
+  </div>
+</div>
+
+<!-- =================================================  LANDING  ================================================= -->
+<div id="surface-landing" class="surface-view show">
+  <header class="container">
+    <nav class="l-nav" aria-label="Principale">
+      <div class="brand"><span class="mark" aria-hidden="true"></span>SPESEMED</div>
+      <div class="l-links">
+        <a href="#come-funziona">Come funziona</a>
+        <a href="#sicurezza">Sicurezza</a>
+        <a href="#waitlist">Lista d’attesa</a>
+      </div>
+      <div class="l-cta">
+        <a class="btn btn-ghost" href="#" onclick="goSurface('surface-app');return false">Accedi</a>
+        <a class="btn btn-green" href="#waitlist">Prova gratis</a>
+      </div>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="inner">
+        <span class="chip chip-neut" style="font-weight:700;letter-spacing:.04em">Dati medici crittografati · Bucket privato</span>
+        <h1>Le tue spese mediche, <span>ordinate e pronte</span> per il 730.</h1>
+        <p class="lead">Scatta o carica scontrini e parcelle. SPESEMED li legge, li valida
+        e li organizza per categoria — poi te li esporta puliti per il commercialista, l’assicurazione o la tua dichiarazione.</p>
+        <div class="actions">
+          <a class="btn btn-green" href="#waitlist">Inizia gratis</a>
+          <a class="btn btn-ghost" href="#come-funziona">Come funziona</a>
+        </div>
+        <div class="trust" aria-label="Punti di fiducia">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Nessuna ricevuta resa pubblica</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Codice fiscale validato</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Export pronto per il commercialista</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="come-funziona">
+    <div class="container">
+      <div class="band-full">
+      <span class="eyebrow">Come funziona</span>
+      <h2 style="margin-top:.5rem">Tre passaggi. Nessun foglio da compilare.</h2>
+      <div class="steprail">
+        <div class="step">
+          <span class="n">1</span>
+          <h3>Carica</h3>
+          <p>Foto della ricevuta o PDF, anche multipagina. Una alla volta o tutte insieme.</p>
+          <span class="sub">PDF · JPG · PNG · WEBP · BMP</span>
+        </div>
+        <div class="step">
+          <span class="n">2</span>
+          <h3>Estrai</h3>
+          <p>Leggiamo data, esercente, importo, codice fiscale e categoria. Controlla il risultato: si modifica in un tocco.</p>
+          <span class="sub">Intelligenza artificiale applicata alle ricevute</span>
+        </div>
+        <div class="step">
+          <span class="n">3</span>
+          <h3>Esporta</h3>
+          <p>Scarichi un foglio Excel riepilogativo e uno ZIP con le ricevute rinominate, già in ordine per il 730.</p>
+          <span class="sub">Excel riepilogativo + ZIP rinominato</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sicurezza">
+    <div class="container">
+      <div class="darkband">
+        <span class="chip chip-ok" style="margin-bottom:1rem">Sicurezza e privacy</span>
+        <h2>Le ricevute mediche sono dati sensibili. Le trattiamo come tali.</h2>
+        <p class="lead" style="margin-top:.8rem">Nessuna ricevuta è mai esposta al pubblico: tutto resta nel tuo archivio privato, raggiungibile solo con il tuo accesso.</p>
+        <div class="trustgrid">
+          <div class="titem"><h3>Archivio privato</h3><p>Le ricevute vivono in uno spazio riservato, mai indicizzato né pubblico. Conformità GDPR.</p></div>
+          <div class="titem"><h3>Nessuna ricevuta condivisa</h3><p>Il caricamento è personale: non pubblichiamo e non vendiamo i tuoi dati.</p></div>
+          <div class="titem"><h3>Validazione in-app</h3><p>Codice fiscale, importi e date vengono controllati prima di entrare nell’archivio.</p></div>
+          <div class="titem"><h3>Controllo sempre tuo</h3><p>L’AI propone ogni campo, ma sei tu a confermare: tutto è modificabile prima di esportare.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="waitlist" class="waitlist">
+    <div class="container ctr" style="text-align:center">
+      <span class="eyebrow">Lista d’attesa</span>
+      <h2 style="margin-top:.5rem">Le prime ricevute le organizziamo noi.</h2>
+      <p class="lead" style="margin-top:.7rem">Lascia la tua email: ti avvisiamo quando apriamo e ti regaliamo il primo export.</p>
+      <form onsubmit="alert('Grazie! Ti faremo sapere a breve.');return false" style="margin-top:1rem">
+        <div class="field" style="text-align:left">
+          <label for="wl-email">La tua email</label>
+          <div class="field-actions">
+          <input id="wl-email" type="email" required placeholder="nome@esempio.it" style="min-width:240px">
+          <button class="btn btn-green" type="submit" style="min-height:48px">Avvisami</button>
+          </div>
+        </div>
+        <p class="dim" style="font-size:.84rem">Niente spam. Un solo messaggio quando siamo pronti.</p>
+      </form>
+      <style>.field-actions{display:flex;gap:.6rem;flex-wrap:wrap}@media(max-width:520px){.field-actions{flex-direction:column}}</style>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="container row">
+      <div class="brand" style="font-size:1rem"><span class="mark" aria-hidden="true"></span>SPESEMED</div>
+      <div>Spese Mediche Smart · micro-SaaS italiano</div>
+      <div><a href="#come-funziona">Come funziona</a> · <a href="#sicurezza">Sicurezza</a> · <a href="#waitlist">Lista d’attesa</a></div>
+    </div>
+  </footer>
+</div>
+
+<!-- =================================================  APP  ================================================= -->
+<div id="surface-app" class="surface-view">
+  <header style="border-bottom:1px solid var(--line);background:#fff">
+    <div class="container app-bar">
+      <div class="brand"><span class="mark" aria-hidden="true"></span>SPESEMED</div>
+      <nav class="app-nav" aria-label="App">
+        <button data-screen="dash" aria-selected="true">Dashboard</button>
+        <button data-screen="upload">Carica</button>
+        <button data-screen="results">Risultati</button>
+        <button data-screen="jobs">Storico</button>
+        <button data-screen="export">Esporta</button>
+      </nav>
+      <div class="user-chip"><span class="av">MR</span> Mario Rossi</div>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <section class="screen show" data-pane="dash">
+    <div class="container">
+      <div class="sumband">
+        <div class="top">
+          <div>
+            <div class="label">Totale esportabile</div>
+            <div class="big">€ 1.284,56 <small>· 24 spese</small></div>
+          </div>
+          <span class="chip chip-neut">Esempio di riepilogo</span>
+        </div>
+        <div class="cats" aria-label="Spese per categoria">
+          <span class="chip chip-ok">Farmaci · 9</span>
+          <span class="chip chip-neut">Visite · 7</span>
+          <span class="chip chip-neut">Esami · 5</span>
+          <span class="chip chip-neut">Dispositivi · 2</span>
+          <span class="chip chip-neut">Altro · 1</span>
+        </div>
+        <p class="note">Gli importi sono esempio a scopo di mockup. In produzione arrivano da <span class="mono">GET /api/v1/summary</span>.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:clamp(1rem,3vw,2rem);align-items:start;margin-top:2rem" class="dashgrid">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
+            <h3 style="font-size:1.15rem">Ultime spese</h3>
+            <a href="#" onclick="navScreen('jobs');return false" style="font-size:.9rem">Tutto lo storico →</a>
+          </div>
+          <div class="surface" style="padding:.2rem 1.2rem">
+            <div class="seg">
+              <div><div class="who">Farmacia Centrale</div><div class="meta">15 mar 2026 · Farmaci</div></div>
+              <div class="right"><span class="amt">€ 42,80</span><span class="chip chip-ok">✓ Validato</span></div>
+            </div>
+            <div class="seg">
+              <div><div class="who">Studio Dentistico Bianchi</div><div class="meta">02 apr 2026 · Visita Specialistica</div></div>
+              <div class="right"><span class="amt">€ 210,00</span><span class="chip chip-ok">✓ Validato</span></div>
+            </div>
+            <div class="seg">
+              <div><div class="who">Lab. Analisi Verdi</div><div class="meta">18 mag 2026 · Esami</div></div>
+              <div class="right"><span class="amt">€ 88,50</span><span class="chip chip-run">● In lavorazione</span></div>
+            </div>
+            <div class="seg">
+              <div><div class="who">Ottica Sole</div><div class="meta">30 giu 2026 · Dispositivo Medico</div></div>
+              <div class="right"><span class="amt">€ 154,99</span><span class="chip chip-ok">✓ Validato</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size:1.15rem;margin-bottom:.4rem">Job recenti</h3>
+          <div class="surface" style="padding:.9rem 1.2rem">
+            <div style="padding:.5rem 0;border-bottom:1px solid var(--line)">
+              <div style="display:flex;justify-content:space-between"><b style="font-size:.92rem">4 ricevute</b><span class="chip chip-ok">Fatto</span></div>
+              <div class="meta" style="font-size:.82rem;color:var(--ink-3)">oggi 14:32</div>
+            </div>
+            <div style="padding:.5rem 0;border-bottom:1px solid var(--line)">
+              <div style="display:flex;justify-content:space-between"><b style="font-size:.92rem">1 ricevuta</b><span class="chip chip-run">● In corso</span></div>
+              <div class="meta" style="font-size:.82rem;color:var(--ink-3)">oggi 14:58</div>
+            </div>
+            <div style="padding:.5rem 0">
+              <div style="display:flex;justify-content:space-between"><b style="font-size:.92rem">12 ricevute</b><span class="chip chip-neut">Esportato</span></div>
+              <div class="meta" style="font-size:.82rem;color:var(--ink-3)">ieri</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>@media(max-width:820px){.dashgrid{grid-template-columns:1fr!important}}</style>
+    </div>
+  </section>
+
+  <!-- UPLOAD -->
+  <section class="screen" data-pane="upload">
+    <div class="container ctr">
+      <span class="chip chip-neut" style="margin-bottom:1rem;display:inline-flex">Carica ricevute</span>
+      <h2 style="margin:.5rem 0 .7rem">Mettile qui. Ce ne occupiamo noi.</h2>
+      <p class="lead" style="margin-bottom:1.6rem">PDF, anche multipagina, oppure foto di scontrini e parcelle.</p>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Trascina i file qui o clicca per selezionarli">
+        <div style="font-size:2rem;font-weight:800;color:var(--green-deep);line-height:1">＋</div>
+        <h3>Trascina i file qui</h3>
+        <p>oppure clicca per selezionarli · max 10 alla volta</p>
+      </div>
+      <div class="uplist">
+        <div class="uprow">
+          <span class="chip chip-ok">✓ Fatto</span>
+          <div style="flex:1;min-width:0"><div class="name">scontrino-farmacia-marzo.pdf</div><div class="size">1,2 MB</div></div>
+          <span class="chip chip-neut">Farmaci</span>
+        </div>
+        <div class="uprow">
+          <span class="chip chip-run">● Estraendo</span>
+          <div style="flex:1;min-width:0"><div class="name">parcella-dentista.jpg</div><div class="size">3,8 MB</div></div>
+          <div class="bar" style="flex:0 0 120px"><i></i></div>
+        </div>
+        <div class="uprow">
+          <span class="chip chip-neut">In coda</span>
+          <div style="flex:1;min-width:0"><div class="name">esami-ematici.png</div><div class="size">2,1 MB</div></div>
+          <span class="chip chip-neut">Esami</span>
+        </div>
+      </div>
+      <p class="hint dim">Fino a 3 file l’estrazione è immediata. Oltre, parte un lavoro in secondo piano e ti avvisiamo quando è pronto.</p>
+      <div class="actions" style="margin-top:1.4rem">
+        <button class="btn btn-green" onclick="navScreen('results')">Estrai ora</button>
+        <button class="btn btn-ghost">Annulla</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="screen" data-pane="results">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.6rem;margin-bottom:1.4rem">
+        <div><span class="chip chip-ok" style="display:inline-flex">3 estratte</span><h2 style="margin-top:.5rem">Risultati estrazione</h2></div>
+        <span class="chip chip-neut">Ogni campo si può correggere in un tocco</span>
+      </div>
+
+      <div class="surface" style="padding:1.4rem 1.5rem;margin-bottom:1.2rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem">
+          <div>
+            <div style="font-weight:800;font-size:1.1rem">Farmacia Centrale di Rossi M.</div>
+            <div class="meta" style="color:var(--ink-3);font-size:.85rem">scontrino-farmacia-marzo.pdf</div>
+          </div>
+          <span class="chip chip-ok">Codice fiscale validato</span>
+        </div>
+        <div class="two" style="margin-top:1.1rem">
+          <div class="field"><label>Data spesa</label><input class="in" value="15/03/2026"></div>
+          <div class="field"><label>Categoria</label>
+            <select class="in"><option>Farmaci</option></select>
+          </div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Importo totale</label><input class="in" value="42,80 €"></div>
+          <div class="field"><label>Codice fiscale paziente</label><input class="in mono" value="RSSMRA85A01H501W"></div>
+        </div>
+        <div class="field"><label>Esercente</label><input class="in" value="Farmacia Centrale di Rossi M."></div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-ghost">Salva bozza</button>
+          <button class="btn btn-green">Conferma spesa</button>
+        </div>
+      </div>
+
+      <div class="surface" style="padding:1.4rem 1.5rem;margin-bottom:1.2rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem">
+          <div>
+            <div style="font-weight:800;font-size:1.1rem">Lab. Analisi Verdi</div>
+            <div class="meta" style="color:var(--ink-3);font-size:.85rem">esami-ematici.png</div>
+          </div>
+          <span class="chip chip-run">● In attesa di conferma</span>
+        </div>
+        <div class="two" style="margin-top:1.1rem">
+          <div class="field"><label>Data spesa</label><input class="in" value="18/05/2026"></div>
+          <div class="field"><label>Categoria</label><select class="in"><option>Esami</option></select></div>
+        </div>
+        <div class="field"><label>Importo totale</label><input class="in" value="88,50 €"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section class="screen" data-pane="jobs">
+    <div class="container ctr">
+      <span class="chip chip-neut" style="display:inline-flex">Storico</span>
+      <h2 style="margin:.5rem 0 1.4rem">I tuoi lavori di estrazione</h2>
+      <p class="dim" style="margin-bottom:1.6rem">Ogni caricamento diventa un lavoro: ne vedi lo stato e puoi scaricarne l’export se vuoi.</p>
+      <div class="surface" style="padding:0 1.4rem">
+        <div class="seg">
+          <div><div class="who">4 ricevute</div><div class="meta">oggi 14:32 · 3 validati</div></div>
+          <div class="right"><span class="chip chip-ok">Fatto</span><span class="chip chip-neut">Esporta</span></div>
+        </div>
+        <div class="seg">
+          <div><div class="who">1 ricevuta</div><div class="meta">oggi 14:58 · in lavorazione</div></div>
+          <div class="right"><span class="chip chip-run">● In corso</span></div>
+        </div>
+        <div class="seg">
+          <div><div class="who">12 ricevute</div><div class="meta">ieri · 12 validati</div></div>
+          <div class="right"><span class="chip chip-ok">Fatto</span><span class="chip chip-neut">Esporta</span></div>
+        </div>
+        <div class="seg">
+          <div><div class="who">3 ricevute</div><div class="meta">02 feb 2026 · errore su 1 file</div></div>
+          <div class="right"><span class="chip chip-err">1 errore</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section class="screen" data-pane="export">
+    <div class="container">
+      <span class="chip chip-neut">Esporta per il commercialista</span>
+      <h2 style="margin:.5rem 0 .8rem">Scarica l’archivio già in ordine.</h2>
+      <p class="lead" style="max-width:640px;margin-bottom:1.8rem">Ricevi un foglio Excel riepilogativo e uno ZIP con le ricevute rinominate col formato che serve per il 730.</p>
+      <div class="export">
+        <div class="why">
+          <div class="surface" style="padding:1.5rem">
+            <h3 style="font-size:1.1rem">Cosa ottieni</h3>
+            <div style="margin-top:1rem;display:grid;gap:.9rem">
+              <div><b>Excel riepilogativo</b><div class="dim" style="font-size:.9rem">Un foglio “Riepilogo” e uno “Per categoria”.</div></div>
+              <div><b>ZIP con ricevute rinominate</b><div class="dim" style="font-size:.9rem">Ogni file pronto da allegare, senza toccare nulla.</div></div>
+              <div class="meta dim" style="font-size:.82rem">Formato nome: <span class="mono">YYYY-MM-DD_esercente_importoCAT.ext</span></div>
+            </div>
+            <button class="btn btn-green btn-block" style="margin-top:1.3rem">Scarica export (ZIP)</button>
+          </div>
+          <div class="band" style="border-radius:var(--radius);padding:1.4rem">
+            <span class="tag">Anteprima nomi file</span>
+            <div class="pret" style="margin-top:.7rem"><b>2026-03-15</b>_Farmacia-Centrale<span class="g">_42.80EUR_FAR</span>.pdf<br><b>2026-03-15</b>_Farmacia-Centrale<span class="g">_42.80EUR_FAR</span>.pdf<br><b>2026-04-02</b>_Studio-Dentistico_<span class="g">210.00EUR_VIS</span>.pdf<br><b>2026-06-30</b>_Ottica-Sole_<span class="g">154.99EUR_DIS</span>.pdf</div>
+          </div>
+        </div>
+        <p class="dim" style="margin-top:1.4rem;font-size:.85rem">In produzione l’export arriva da <span class="mono">POST /api/v1/export</span>, generato con <span class="mono">openpyxl</span> + <span class="mono">zipfile</span>.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Surface switcher (Landing / App)
+  function goSurface(g){document.querySelectorAll('.surface-view').forEach(v=>v.classList.toggle('show',v.id===g));
+    if(g==='surface-app'){navScreen('dash');} }
+  document.querySelectorAll('.tabsbar button[data-group="surface"]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.tabsbar button[data-group="surface"]').forEach(x=>x.setAttribute('aria-selected',x===b));
+      goSurface(b.dataset.view);
+    });
+  });
+  // App screens
+  function navScreen(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show',s.dataset.pane===id));
+    document.querySelectorAll('.app-nav button').forEach(x=>x.setAttribute('aria-selected',x.dataset.screen===id));
+  }
+  document.querySelectorAll('.app-nav button').forEach(b=>b.addEventListener('click',()=>navScreen(b.dataset.screen)));
+  // Upload drop-zone highlight
+  const drop=document.getElementById('drop');
+  if(drop){['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+    drop.addEventListener('click',()=>navScreen('upload'));}
+</script>
+</body>
+</html>

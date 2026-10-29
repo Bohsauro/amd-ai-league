@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spesemed"
+version = "0.3.0"
+description = "SPESEMED backend - OCR per ricevute mediche italiane via OpenRouter"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [{name = "SPESEMED Team"}]
+dependencies = [
+    # === Core AI engine (Fase 1) ===
+    "httpx>=0.27.0,<1.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic[email]>=2.5.0,<3.0.0",
+    "Pillow>=10.2.1,<12.0.0",
+    "pdf2image>=1.17.0",
+
+    # === API (Fase 1) ===
+    "fastapi>=0.110.0,<1.0.0",
+    "uvicorn[standard]>=0.27.0",
+    "gunicorn>=21.2.0,<24.0.0",
+    "python-multipart>=0.0.12,<1.0.0",
+    "pydantic-settings>=2.1.0",
+
+    # === Supabase + JWT (Fase 2) ===
+    "supabase>=2.4.0,<3.0.0",
+    # NB: occorre PyJWT[crypto] per supporto ES256/RS256 (curve ellittiche
+    # e RSA richiedono il pacchetto `cryptography` come extra opzionale).
+    # Senza `[crypto]`, jwt.decode fallisce con InvalidAlgorithmError su
+    # token ES256 (problema reale con Supabase moderni).
+    "PyJWT[crypto]>=2.8.0,<3.0.0",
+    "cryptography>=42.0.0,<48.0.0",
+
+    # === Rate limit + monitoring (Fase 3 + Fase 4 Redis) ===
+    "slowapi>=0.1.9,<1.0.0",
+    # NB: limits[redis] tira gia' redis come sub-dipendenza.
+    # Il pin esplicito redis>=5.0.0,<6.0.0 serve per version-control
+    # stretto: se limits[redis] rilassa il suo pin, noi restiamo bloccati
+    # su v5.x (v6 ha breaking changes). Rimuovere se conflitto.
+    "limits[redis]>=3.0.0",
+    "redis>=5.0.0,<6.0.0",
+    "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
+    # Prometheus client per metriche auth / JWT (counters failure reason + histogram latency).
+    # PIN: esclude 0.25.0 che ha un bug noto in Metric.clear() (AttributeError _lock).
+    # Il workaround in tests/conftest.py supporta anche 0.25.x se reinstallato.
+    "prometheus-client>=0.20.0,<0.26.0,!=0.25.0",
+
+    # === Export Excel/ZIP (Fase 4B) ===
+    # openpyxl: generazione Excel (.xlsx) riepilogativo per categoria.
+    "openpyxl>=3.1.2,<4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.12.0",
+]
+
+[project.urls]
+Repository = "https://github.com/spesemed/spesemed"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
