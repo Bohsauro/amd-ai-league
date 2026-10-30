@@ -13,7 +13,7 @@ SPA web in **React 18 + TypeScript + Vite** per **SPESEMED** (Spese Mediche Smar
 - **Risultati (`/app/results`)**: Spese estratte con campi editabili (data `YYYY-MM-DD`, categoria, importo, codice fiscale, esercente) e verifica validità del CF.
 - **Storico (`/app/jobs`)**: Elenco paginato dei lavori dell'utente con download diretto dell'archivio per singolo job.
 - **Esporta (`/app/export`)**: Generazione e download binario dello ZIP per il commercialista (`POST /api/v1/export`) contenente Excel riepilogativo e file rinominati `YYYY-MM-DD_esercente_importoCAT.ext`.
-- **Profilo (`/app/profile`)**: Informazioni sessione, rinnovo manuale token (refresh) e logout sicuro.
+- **Profilo (`/app/profile`, alias `/app/profilo`)**: Informazioni sessione, rinnovo manuale token (refresh) e logout sicuro. Include la sezione "Il tuo piano" (`GET /api/v1/billing/status`) con stato del piano, rinnovo, estrazioni incluse e CTA di checkout (`POST /api/v1/billing/checkout`). L'alias `/app/profilo` serve al ritorno da Stripe (`?billing=success|cancel`).
 
 ## Gestione Token & Trade-off Architetturale
 

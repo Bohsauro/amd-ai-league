@@ -34,6 +34,8 @@ export const LoginPage: React.FC = () => {
       if (err instanceof ApiError) {
         if (err.status === 401) {
           setErrorMsg('Credenziali non valide. Controlla email e password.');
+        } else if (err.status === 422) {
+          setErrorMsg('Controlla i dati inseriti: email o password non sono validi.');
         } else if (err.status === 429) {
           setErrorMsg('Troppi tentativi di accesso. Per sicurezza attendi un minuto.');
         } else if (err.status === 503) {
@@ -50,7 +52,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div style={{
+    <main style={{
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
@@ -75,12 +77,12 @@ export const LoginPage: React.FC = () => {
           width: '100%',
           maxWidth: '460px',
           padding: 'clamp(1.8rem, 5vw, 2.6rem)',
-          backgroundColor: '#ffffff',
-          boxShadow: '0 4px 24px rgba(22, 33, 26, 0.07)',
+          backgroundColor: 'var(--bg)',
+          boxShadow: 'var(--shadow-card)',
         }}
       >
         <div style={{ marginBottom: '1.6rem' }}>
-          <h2>Bentornato</h2>
+          <h1 style={{ fontSize: 'clamp(1.6rem, 4vw, 2rem)' }}>Bentornato</h1>
           <p className="dim" style={{ fontSize: '0.95rem', marginTop: '0.3rem' }}>
             Accedi per gestire ed esportare le tue spese mediche.
           </p>
@@ -88,19 +90,11 @@ export const LoginPage: React.FC = () => {
 
         {errorMsg && (
           <div
-            className="chip-err"
-            style={{
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              fontSize: '0.9rem',
-            }}
+            className="banner banner-err"
+            style={{ marginBottom: '1.4rem' }}
             role="alert"
           >
-            <AlertCircleIcon size={18} style={{ flexShrink: 0 }} />
+            <AlertCircleIcon size={18} />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -166,9 +160,9 @@ export const LoginPage: React.FC = () => {
       </div>
 
       <div style={{ marginTop: '1.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.86rem', color: 'var(--ink-3)' }}>
-        <ShieldCheckIcon size={16} style={{ color: 'var(--success)' }} />
-        <span>Connessione protetta con cifratura a 256 bit · Privacy GDPR</span>
+        <ShieldCheckIcon size={16} style={{ color: 'var(--success-strong)' }} />
+        <span>Connessione protetta con cifratura · Privacy GDPR</span>
       </div>
-    </div>
+    </main>
   );
 };

@@ -12,7 +12,7 @@
   /* Typography & Ink (tinted with green, never pure black/grey) */
   --ink: #16211a;
   --ink-2: #44523f;
-  --ink-3: #56624e;
+  --ink-3: #66755f;
 
   /* Lines & Borders */
   --line: #d8e2cd;
@@ -20,17 +20,40 @@
 
   /* Primary Accent & Brand */
   --green: #9fe870;
+  --green-hover: #b0f281;
   --green-deep: #143300;
+  --green-deepest: #0f2410;
   --green-bg: #e2f6d5;
 
-  /* Semantic State Colors (tinted fg, never grey on color) */
-  --success: #1c6b25;
+  /* Semantic State Colors (DESIGN.md value + "-strong" AA-safer variant for
+     small text on tinted surfaces: #2e7d32→4.49:1, #8a6d00→4.34:1 on their
+     tinted backgrounds, so chips use the darker "-strong" tone) */
+  --success: #2e7d32;
+  --success-strong: #1c6b25;
   --danger: #b3261e;
-  --warn: #6e5500;
+  --warn: #8a6d00;
+  --warn-strong: #6e5500;
   --info: #0f6f8f;
+
+  /* Semantic Backgrounds & Borders */
+  --success-bg: #e2f6d5;
+  --warn-bg: #fbf1c8;
+  --danger-bg: #fbe9e7;
+  --danger-hover-bg: #ffcdd2;
+  --danger-border: #ffccbc;
+  --info-bg: #e2f3f6;
+  --error-input-bg: #fffbfa;
+
+  /* Interactive hover tones */
+  --ink-hover: #27382d;
+  --light-hover: #dbe5ce;
+
+  /* Dark band (landing "Sicurezza") */
+  --dark-copy: rgba(243, 246, 239, 0.85);
 
   /* Elevation & Borders */
   --ring: 0 0 0 1px rgba(22, 33, 26, 0.06);
+  --shadow-card: 0 4px 24px rgba(22, 33, 26, 0.07);
   --radius: 20px;
   --radius-sm: 12px;
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -70,6 +93,17 @@ body {
   min-height: 100vh;
 }
 
+/* Accessible focus indicator for every interactive control */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 2px;
+}
+
 /* Monospace accent for numbers and file names */
 .mono {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -82,6 +116,7 @@ h1, h2, h3, h4 {
   letter-spacing: -0.02em;
   font-weight: 800;
   color: var(--ink);
+  text-wrap: balance;
 }
 
 h1 {
@@ -111,6 +146,10 @@ p.lead {
   color: var(--ink-2);
   line-height: 1.5;
   font-weight: 500;
+}
+
+.hero p.lead {
+  max-width: 32em;
 }
 
 p.dim {
@@ -187,7 +226,7 @@ section {
 }
 
 .btn-green:hover:not(:disabled) {
-  background-color: #b0f281;
+  background-color: var(--green-hover);
 }
 
 .btn-ghost {
@@ -203,11 +242,11 @@ section {
 
 .btn-dark {
   background-color: var(--ink);
-  color: #ffffff;
+  color: var(--bg);
 }
 
 .btn-dark:hover:not(:disabled) {
-  background-color: #27382d;
+  background-color: var(--ink-hover);
 }
 
 .btn-light {
@@ -216,17 +255,17 @@ section {
 }
 
 .btn-light:hover:not(:disabled) {
-  background-color: #dbe5ce;
+  background-color: var(--light-hover);
 }
 
 .btn-danger {
-  background-color: #fbe9e7;
+  background-color: var(--danger-bg);
   color: var(--danger);
-  border-color: #ffccbc;
+  border-color: var(--danger-border);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #ffcdd2;
+  background-color: var(--danger-hover-bg);
 }
 
 .btn-block {
@@ -234,9 +273,18 @@ section {
 }
 
 .btn-sm {
-  min-height: 38px;
-  padding: 0.45rem 1rem;
+  min-height: 44px;
+  padding: 0.55rem 1rem;
   font-size: 0.88rem;
+}
+
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
 }
 
 /* ==========================================================================
@@ -254,17 +302,17 @@ section {
 }
 
 .chip-ok {
-  background-color: var(--green-bg);
-  color: var(--success);
+  background-color: var(--success-bg);
+  color: var(--success-strong);
 }
 
 .chip-run {
-  background-color: #fdf0c2;
-  color: var(--warn);
+  background-color: var(--warn-bg);
+  color: var(--warn-strong);
 }
 
 .chip-err {
-  background-color: #fbe9e7;
+  background-color: var(--danger-bg);
   color: var(--danger);
 }
 
@@ -274,7 +322,51 @@ section {
 }
 
 .chip-info {
-  background-color: var(--surface);
+  background-color: var(--info-bg);
+  color: var(--info);
+  border: 1px solid var(--line);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   Banners (inline notifications — high-contrast tinted surfaces)
+   ========================================================================== */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.banner svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.banner-ok {
+  background-color: var(--success-bg);
+  color: var(--success-strong);
+}
+
+.banner-err {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.banner-info {
+  background-color: var(--info-bg);
   color: var(--info);
   border: 1px solid var(--line);
 }
@@ -302,18 +394,18 @@ section {
 }
 
 .darkband {
-  background-color: #0f2410;
-  color: #f3f6ef;
+  background-color: var(--green-deepest);
+  color: var(--surface);
   border-radius: var(--radius);
   padding: clamp(2rem, 5vw, 3.5rem);
 }
 
 .darkband h2, .darkband h3 {
-  color: #ffffff;
+  color: var(--bg);
 }
 
 .darkband .lead {
-  color: rgba(243, 246, 239, 0.85);
+  color: var(--dark-copy);
 }
 
 /* Brand mark */
@@ -365,7 +457,7 @@ section {
   padding: 0.8rem 1rem;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background-color: #ffffff;
+  background-color: var(--bg);
   color: var(--ink);
   min-height: 48px;
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
@@ -384,7 +476,7 @@ section {
 
 .field .in.error {
   border-color: var(--danger);
-  background-color: #fffbfa;
+  background-color: var(--error-input-bg);
 }
 
 .error-text {
@@ -421,12 +513,62 @@ section {
   color: var(--ink-3);
 }
 
+/* Landing header nav (wraps on narrow screens) */
+.l-nav {
+  flex-wrap: wrap;
+}
+
+.l-cta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .l-nav .l-links {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 1rem 1.4rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* Dashboard two-column layout (collapses on narrow screens) */
+.dashgrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+  margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+  .dashgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Export page two-column layout */
+.exportgrid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: clamp(1.2rem, 3vw, 2rem);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .exportgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ==========================================================================
    App Specific Components
    ========================================================================== */
 .app-header {
   border-bottom: 1px solid var(--line);
-  background-color: #ffffff;
+  background-color: var(--bg);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -472,7 +614,7 @@ section {
 
 .app-nav a.active, .app-nav button[aria-selected="true"] {
   background-color: var(--ink);
-  color: #ffffff;
+  color: var(--bg);
   font-weight: 700;
 }
 
@@ -483,6 +625,17 @@ section {
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--ink-2);
+  min-height: 44px;
+  padding: 0.2rem 0.55rem 0.2rem 0.2rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.user-chip:hover {
+  background-color: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 .user-chip .av {
@@ -630,7 +783,7 @@ section {
   align-items: center;
   gap: 0.9rem;
   padding: 0.85rem 1.1rem;
-  background-color: #ffffff;
+  background-color: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
@@ -685,11 +838,11 @@ section {
 }
 
 .pret b {
-  color: #ffffff;
+  color: var(--bg);
 }
 
 .pret .g {
-  color: #b0f281;
+  color: var(--green-hover);
 }
 
 /* Step rail */

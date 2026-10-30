@@ -9,6 +9,7 @@ export const JobsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exportingJobId, setExportingJobId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const loadJobs = async () => {
     setIsLoading(true);
@@ -34,6 +35,7 @@ export const JobsPage: React.FC = () => {
 
   const handleExportJob = async (jobId: string) => {
     setExportingJobId(jobId);
+    setExportError(null);
     try {
       const { blob, filename } = await api.exportZip({ job_id: jobId });
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -45,11 +47,11 @@ export const JobsPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        alert(`Errore export: ${err.detail}`);
-      } else {
-        alert('Errore durante il download dell’archivio.');
-      }
+      const message =
+        err instanceof ApiError
+          ? err.detail
+          : 'Errore durante il download dell’archivio. Riprova.';
+      setExportError(message);
     } finally {
       setExportingJobId(null);
     }
@@ -93,18 +95,23 @@ export const JobsPage: React.FC = () => {
 
       {errorMsg && (
         <div
-          className="chip-err"
-          style={{
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.4rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
+          className="banner banner-err"
+          style={{ marginBottom: '1.4rem' }}
+          role="alert"
         >
           <AlertCircleIcon size={16} />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {exportError && (
+        <div
+          className="banner banner-err"
+          style={{ marginBottom: '1.4rem' }}
+          role="alert"
+        >
+          <AlertCircleIcon size={16} />
+          <span>{exportError}</span>
         </div>
       )}
 
@@ -138,7 +145,11 @@ export const JobsPage: React.FC = () => {
                       <CheckIcon size={13} /> Fatto
                     </span>
                   )}
-                  {isRunning && <span className="chip chip-run">● In corso</span>}
+                  {isRunning && (
+                    <span className="chip chip-run">
+                      <i className="dot" aria-hidden="true"></i> In corso
+                    </span>
+                  )}
                   {isFailed && <span className="chip chip-err">Fallito</span>}
 
                   {isDone && (
@@ -146,7 +157,6 @@ export const JobsPage: React.FC = () => {
                       className="btn btn-ghost btn-sm"
                       onClick={() => handleExportJob(job.job_id)}
                       disabled={isDownloading}
-                      style={{ padding: '0.35rem 0.85rem', minHeight: '36px' }}
                     >
                       {isDownloading ? (
                         <>

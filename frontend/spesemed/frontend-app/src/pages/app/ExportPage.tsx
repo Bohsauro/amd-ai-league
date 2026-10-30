@@ -27,7 +27,7 @@ export const ExportPage: React.FC = () => {
       document.body.removeChild(tempLink);
       window.URL.revokeObjectURL(blobUrl);
 
-      setSuccessMsg('Download completato con successo!');
+      setSuccessMsg('Archivio scaricato: trovi il file ZIP tra i download del browser.');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 400) {
@@ -70,52 +70,30 @@ export const ExportPage: React.FC = () => {
 
       {errorMsg && (
         <div
-          className="chip-err"
-          style={{
-            padding: '0.9rem 1.2rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            maxWidth: '820px',
-          }}
+          className="banner banner-err"
+          style={{ marginBottom: '1.5rem', maxWidth: '820px' }}
+          role="alert"
         >
-          <AlertCircleIcon size={18} style={{ flexShrink: 0 }} />
+          <AlertCircleIcon size={18} />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
         <div
-          className="chip-ok"
-          style={{
-            padding: '0.9rem 1.2rem',
-            borderRadius: 'var(--radius-sm)',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            maxWidth: '820px',
-          }}
+          className="banner banner-ok"
+          style={{ marginBottom: '1.5rem', maxWidth: '820px' }}
+          role="status"
         >
-          <CheckIcon size={18} style={{ flexShrink: 0 }} />
+          <CheckIcon size={18} />
           <span>{successMsg}</span>
         </div>
       )}
 
       <div className="export">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.1fr 0.9fr',
-            gap: 'clamp(1.2rem, 3vw, 2rem)',
-            alignItems: 'start',
-          }}
-          className="two"
-        >
+        <div className="exportgrid">
           {/* Card Cosa Ottieni */}
-          <div className="surface" style={{ padding: '1.8rem', backgroundColor: '#ffffff' }}>
+          <div className="surface" style={{ padding: '1.8rem', backgroundColor: 'var(--bg)' }}>
             <h3 style={{ fontSize: '1.15rem' }}>Cosa ottieni</h3>
             <div style={{ marginTop: '1.2rem', display: 'grid', gap: '1rem' }}>
               <div>
@@ -193,8 +171,8 @@ export const ExportPage: React.FC = () => {
         </div>
 
         <p className="dim" style={{ marginTop: '1.8rem', fontSize: '0.88rem' }}>
-          In produzione l’export viene assemblato in-memory da <span className="mono">POST /api/v1/export</span>{' '}
-          tramite librerie specializzate <span className="mono">openpyxl</span> e <span className="mono">zipfile</span>.
+          L’archivio viene preparato in automatico dal tuo archivio privato: nessun riordino manuale.
+          Ogni download riguarda solo i dati del tuo account.
         </p>
       </div>
     </div>

@@ -53,6 +53,8 @@ export const App: React.FC = () => {
                 <Route path="jobs" element={<JobsPage />} />
                 <Route path="export" element={<ExportPage />} />
                 <Route path="profile" element={<ProfilePage />} />
+                {/* Alias: il ritorno da Stripe usa /app/profilo?billing=success|cancel */}
+                <Route path="profilo" element={<ProfilePage />} />
               </Route>
             </Route>
 

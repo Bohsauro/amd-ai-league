@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { TrustBadgePrivacy, TrustPointsHero } from '../components/TrustBadges';
 import { SpinnerIcon, CheckIcon } from '../components/Icons';
 
@@ -29,9 +29,14 @@ export const LandingPage: React.FC = () => {
       setMessage(res.message || 'Grazie per l’interesse! Ti avviseremo a breve.');
       setEmail('');
       setName('');
-    } catch {
-      // Fallback gentile se il server non ha il DB configurato o è offline
-      setMessage('Grazie! La tua email è stata registrata per l’accesso prioritario.');
+    } catch (err: unknown) {
+      // Nessuna promessa falsa: distinguiamo tra server raggiungibile e rete giù.
+      setIsError(true);
+      if (err instanceof ApiError && err.status !== 0) {
+        setMessage('La richiesta non è andata a buon fine. Controlla i dati inseriti e riprova.');
+      } else {
+        setMessage('Non riusciamo a contattare il server in questo momento. Riprova tra poco.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +73,7 @@ export const LandingPage: React.FC = () => {
             <a href="#sicurezza">Sicurezza</a>
             <a href="#waitlist">Lista d’attesa</a>
           </div>
-          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+          <div className="l-cta" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
             <Link to="/login" className="btn btn-ghost">
               Accedi
             </Link>
@@ -173,25 +178,25 @@ export const LandingPage: React.FC = () => {
             >
               <div style={{ borderLeft: '3px solid var(--green)', paddingLeft: '1rem' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Archivio privato</h3>
-                <p style={{ color: 'rgba(243,246,239,0.8)', fontSize: '0.94rem' }}>
+                <p style={{ color: 'var(--dark-copy)', fontSize: '0.94rem' }}>
                   Le ricevute vivono in uno storage riservato, mai indicizzato né accessibile ad estranei.
                 </p>
               </div>
               <div style={{ borderLeft: '3px solid var(--green)', paddingLeft: '1rem' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Nessuna vendita di dati</h3>
-                <p style={{ color: 'rgba(243,246,239,0.8)', fontSize: '0.94rem' }}>
+                <p style={{ color: 'var(--dark-copy)', fontSize: '0.94rem' }}>
                   Il caricamento è rigorosamente personale. I tuoi scontrini non vengono condivisi né monetizzati.
                 </p>
               </div>
               <div style={{ borderLeft: '3px solid var(--green)', paddingLeft: '1rem' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Validazione automatica</h3>
-                <p style={{ color: 'rgba(243,246,239,0.8)', fontSize: '0.94rem' }}>
+                <p style={{ color: 'var(--dark-copy)', fontSize: '0.94rem' }}>
                   Codice fiscale, date e importi vengono controllati secondo gli standard tributari italiani.
                 </p>
               </div>
               <div style={{ borderLeft: '3px solid var(--green)', paddingLeft: '1rem' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Controllo sempre tuo</h3>
-                <p style={{ color: 'rgba(243,246,239,0.8)', fontSize: '0.94rem' }}>
+                <p style={{ color: 'var(--dark-copy)', fontSize: '0.94rem' }}>
                   L’AI suggerisce i valori, ma sei sempre tu a validare e confermare ogni spesa prima dell’export.
                 </p>
               </div>
@@ -211,15 +216,14 @@ export const LandingPage: React.FC = () => {
 
           {message && (
             <div
-              className={`surface ${isError ? 'chip-err' : 'chip-ok'}`}
+              role={isError ? 'alert' : 'status'}
+              className={isError ? 'banner banner-err' : 'banner banner-ok'}
               style={{
                 marginTop: '1.4rem',
-                padding: '1rem 1.4rem',
                 display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                borderRadius: 'var(--radius-sm)',
                 textAlign: 'left',
+                alignItems: 'flex-start',
+                maxWidth: '100%',
               }}
             >
               {!isError && <CheckIcon size={18} />}
@@ -233,7 +237,9 @@ export const LandingPage: React.FC = () => {
                 <label htmlFor="wl-name">Il tuo nome</label>
                 <input
                   id="wl-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   className="in"
                   placeholder="Mario Rossi"
                   value={name}
@@ -260,8 +266,10 @@ export const LandingPage: React.FC = () => {
               <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
                 <input
                   id="wl-email"
+                  name="email"
                   type="email"
                   required
+                  autoComplete="email"
                   className="in"
                   placeholder="nome@esempio.it"
                   style={{ flex: '1 1 240px' }}

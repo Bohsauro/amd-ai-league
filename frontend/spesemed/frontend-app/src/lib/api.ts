@@ -14,6 +14,8 @@
 import {
   AuthRequest,
   AuthResponse,
+  BillingCheckoutResponse,
+  BillingStatusResponse,
   ErrorResponse,
   ExportRequest,
   ExtractionResponse,
@@ -145,9 +147,10 @@ async function request<T>(
     response = await fetch(url, fetchOptions);
   } catch (netErr: unknown) {
     const msg = netErr instanceof Error ? netErr.message : 'Errore di connessione di rete';
+    console.warn(`SPESEMED API non raggiungibile (${API_BASE_URL}):`, msg);
     throw new ApiError(
       0,
-      `Impossibile contattare il server SPESEMED (${API_BASE_URL}). Assicurati che il backend sia attivo. (${msg})`,
+      'Server non raggiungibile. Controlla la connessione e riprova tra poco.',
       'network_error'
     );
   }
@@ -174,7 +177,7 @@ async function request<T>(
 
     try {
       const errJson = (await response.json()) as ErrorResponse;
-      if (errJson.detail) detail = errJson.detail;
+      if (typeof errJson.detail === 'string' && errJson.detail.trim()) detail = errJson.detail;
       if (errJson.code) code = errJson.code;
       if (errJson.retry_after_seconds) retryAfterSeconds = errJson.retry_after_seconds;
     } catch {
@@ -272,7 +275,8 @@ export const api = {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Connessione non riuscita';
-      throw new ApiError(0, `Errore di rete durante il caricamento: ${msg}`, 'network_error');
+      console.warn(`Estrazione: rete/upload non riuscito:`, msg);
+      throw new ApiError(0, 'Server non raggiungibile. Controlla la connessione e riprova tra poco.', 'network_error');
     }
 
     if (res.status === 401) {
@@ -288,12 +292,23 @@ export const api = {
       }
     }
 
+    if (res.status === 401) {
+      // Refresh fallito o rifiutato: sessione non più valida
+      notifyLogout();
+      throw new ApiError(401, 'Sessione scaduta. Effettua nuovamente l’accesso.', 'unauthorized');
+    }
+
+    if (res.status === 403) {
+      notifyLogout();
+      throw new ApiError(403, 'Accesso non consentito per questa risorsa.', 'forbidden');
+    }
+
     if (!res.ok) {
       let detail = `Errore estrazione (${res.status})`;
       let code: string | null = null;
       try {
         const errJson = (await res.json()) as ErrorResponse;
-        if (errJson.detail) detail = errJson.detail;
+        if (typeof errJson.detail === 'string' && errJson.detail.trim()) detail = errJson.detail;
         if (errJson.code) code = errJson.code;
       } catch {
         const txt = await res.text().catch(() => '');
@@ -337,18 +352,52 @@ export const api = {
       headers.set('X-User-Id', DEV_MOCK_USER_ID);
     }
 
-    const res = await fetch(`${API_V1}/export`, {
-      method: 'POST',
-      headers,
-      body: payload ? JSON.stringify(payload) : JSON.stringify({}),
-    });
+    const doFetch = async (authHeader?: string) => {
+      const finalHeaders = new Headers(headers);
+      if (authHeader) {
+        finalHeaders.set('Authorization', authHeader);
+      } else if (token) {
+        finalHeaders.set('Authorization', `Bearer ${token}`);
+      }
+      return fetch(`${API_V1}/export`, {
+        method: 'POST',
+        headers: finalHeaders,
+        body: payload ? JSON.stringify(payload) : JSON.stringify({}),
+      });
+    };
+
+    let res: Response;
+    try {
+      res = await doFetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connessione non riuscita';
+      console.warn(`Export: rete non raggiungibile:`, msg);
+      throw new ApiError(0, 'Server non raggiungibile. Controlla la connessione e riprova tra poco.', 'network_error');
+    }
+
+    if (res.status === 401 && token) {
+      const newToken = await performTokenRefresh();
+      if (newToken) {
+        res = await doFetch(`Bearer ${newToken}`);
+      }
+    }
+
+    if (res.status === 401) {
+      notifyLogout();
+      throw new ApiError(401, 'Sessione scaduta. Effettua nuovamente l’accesso.', 'unauthorized');
+    }
+
+    if (res.status === 403) {
+      notifyLogout();
+      throw new ApiError(403, 'Accesso non consentito per questa risorsa.', 'forbidden');
+    }
 
     if (!res.ok) {
       let detail = `Errore durante l'esportazione (${res.status})`;
       let code: string | null = null;
       try {
         const err = (await res.json()) as ErrorResponse;
-        if (err.detail) detail = err.detail;
+        if (typeof err.detail === 'string' && err.detail.trim()) detail = err.detail;
         if (err.code) code = err.code;
       } catch {
         const txt = await res.text().catch(() => '');
@@ -369,6 +418,18 @@ export const api = {
 
     const blob = await res.blob();
     return { blob, filename };
+  },
+
+  async billingStatus(): Promise<BillingStatusResponse> {
+    return request<BillingStatusResponse>('/billing/status');
+  },
+
+  async billingCheckout(): Promise<BillingCheckoutResponse> {
+    return request<BillingCheckoutResponse>('/billing/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
   },
 
   // ── Waitlist ───────────────────────────────────────────────────────────
