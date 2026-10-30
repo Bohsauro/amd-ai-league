@@ -305,8 +305,8 @@ Atteso: `"cached": [true]` (no nuovo consumo crediti OpenRouter).
 > persistenza della subscription su Supabase. **Nessun dato carta transita
 > dal backend** (PCI scope = SAQ A).
 >
-> Nota di stato: questa fase espone `GET /billing/plan`, `GET /billing/status`,
-> `POST /billing/checkout` e `POST /billing/webhook`. Con `BILLING_ENABLED=true`
+> Nota di stato: questa fase espone `GET /billing/status`, `POST /billing/checkout`
+> e `POST /billing/webhook`. Con `BILLING_ENABLED=true`
 > il `POST /extract` è gated con `402 payment_required` per utenti senza quota.
 
 ### 5.1 Crea Product + Price ricorrente
@@ -332,9 +332,9 @@ Stripe Dashboard → **Developers → API keys**:
 Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
 
 - **Endpoint URL**: `https://<api-host>/api/v1/billing/webhook`
-- **Eventi**: `checkout.session.completed` (minimo) + `customer.subscription.updated`,
-  `invoice.paid` (consigliati). Lo skeleton attuale persiste il primo; gli altri
-  vengono accettati e ack-ati con `action=ignored` finché non arriva il lifecycle completo.
+- **Eventi**: `checkout.session.completed`, `customer.subscription.updated`,
+  `invoice.paid`. Il backend gestisce tutti e tre: persistenza subscription,
+  aggiornamento/cancellazione status e rinnovo periodo.
 - Copia la **Signing secret** (`whsec_...`) → `STRIPE_WEBHOOK_SECRET`.
 
 Il webhook non usa Bearer/JWT: l'autenticazione è la firma `Stripe-Signature`.
@@ -352,49 +352,28 @@ STRIPE_MODE=live                       # test|live, per log/etichette
 BILLING_EXTRACTIONS_LIMIT=100
 BILLING_SUCCESS_URL=https://app.spesemed.it/app/profilo?billing=success
 BILLING_CANCEL_URL=https://app.spesemed.it/app/profilo?billing=cancel
-BILLING_PLAN_NAME=SPESEMED PRO
 ```
 
 ```bash
-# verifica a caldo (nessun secret nella risposta)
-curl -sS https://<api-host>/api/v1/billing/plan | python3 -m json.tool
-# atteso: "stripe_configured": true, "webhook_configured": true
+# verifica a caldo con un Bearer token valido (nessun secret nella risposta)
+curl -sS https://<api-host>/api/v1/billing/status \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+# atteso: "billing_enabled": true e piano/status dell'utente
 ```
 
 ### 5.5 Persistenza subscription + entitlements (obbligatoria per il gating)
 
 Applica `backend/spesemed/migrations/004_billing.sql` nella SQL Editor di
-Supabase. La migration è idempotente e crea `subscriptions` + `billing_events`
-con RLS service_role-only. Senza migration il webhook risponde comunque `200`
-ma logga un WARNING e non persiste la riga.
+Supabase. La migration è idempotente e crea `entitlements` + `stripe_events`
+con RLS service_role-only. `entitlements.user_id` è `TEXT` (non `UUID`) per
+accettare sia gli id Supabase sia le righe legacy copiate da `user_id::text`.
+Senza migration il webhook risponde comunque `200` ma logga un WARNING e non
+persiste la riga.
 
-Il gating 402 legge la tabella `entitlements` (con fallback in lettura su
-`subscriptions` per lo status). Se la migration applicata non include ancora
-`entitlements`, creala con questo blocco idempotente prima di attivare
-`BILLING_ENABLED=true`:
+Il gating 402 legge la tabella `entitlements` (con fallback in lettura sulle
+tabelle legacy per lo status). Non serve creare `entitlements` a mano: la
+migration `004_billing.sql` la include già, insieme a `stripe_events`.
 
-```sql
-CREATE TABLE IF NOT EXISTS entitlements (
-    user_id UUID PRIMARY KEY,
-    plan TEXT NOT NULL DEFAULT 'pro',
-    status TEXT NOT NULL DEFAULT 'active',
-    current_period_start TIMESTAMPTZ,
-    current_period_end TIMESTAMPTZ,
-    extractions_limit INT NOT NULL DEFAULT 0,
-    extractions_used INT NOT NULL DEFAULT 0,
-    stripe_customer_id TEXT,
-    stripe_subscription_id TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE entitlements ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Service role full access on entitlements" ON entitlements;
-CREATE POLICY "Service role full access on entitlements" ON entitlements
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
-```
 
 Senza una riga `entitlements` attiva, con billing acceso ogni `/extract`
 risponde `402`: è il comportamento voluto (free senza quota), ma va verificato
@@ -422,7 +401,7 @@ e le carte pubbliche di test Stripe:
 | 3DS | `4000 0027 6000 3184` | data futura / qualsiasi 3 cifre |
 
 Mai usare carte reali in test. Verifica nei log `subscription_created` e la
-riga in `subscriptions`.
+riga in `entitlements`.
 
 ### 5.7 Redis readiness (multi-worker)
 
@@ -442,10 +421,10 @@ worker il default `memory` resta valido.
 
 | Sintomo | Causa | Remediation |
 |---|---|---|
-| `/billing/checkout` → `503` | `BILLING_ENABLED=false`, secret/price mancanti o libreria `stripe` assente | Verifica `.env` (kill switch + chiavi) e `GET /billing/plan`; reinstalla requirements; riavvia |
+| `/billing/checkout` → `503` | `BILLING_ENABLED=false`, secret/price mancanti o libreria `stripe` assente | Verifica `.env` (kill switch + chiavi) e `GET /billing/status`; reinstalla requirements; riavvia |
 | Webhook → `503` | `STRIPE_WEBHOOK_SECRET` mancante | Imposta il signing secret dell'endpoint corretto |
 | Webhook → `400` | Firma invalida / secret di un altro endpoint / body riscritto dal proxy | Usa il secret giusto, non modificare il body, rigenera il secret se serve |
-| Webhook `200` ma niente in `subscriptions` | Migration 004 assente o Supabase non configurato | Applica migration, verifica `SUPABASE_*`, controlla i WARNING nei log |
+| Webhook `200` ma niente in `entitlements` | Migration 004 assente o Supabase non configurato | Applica migration, verifica `SUPABASE_*`, controlla i WARNING nei log |
 | Sospetto leak chiave | Secret finita in log/repo | Ruota subito in Stripe, aggiorna `.env`/vault, riavvia, controlla i log |
 | Vuoi disattivare il billing | — | Imposta `BILLING_ENABLED=false` (checkout → `503`, nessuna chiamata Stripe). Svuota anche `STRIPE_WEBHOOK_SECRET` per far rispondere `503` al webhook |
 
@@ -516,7 +495,7 @@ Dopo il go-live, le evoluzioni naturali sono:
     `role_unauthorized`, `missing_required_claim`, `general_decode_error`).
   - `spesemed_jwt_decode_duration_seconds` — Histogram latenza decode JWT.
   - `spesemed_jwt_jwks_cache_resets_total` — Counter reset manuali cache JWKS.
-  - `spesemed_http_requests_total{method,status_class}` — Counter richieste HTTP
+  - `spesemed_http_requests_total{method,status}` — Counter richieste HTTP
     (cardinalità bassa: nessun path/utente, `/metrics` escluso).
   - `spesemed_http_request_duration_seconds` — Histogram latenza richieste HTTP.
 

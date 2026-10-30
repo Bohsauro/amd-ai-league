@@ -310,11 +310,6 @@ class Settings(BaseSettings):
         default="",
         description="Redirect se l'utente annulla. Vuoto = derivato da APP_URL.",
     )
-    billing_plan_name: str = Field(
-        default="SPESEMED PRO",
-        description="Nome commerciale del piano in fatturazione.",
-    )
-
     # =====================================================================
     # API metadata
     # =====================================================================
