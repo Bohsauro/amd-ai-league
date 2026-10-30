@@ -379,8 +379,9 @@ def root() -> dict:
         "health": "/api/v1/health",
         "metrics": "/metrics (se PROMETHEUS_METRICS_ENABLED=True)",
         "billing": (
-            "Stripe billing: GET /api/v1/billing/plan, POST /api/v1/billing/checkout, "
-            "POST /api/v1/billing/webhook (no-op finche' STRIPE_SECRET_KEY non e' configurata)"
+            "Stripe billing: GET /api/v1/billing/status (auth), GET /api/v1/billing/plan, "
+            "POST /api/v1/billing/checkout, POST /api/v1/billing/webhook "
+            "(no-op finche' STRIPE_SECRET_KEY non e' configurata)"
         ),
         "endpoints": {
             "auth": [
@@ -392,6 +393,7 @@ def root() -> dict:
             "export": "POST /api/v1/export (ZIP Excel + ricevute per commercialista)",
             "summary": "GET /api/v1/summary (riepilogo spese + usage per il Profilo)",
             "billing": [
+                "GET /api/v1/billing/status",
                 "GET /api/v1/billing/plan",
                 "POST /api/v1/billing/checkout",
                 "POST /api/v1/billing/webhook",

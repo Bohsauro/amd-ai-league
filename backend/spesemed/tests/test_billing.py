@@ -349,3 +349,106 @@ class TestBillingConfig:
         call = fake_stripe_module.create_calls[-1]
         assert call["success_url"] == "https://app.example.test/app/profilo?billing=success"
         assert call["cancel_url"] == "https://app.example.test/app/profilo?billing=cancel"
+
+
+# =============================================================================
+# GET /billing/status (Task 4C-C6)
+# =============================================================================
+
+class TestBillingStatus:
+    def _configure_rows(self, client, rows):
+        query = client.table.return_value.select.return_value
+        query.eq.return_value = query
+        query.limit.return_value = query
+        query.execute.return_value.data = rows
+        return client
+
+    def test_status_disabled_returns_200_free(self, monkeypatch, test_client, auth_headers):
+        monkeypatch.setattr(settings, "billing_enabled", False)
+        r = test_client.get("/api/v1/billing/status", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["billing_enabled"] is False
+        assert body["plan"] == "free"
+        assert body["status"] == "none"
+        assert body["period_end"] is None
+        assert body["extractions_limit"] == 0
+        assert body["extractions_used"] == 0
+
+    def test_status_active_entitlement(self, monkeypatch, mock_supabase, test_client, auth_headers):
+        monkeypatch.setattr(settings, "billing_enabled", True)
+        self._configure_rows(
+            mock_supabase,
+            [{
+                "user_id": "00000000-0000-4000-8000-000000000001",
+                "plan": "pro",
+                "status": "active",
+                "current_period_end": "2026-12-01T00:00:00+00:00",
+                "extractions_limit": 100,
+                "extractions_used": 12,
+            }],
+        )
+        r = test_client.get("/api/v1/billing/status", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["billing_enabled"] is True
+        assert body["plan"] == "pro"
+        assert body["status"] == "active"
+        assert body["period_end"] == "2026-12-01T00:00:00+00:00"
+        assert body["extractions_limit"] == 100
+        assert body["extractions_used"] == 12
+
+    def test_status_no_row_returns_free(self, monkeypatch, mock_supabase, test_client, auth_headers):
+        monkeypatch.setattr(settings, "billing_enabled", True)
+        self._configure_rows(mock_supabase, [])
+        r = test_client.get("/api/v1/billing/status", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["billing_enabled"] is True
+        assert body["plan"] == "free"
+        assert body["extractions_limit"] == 0
+        assert body["extractions_used"] == 0
+
+    def test_status_subscriptions_fallback(self, monkeypatch, mock_supabase, test_client, auth_headers):
+        """Compatibilita' con lo skeleton gia' deployato (tabella subscriptions)."""
+        monkeypatch.setattr(settings, "billing_enabled", True)
+
+        def _table(name):
+            table = types.SimpleNamespace()
+            query = types.SimpleNamespace()
+            query.select = lambda *a, **k: query
+            query.eq = lambda *a, **k: query
+            query.limit = lambda *a, **k: query
+            query.execute = lambda: types.SimpleNamespace(
+                data=[{
+                    "plan": "pro",
+                    "status": "active",
+                    "current_period_end": "2026-12-01T00:00:00+00:00",
+                }] if name == "subscriptions" else []
+            )
+            table.select = lambda *a, **k: query
+            return table
+
+        monkeypatch.setattr(mock_supabase, "table", _table)
+        r = test_client.get("/api/v1/billing/status", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["plan"] == "pro"
+        assert body["status"] == "active"
+        assert body["extractions_limit"] == settings.billing_extractions_limit
+
+    def test_status_never_5xx_when_db_fails(self, monkeypatch, mock_supabase, test_client, auth_headers):
+        monkeypatch.setattr(settings, "billing_enabled", True)
+        monkeypatch.setattr(mock_supabase, "table", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("db down")))
+        r = test_client.get("/api/v1/billing/status", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["billing_enabled"] is True
+        assert body["plan"] == "free"
+        assert body["extractions_limit"] == 0
+
+    def test_status_requires_auth(self, monkeypatch, test_client):
+        monkeypatch.setattr(settings, "billing_enabled", False)
+        monkeypatch.setattr(settings, "allow_dev_mock_auth", False)
+        r = test_client.get("/api/v1/billing/status")
+        assert r.status_code == 401

@@ -1,5 +1,6 @@
 """SPESEMED API - Billing endpoints (Fase 4C Stripe skeleton).
 
+GET  /api/v1/billing/status    -> stato piano utente (200, auth richiesto)
 GET  /api/v1/billing/plan      -> info pubbliche piano (200, nessun secret)
 POST /api/v1/billing/checkout  -> Stripe Checkout Session (200, auth richiesto)
 POST /api/v1/billing/webhook   -> riceve eventi Stripe (200, firma verificata)
@@ -21,6 +22,7 @@ from .. import billing, billing_client
 from ..config import settings
 from ..dependencies import get_current_user
 from ..rate_limit import limiter
+from ..schemas import BillingStatusResponse
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,34 @@ class BillingPlanResponse(BaseModel):
     webhook_configured: bool = Field(...)
     currency: str = Field(...)
     plans: list = Field(default_factory=list, description="Lista piani (name, features, price_id,...).")
+
+
+# =============================================================================
+# Status (auth): contratto letto dal Profilo del client
+# =============================================================================
+@router.get(
+    "/billing/status",
+    response_model=BillingStatusResponse,
+    summary="Stato piano dell'utente autenticato (free/pro, scadenza, usage).",
+    responses={
+        200: {"model": BillingStatusResponse, "description": "Stato piano (anche con billing disabilitato)."},
+        401: {"description": "Non autenticato."},
+    },
+)
+@limiter.limit("30/minute")
+async def billing_status(
+    request: Request,
+    response: Response,  # richiesto da slowapi (X-RateLimit headers)
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Ritorna lo stato del piano per ``user_id`` letto dal token.
+
+    Con ``BILLING_ENABLED=false`` risponde 200 con ``billing_enabled=false`` e
+    piano free: il client NON deve ricevere 5xx ne' 503. Con billing attivo
+    legge la riga ``entitlements`` (fallback ``subscriptions``) e degrada a
+    free in caso di DB non disponibile.
+    """
+    return billing.get_user_billing_status(user_id)
 
 
 # =============================================================================

@@ -167,6 +167,36 @@ class UsageSummaryResponse(BaseModel):
     )
 
 
+class BillingStatusResponse(BaseModel):
+    """Response per GET /api/v1/billing/status (contratto frontend Profilo).
+
+    ``billing_enabled=false`` non e' un errore: il client riceve comunque 200
+    con piano free e limiti a zero, cosi' la UI non si rompe quando Stripe non
+    e' configurato.
+    """
+    billing_enabled: bool = Field(
+        default=False,
+        description="True se il billing Stripe e' attivo (kill switch BILLING_ENABLED).",
+    )
+    plan: str = Field(default="free", description="Piano utente: free | pro.")
+    status: str = Field(
+        default="none",
+        description="Stato abbonamento: none | active | trialing | past_due | canceled.",
+    )
+    period_end: Optional[str] = Field(
+        default=None,
+        description="Fine periodo corrente (ISO 8601), None se piano free.",
+    )
+    extractions_limit: int = Field(
+        default=0,
+        description="Estrazioni incluse nel periodo corrente (0 per il piano free).",
+    )
+    extractions_used: int = Field(
+        default=0,
+        description="Estrazioni consumate nel periodo corrente.",
+    )
+
+
 class RateLimitResponse(BaseModel):
     """Response standard per 429 (rate limit exceeded)."""
     detail: str = Field(default="Troppe richieste. Riprova piu' tardi.", description="Messaggio leggibile.")

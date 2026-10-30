@@ -310,3 +310,142 @@ def build_public_plan_info() -> Dict[str, Any]:
         "currency": settings.stripe_currency,
         "plans": [pro],
     }
+
+# =============================================================================
+# Stato billing per il client (GET /billing/status)
+# =============================================================================
+
+
+def _iso_or_none(value: Any) -> Optional[str]:
+    """Serializza una data (str/datetime) in ISO 8601 senza sollevare."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value or None
+    isoformat = getattr(value, "isoformat", None)
+    if callable(isoformat):
+        try:
+            return isoformat()
+        except Exception:  # pragma: no cover - difensivo su tipi esotici
+            pass
+    return str(value)
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    """Converte un valore DB in int, con fallback sicuro (mai 5xx)."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _free_status(billing_enabled: bool) -> Dict[str, Any]:
+    """Payload di default: utente free / nessuna riga di entitlement."""
+    return {
+        "billing_enabled": billing_enabled,
+        "plan": "free",
+        "status": "none",
+        "period_end": None,
+        "extractions_limit": 0,
+        "extractions_used": 0,
+    }
+
+
+def _select_single_row(client: Any, table: str, user_id: str) -> Optional[Dict[str, Any]]:
+    """Legge una singola riga per ``user_id``. Qualsiasi errore => None.
+
+    La route /billing/status non deve MAI rispondere 5xx: se la tabella non
+    esiste ancora (migration non applicata) o Supabase e' giu', degradiamo a
+    piano free con un WARNING (senza loggare PII o segreti).
+    """
+    try:
+        result = (
+            client.table(table)
+            .select("*")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(result, "data", None) or []
+        if isinstance(rows, list) and rows:
+            row = rows[0]
+            if isinstance(row, dict):
+                return row
+    except Exception as e:  # noqa: BLE001 - best-effort, mai 5xx al client
+        logger.warning(
+            "Billing status: lettura %s fallita per user=%s: %s",
+            table,
+            user_id[:12],
+            e,
+        )
+    return None
+
+
+def _map_entitlement_row(row: Dict[str, Any], billing_enabled: bool) -> Dict[str, Any]:
+    """Mappa una riga ``entitlements`` sul contratto BillingStatusResponse."""
+    plan = str(row.get("plan") or "free")
+    status_value = str(row.get("status") or "none")
+    period_end = _iso_or_none(
+        row.get("current_period_end") or row.get("period_end") or row.get("expire_at")
+    )
+    raw_limit = row.get("extractions_limit")
+    if raw_limit is None:
+        limit = settings.billing_extractions_limit if plan != "free" else 0
+    else:
+        limit = _as_int(raw_limit, 0)
+    return {
+        "billing_enabled": billing_enabled,
+        "plan": plan,
+        "status": status_value,
+        "period_end": period_end,
+        "extractions_limit": limit,
+        "extractions_used": _as_int(row.get("extractions_used"), 0),
+    }
+
+
+def _map_subscription_row(row: Dict[str, Any], billing_enabled: bool) -> Dict[str, Any]:
+    """Mappa una riga ``subscriptions`` (skeleton legacy) sul contratto status."""
+    status_value = str(row.get("status") or "none")
+    is_active = status_value in ("active", "trialing", "past_due")
+    plan = str(row.get("plan") or "pro") if is_active else "free"
+    return {
+        "billing_enabled": billing_enabled,
+        "plan": plan,
+        "status": status_value,
+        "period_end": _iso_or_none(row.get("current_period_end")),
+        "extractions_limit": settings.billing_extractions_limit if is_active else 0,
+        "extractions_used": _as_int(row.get("extractions_used"), 0),
+    }
+
+
+def get_user_billing_status(user_id: str) -> Dict[str, Any]:
+    """Stato piano dell'utente autenticato (contratto GET /billing/status).
+
+    - Kill switch OFF (default): risponde subito free senza toccare il DB.
+    - Tabella ``entitlements`` (piano Fase 4C) oppure ``subscriptions``
+      (skeleton gia' deployato) come fallback.
+    - Nessuna eccezione propagata: il client riceve sempre un payload valido.
+    """
+    enabled = bool(settings.billing_enabled)
+    if not enabled:
+        return _free_status(False)
+
+    client = supabase_client.get_supabase_client()
+    if client is None:
+        logger.warning(
+            "Billing status: Supabase non disponibile, risposta free (user=%s).",
+            user_id[:12],
+        )
+        return _free_status(True)
+
+    row = _select_single_row(client, "entitlements", user_id)
+    if row is not None:
+        return _map_entitlement_row(row, True)
+
+    row = _select_single_row(client, "subscriptions", user_id)
+    if row is not None:
+        return _map_subscription_row(row, True)
+
+    return _free_status(True)
