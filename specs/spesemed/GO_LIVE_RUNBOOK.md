@@ -374,7 +374,6 @@ Il gating 402 legge la tabella `entitlements` (con fallback in lettura sulle
 tabelle legacy per lo status). Non serve creare `entitlements` a mano: la
 migration `004_billing.sql` la include già, insieme a `stripe_events`.
 
-
 Senza una riga `entitlements` attiva, con billing acceso ogni `/extract`
 risponde `402`: è il comportamento voluto (free senza quota), ma va verificato
 con un utente reale prima del go-live.

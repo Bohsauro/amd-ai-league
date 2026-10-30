@@ -696,8 +696,8 @@ Manuale operativo step-by-step per portare il backend in produzione
   incidenti/rollback).
 
 Include troubleshooting con 6 errori comuni + tabella incidenti billing,
-security checklist post-go-live, e followups per la Fase 4 (lifecycle webhook,
-UI piano, OpenAPI SDK, k8s).
+security checklist post-go-live, e followups per la Fase 4 (UI piano,
+OpenAPI SDK, k8s).
 
 ### 16.4 Cosa NON posso fare io (limiti onesti)
 
