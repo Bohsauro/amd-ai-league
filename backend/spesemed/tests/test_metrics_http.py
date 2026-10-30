@@ -83,6 +83,16 @@ def test_duration_histogram_observed(test_client):
     assert _duration_sum("GET") >= before
 
 
+def test_labeled_histogram_reset_between_tests():
+    """Il reset autouse azzera anche l'Histogram labelizzato (child per method).
+
+    Senza reset dei child il parent di un Histogram con labelnames non espone
+    _sum/_buckets: il reset sarebbe un no-op e i sample contaminerebbero i
+    test successivi.
+    """
+    assert _duration_sum("GET") == 0.0
+
+
 def test_metrics_scrape_not_counted(test_client):
     before = _counter("GET", "200")
     for _ in range(3):
