@@ -174,6 +174,21 @@ export interface WaitlistResponse {
   message: string;
 }
 
+export interface BillingStatusResponse {
+  billing_enabled: boolean;
+  plan: string;
+  status: string;
+  period_end?: string | null;
+  extractions_limit: number;
+  extractions_used: number;
+}
+
+export interface BillingCheckoutResponse {
+  checkout_url: string;
+  session_id: string;
+  mode?: string;
+}
+
 /**
  * Standard backend error response (RFC 7807-ish)
  */

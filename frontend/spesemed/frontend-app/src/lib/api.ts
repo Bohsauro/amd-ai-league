@@ -14,6 +14,8 @@
 import {
   AuthRequest,
   AuthResponse,
+  BillingCheckoutResponse,
+  BillingStatusResponse,
   ErrorResponse,
   ExportRequest,
   ExtractionResponse,
@@ -416,6 +418,18 @@ export const api = {
 
     const blob = await res.blob();
     return { blob, filename };
+  },
+
+  async billingStatus(): Promise<BillingStatusResponse> {
+    return request<BillingStatusResponse>('/billing/status');
+  },
+
+  async billingCheckout(): Promise<BillingCheckoutResponse> {
+    return request<BillingCheckoutResponse>('/billing/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
   },
 
   // ── Waitlist ───────────────────────────────────────────────────────────

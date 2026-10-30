@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { SpesaMedica } from '../../types/api';
@@ -17,6 +17,7 @@ export const UploadPage: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [paymentRequired, setPaymentRequired] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Stato per async job polling
@@ -141,6 +142,7 @@ export const UploadPage: React.FC = () => {
 
     setIsProcessing(true);
     setErrorMsg(null);
+    setPaymentRequired(false);
     setIsStale(false);
 
     try {
@@ -166,7 +168,11 @@ export const UploadPage: React.FC = () => {
     } catch (err: unknown) {
       setIsProcessing(false);
       if (err instanceof ApiError) {
-        setErrorMsg(err.detail);
+        if (err.status === 402 || err.code === 'payment_required') {
+          setPaymentRequired(true);
+        } else {
+          setErrorMsg(err.detail);
+        }
       } else {
         setErrorMsg('Errore imprevisto durante l’invio dei file.');
       }
@@ -200,6 +206,23 @@ export const UploadPage: React.FC = () => {
         >
           <AlertCircleIcon size={18} />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {paymentRequired && (
+        <div
+          className="banner banner-info"
+          style={{ marginBottom: '1.4rem', alignItems: 'center', flexWrap: 'wrap' }}
+          role="status"
+        >
+          <AlertCircleIcon size={18} />
+          <span style={{ flex: '1 1 240px' }}>
+            Il tuo piano non copre altre estrazioni. I file restano qui: attiva il piano Pro dal
+            Profilo e riprendi quando vuoi.
+          </span>
+          <Link to="/app/profile" className="btn btn-green btn-sm">
+            Vai al Profilo
+          </Link>
         </div>
       )}
 
