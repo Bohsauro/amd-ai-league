@@ -132,28 +132,31 @@ def audit_billing_migration() -> dict:
         return bool(re.search(pattern, text, re.IGNORECASE | re.DOTALL))
 
     checks = {
-        "create_subscriptions": has(
-            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+subscriptions\b"
+        "create_entitlements": has(
+            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+entitlements\b"
         ),
-        "create_billing_events": has(
-            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+billing_events\b"
+        "create_stripe_events": has(
+            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+stripe_events\b"
         ),
-        "rls_subscriptions": has(
-            r"ALTER\s+TABLE\s+subscriptions\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
+        "rls_entitlements": has(
+            r"ALTER\s+TABLE\s+entitlements\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
         ),
-        "rls_billing_events": has(
-            r"ALTER\s+TABLE\s+billing_events\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
+        "rls_stripe_events": has(
+            r"ALTER\s+TABLE\s+stripe_events\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
         ),
-        "policy_subscriptions_service_role": has(
-            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+subscriptions\b"
+        "policy_entitlements_service_role": has(
+            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+entitlements\b"
             r"[^;]*?auth\.role\(\)\s*=\s*'service_role'"
         ),
-        "policy_billing_events_service_role": has(
-            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+billing_events\b"
+        "policy_stripe_events_service_role": has(
+            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+stripe_events\b"
             r"[^;]*?auth\.role\(\)\s*=\s*'service_role'"
         ),
         "idempotent_policy_drop": text.lower().count("drop policy if exists") >= 2,
         "idempotent_add_column": "add column if not exists" in text.lower(),
+        "legacy_upgrade_copy": has(
+            r"to_regclass\('public\.subscriptions'\).*?to_regclass\('public\.billing_events'\)"
+        ),
     }
 
     parens_open = text.count("(")

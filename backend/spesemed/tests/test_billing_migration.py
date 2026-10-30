@@ -1,7 +1,12 @@
 """SPESEMED - Test offline della migration 004_billing.sql (Fase 4C, BOH-25).
 
 Non serve un database: verifichiamo il contratto SQL (idempotenza, tabelle,
-RLS service_role-only, nessun secret) riusando l'audit pre-go-live.
+RLS service_role-only, upgrade da una 004 legacy, nessun secret) riusando
+l'audit pre-go-live.
+
+Nomi canonici: `entitlements` + `stripe_events` (spec 01-gap-analysis.md
+§3.3 GAP-3.2, richiamato da 02-plan-4c.md -> Task 4C-C2). Sono le tabelle
+usate dal runtime: api/billing_client.py, api/billing.py, api/routes/extract.py.
 """
 from __future__ import annotations
 
@@ -44,17 +49,17 @@ def test_migration_exists_and_audit_passes(audit_result):
 
 def test_required_tables_and_rls(audit_result):
     checks = audit_result["checks"]
-    assert checks["create_subscriptions"] is True
-    assert checks["create_billing_events"] is True
-    assert checks["rls_subscriptions"] is True
-    assert checks["rls_billing_events"] is True
-    assert checks["policy_subscriptions_service_role"] is True
-    assert checks["policy_billing_events_service_role"] is True
+    assert checks["create_entitlements"] is True
+    assert checks["create_stripe_events"] is True
+    assert checks["rls_entitlements"] is True
+    assert checks["rls_stripe_events"] is True
+    assert checks["policy_entitlements_service_role"] is True
+    assert checks["policy_stripe_events_service_role"] is True
 
 
-def test_subscriptions_has_billing_columns(sql_text):
+def test_entitlements_has_billing_columns(sql_text):
     table = re.search(
-        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+subscriptions\s*\((.*?)\);",
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+entitlements\s*\((.*?)\);",
         sql_text,
         re.IGNORECASE | re.DOTALL,
     )
@@ -66,17 +71,18 @@ def test_subscriptions_has_billing_columns(sql_text):
         "status",
         "stripe_customer_id",
         "stripe_subscription_id",
+        "current_period_start",
         "current_period_end",
         "extractions_limit",
         "extractions_used",
         "updated_at",
     ):
-        assert column in body, f"colonna mancante in subscriptions: {column}"
+        assert column in body, f"colonna mancante in entitlements: {column}"
 
 
-def test_billing_events_is_replay_safe(sql_text):
+def test_stripe_events_is_replay_safe(sql_text):
     table = re.search(
-        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+billing_events\s*\((.*?)\);",
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+stripe_events\s*\((.*?)\);",
         sql_text,
         re.IGNORECASE | re.DOTALL,
     )
@@ -93,6 +99,33 @@ def test_migration_is_idempotent(sql_text):
     assert lower.count("drop policy if exists") >= 2
     assert "add column if not exists" in lower
     assert "create index if not exists" in lower
+    assert "drop trigger if exists" in lower
+
+
+def test_migration_does_not_create_legacy_tables(sql_text):
+    """Le tabelle legacy non vengono (ri)create: unica fonte di verita'."""
+    assert not re.search(
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+subscriptions\b", sql_text, re.IGNORECASE
+    )
+    assert not re.search(
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+billing_events\b", sql_text, re.IGNORECASE
+    )
+
+
+def test_migration_copies_legacy_rows(sql_text):
+    """Upgrade da una 004 precedente: dati legacy copiati nelle tabelle canoniche."""
+    assert "to_regclass('public.subscriptions')" in sql_text
+    assert "to_regclass('public.billing_events')" in sql_text
+    assert re.search(
+        r"INSERT\s+INTO\s+entitlements\b.*?ON\s+CONFLICT\s*\(\s*user_id\s*\)\s*DO\s+NOTHING",
+        sql_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert re.search(
+        r"INSERT\s+INTO\s+stripe_events\b.*?ON\s+CONFLICT\s*\(\s*event_id\s*\)\s*DO\s+NOTHING",
+        sql_text,
+        re.IGNORECASE | re.DOTALL,
+    )
 
 
 def test_no_secrets_in_migration(sql_text):
