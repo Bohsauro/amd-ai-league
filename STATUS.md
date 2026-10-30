@@ -1,4 +1,4 @@
-# STATUS — handoff (2026-10-30, 11:30 UTC)
+# STATUS — handoff (2026-10-30, 11:45 UTC)
 
 > Leggi questo prima di toccare qualsiasi cosa. È il biglietto d'ingresso per una sessione nuova.
 
@@ -6,9 +6,10 @@
 
 **SPESEMED** — Fase 4C (Redis, Prometheus, Stripe) completata e mergiata su `main`
 (`92bc0f5`, allineato a `origin/main`): backend **260 passed, 1 skipped**, frontend
-build verde (58 moduli). Epic **BOH-12 chiuso** (`done`, APPROVE reviewer 3eaa3b01) e
-BOH-56 (docs fix) chiuso con APPROVE. Resta solo la validazione **E2E con Supabase
-reale**, che richiede i secrets del proprietario. Progetto AMD AI League: archiviato (sotto).
+build verde (58 moduli). Board **tutta chiusa**: epic **BOH-12** `done`, BOH-56 (docs
+fix) `done`, BOH-60 (riallineamento `po/specs`) `done` con APPROVE reviewer. Resta solo
+la validazione **E2E con Supabase reale**, che richiede i secrets del proprietario.
+Progetto AMD AI League: archiviato (sotto).
 
 ## Numeri (misurati su `main`, 30/10)
 
@@ -46,11 +47,19 @@ più i commit di review/merge del CEO. Nessun conflitto, nessun commit di ruolo 
      `SPESEMED_TEST_RECEIPT` (opzionale) → exit 0 = PASS.
    - `specs/spesemed/tasks/scripts/e2e_success_path.py` (solo stdlib, stesso flusso).
 2. **Giro 2 docs** solo se il re-sync introduce nuovi scostamenti: nessuno aperto oggi.
-3. **BOH-60** (PO, `in_review`): riallineare `po/specs` su `main` — il branch è stale e
-   un merge alla cieca revertirebbe il fix BOH-56 (conteggi 260 + stato 4C-C9/audit).
-   Va mergiato solo dopo re-sync del PO e review.
-4. Nient'altro: board SPESEMED chiusa (16 task 4C + 13 ticket [REVIEW] `done`,
-   epic `BOH-12` **done** con APPROVE reviewer, BOH-56 `done`).
+3. Nient'altro: board SPESEMED chiusa (16 task 4C + ticket [REVIEW] `done`, epic
+   `BOH-12` **done** con APPROVE reviewer, BOH-56 `done`, BOH-60 `done`).
+
+## Igiene branch (verificato dal CEO, 30/10 11:40 UTC)
+
+`po/specs` = `a854c10`, merge commit (`a1ae01e` + `92bc0f5`), pushato fast-forward da
+`a1ae01e`: `git diff origin/main..origin/po/specs -- specs/` **vuoto**, `git grep "253 passed"`
+su `po/specs` = 0 occorrenze (260 passed in README 2x, PROJECT_STATUS 3x). Il fix BOH-56
+non è più a rischio di revert.
+`git log origin/main..origin/po/specs` = merge `a854c10` + il vecchio `a1ae01e` (già
+superato da `0cfbdf9`, senza effetto sull'albero): **nessun commit di contenuto nuovo**.
+Unico delta sull'intero albero: `STATUS.md` (main ha `d01d84b` di 3 minuti successivo;
+un merge su main tiene la versione di main).
 
 ## Comandi
 
