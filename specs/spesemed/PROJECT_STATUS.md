@@ -86,8 +86,8 @@ Una pipeline che:
 > L'Export Excel/ZIP chiude il ciclo d'uso per il commercialista; il Profilo
 > utente/usage aggiunge riepilogo spese e storico job con export per-job.
 > La Fase 4C backend è completa come **skeleton operativo** (Redis, Prometheus,
-> Stripe, status piano e gating 402); restano UI piano (4C-C9) e
-> validazione E2E con Supabase reale. Dettaglio in §17.
+> Stripe, status piano e gating 402); completata anche la UI piano (4C-C9); resta
+> la validazione E2E con Supabase reale. Dettaglio in §17.
 
 ---
 
@@ -408,9 +408,8 @@ in §10.2 backlog (non più un "bug noto", solo nice-to-have).
 
 ### 10.1 Visible-to-user (alta priorità)
 
-| Item                                          | Impatto                                |
-|-----------------------------------------------|----------------------------------------|
-| 💳 **UI Profilo/piano (4C-C9)**               | mostra piano/stato/uso e gestisce il 402 nel frontend |
+Nessun item residuo: la **UI Profilo/piano (4C-C9)** è completata
+(`ProfilePage.tsx` usa `billingStatus`/`billingCheckout` e gestisce il 402).
 
 ### 10.2 Indurimento (media priorità)
 
@@ -632,8 +631,8 @@ chiude il ciclo d'uso per il commercialista e il **Profilo utente/usage**
 job e download dell'export per job o completo dal nuovo `GET /api/v1/summary`.
 
 → **Fase 4C (skeleton) fatta**: Redis readiness/test, Prometheus HTTP metrics,
-Stripe status/checkout/webhook + gating 402. Prossimo valore: **UI piano
-(4C-C9)**.
+Stripe status/checkout/webhook + gating 402. Anche la **UI piano (4C-C9)** è
+completata.
 
 → **Test E2E con Supabase reale**: le 4 azioni del runbook sono state eseguite
 dall'utente; resta la validazione del success-path (200 OK) con secrets reali,
@@ -736,7 +735,7 @@ ciò che il runbook abilita.
 ## 17. 🟡 FASE 4C — Redis, Prometheus, Stripe (stato reale)
 
 **Stato**: backend **skeleton operativo** completato e verde offline. Status
-piano e gating 402 sono implementati; restano la UI piano (4C-C9) e la
+piano, gating 402 e UI piano (4C-C9) sono implementati; resta la
 validazione E2E con Supabase reale.
 
 ### 17.1 Redis rate-limit storage + readiness
@@ -794,8 +793,8 @@ subscription updated/deleted e invoice.paid, con idempotenza replay-safe su
 `stripe_events`.
 
 **Nota**: il gating legge `entitlements`, inclusa nella migration 004; non
-serve SQL manuale. Resta la UI piano (4C-C9) per mostrare stato/uso nel
-frontend.
+serve SQL manuale. La UI piano (4C-C9) mostra stato/uso nel frontend
+(`ProfilePage.tsx`).
 
 ### 17.5 Test offline (nessun secret)
 
@@ -822,5 +821,5 @@ _Documento aggiornato al termine della **Fase 4C (skeleton)**: pytest
 utente/usage** (Fase 4B+: `GET /api/v1/summary` + ProfileScreen con riepilogo,
 storico job ed export per-job). Le azioni manuali Supabase (migration SQL,
 bucket Storage, .env populate, curl autenticati) sono state eseguite
-dall'utente; restano la validazione E2E del success-path con Supabase reale,
-la UI piano (4C-C9) e la validazione E2E con Supabase reale._
+dall'utente; resta la validazione E2E del success-path con Supabase reale.
+La UI piano (4C-C9) è completata (`ProfilePage.tsx`)._
