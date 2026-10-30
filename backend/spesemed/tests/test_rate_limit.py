@@ -75,6 +75,21 @@ class TestBuildStorageUri:
             for r in caplog.records
         )
 
+    def test_redis_keyword_with_whitespace_redis_url_falls_back_to_memory(self, monkeypatch):
+        """REDIS_URL composta solo da spazi e' trattata come assente (strip)."""
+        _set_storage(monkeypatch, "redis", "   ")
+        assert _build_storage_uri() == "memory://"
+
+    def test_direct_redis_uri_logs_redacted_credentials(self, monkeypatch, caplog):
+        """La URI con password viene restituita intatta ma loggata redatta."""
+        uri = "redis://:fake-secret-not-real@redis:6379/0"
+        _set_storage(monkeypatch, uri)
+        with caplog.at_level(logging.INFO, logger="spesemed.api.rate_limit"):
+            assert _build_storage_uri() == uri
+        logged = "\n".join(r.getMessage() for r in caplog.records)
+        assert "fake-secret-not-real" not in logged
+        assert ":***@" in logged
+
     def test_unknown_backend_falls_back_to_memory(self, monkeypatch, caplog):
         _set_storage(monkeypatch, "in-memory-db")
         with caplog.at_level(logging.WARNING, logger="spesemed.api.rate_limit"):
