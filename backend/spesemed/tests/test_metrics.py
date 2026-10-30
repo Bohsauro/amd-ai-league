@@ -444,16 +444,16 @@ class TestMetricsEndpoint:
 class TestHTTPMetrics:
     """Metriche HTTP generiche (Fase 4C): counter+histogram, NO user data."""
 
-    def test_health_request_increments_http_counter_status_class(self, test_client):
+    def test_health_request_increments_http_counter_status(self, test_client):
         r = test_client.get("/api/v1/health")
         assert r.status_code == 200
-        # Il counter labelizzato per (GET, 2xx) deve essere >= 1.
-        assert http_requests_total.labels(method="GET", status_class="2xx")._value.get() >= 1.0
+        # Il counter labelizzato per (GET, 200) deve essere >= 1.
+        assert http_requests_total.labels(method="GET", status="200")._value.get() >= 1.0
 
-    def test_404_gets_4xx_status_class(self, test_client):
+    def test_404_gets_404_status(self, test_client):
         r = test_client.get("/questa-rotta-non-esiste")
         assert r.status_code == 404
-        assert http_requests_total.labels(method="GET", status_class="4xx")._value.get() >= 1.0
+        assert http_requests_total.labels(method="GET", status="404")._value.get() >= 1.0
 
     def test_metrics_body_exposes_http_metrics(self):
         # Chiama prima un endpoint reale per far generare almeno un sample.
@@ -481,10 +481,10 @@ class TestHTTPMetrics:
     def test_metrics_scrape_not_counted_itself(self):
         """/metrics (lo scraper) non deve incrementare il suo stesso counter."""
         with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
-            before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+            before = http_requests_total.labels(method="GET", status="200")._value.get()
             for _ in range(3):
                 client.get("/metrics")
-            after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+            after = http_requests_total.labels(method="GET", status="200")._value.get()
         # Se /metrics fosse conteggiato, +3; qui nessun incremento.
         assert after == before
 
@@ -493,28 +493,28 @@ class TestHTTPMetrics:
         from spesemed.api.metrics import http_request_duration_seconds
 
         with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
-            before = http_request_duration_seconds._sum.get()
+            before = http_request_duration_seconds.labels(method="GET")._sum.get()
             for _ in range(3):
                 client.get("/metrics")
-            after = http_request_duration_seconds._sum.get()
+            after = http_request_duration_seconds.labels(method="GET")._sum.get()
         assert after == before
 
     def test_kill_switch_disables_http_metrics_recording(self, monkeypatch, test_client):
         """PROMETHEUS_METRICS_ENABLED=False: nessuna raccolta (non solo /metrics 404)."""
         monkeypatch.setattr(settings, "prometheus_metrics_enabled", False)
-        before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        before = http_requests_total.labels(method="GET", status="200")._value.get()
         r = test_client.get("/api/v1/health")
         assert r.status_code == 200
-        after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        after = http_requests_total.labels(method="GET", status="200")._value.get()
         assert after == before
 
     def test_kill_switch_enabled_keeps_recording(self, monkeypatch, test_client):
         """Con kill-switch ON (default) il middleware registra come prima."""
         monkeypatch.setattr(settings, "prometheus_metrics_enabled", True)
-        before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        before = http_requests_total.labels(method="GET", status="200")._value.get()
         r = test_client.get("/api/v1/health")
         assert r.status_code == 200
-        after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        after = http_requests_total.labels(method="GET", status="200")._value.get()
         assert after == before + 1.0
 
 
