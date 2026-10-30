@@ -1,0 +1,107 @@
+# =============================================================================
+# SPESEMED API - Docker Compose PRODUZIONE (Fase 3 + Fase 4 Redis)
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+#
+# NOTA: sovrascrive il servizio `api` del docker-compose.yml di base
+# con configurazioni di produzione (no hot-reload, no bind mount,
+# log driver json, healthcheck piu' aggressivo, Redis persistente).
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redis - persistenza AOF per recovery dopo crash (Fase 4).
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: spesemed-redis-prod
+    restart: always
+    # No port mapping diretto: solo accesso interno rete spesemed-net.
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - spesemed-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Persistenza AOF (piu' resiliente di RDB per rate-limit counters).
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spesemed-api:0.3.0
+    container_name: spesemed-api-prod
+    restart: always
+    # Esposizione porta 8000 per accesso diretto o reverse proxy
+    ports:
+      - "8000:8000"
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    environment:
+      - API_ENV=production
+      - API_WORKERS=2
+      # Fase 4 - Redis per rate-limit multi-worker (FIX H1 audit).
+      # OBBLIGATORIO con API_WORKERS > 1: senza Redis i limiti
+      # vengono moltiplicati x N worker e non sono piu' deterministici.
+      - RATE_LIMIT_STORAGE_BACKEND=redis
+      - REDIS_URL=redis://redis:6379/0
+    # NO bind mount (codice immutabile nel container, ridotti attacchi supply-chain)
+    read_only: false  # serve scrivere tempfile per upload; tmpfs li gestisce
+    tmpfs:
+      - /tmp:size=200M,mode=1777
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - spesemed-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service,env"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health', timeout=3).raise_for_status()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # Restart policy per crash del worker async
+    stop_grace_period: 30s
+
+networks:
+  spesemed-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

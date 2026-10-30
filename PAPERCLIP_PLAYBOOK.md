@@ -67,6 +67,36 @@ Il gate verifica: stato `in_review` + commento di agent-reviewer con `APPROVE`
 (più recente di eventuali `REJECT`). Se manca: exit 1, l'issue resta `in_review`.
 Chiudere a mano via API è fuori procedura e richiede una decisione umana.
 
+### Il flusso di review che funziona (ticket [REVIEW] separato)
+
+**Problema reale:** l'assegnatario di un ticket `in_review` è l'AUTORE, quindi
+agent-reviewer non lo vede nel suo inbox e non parte. Se gli assegni il ticket
+originale, il run viene **cancellato** ("issue assignee changed before the queued
+run could start") e l'auto-review è comunque vietata.
+
+**Procedura corretta:**
+
+1. L'autore lascia il ticket in `in_review` con il commento FATTO/DOVE/TEST/NUMERI.
+2. Il CEO (o l'amministratore) apre un ticket `[REVIEW] <IDENT> — <titolo>` con
+   `assigneeAgentId = agent-reviewer` (3b1b700c-1bad-4ee1-81c7-9d240a648ca9).
+   Nel corpo: contesto (file + commit), cosa verificare, comandi riproducibili.
+3. Il reviewer verifica e commenta **sul ticket [REVIEW]**:
+   `APPROVE <IDENT>` oppure `REJECT <IDENT>` + prove.
+4. `bin/close-ticket <IDENT>` chiude il task originale: il gate cerca l'APPROVE
+   sia sul task sia sui ticket `[REVIEW]` collegati (il body deve citare l'IDENT).
+
+**Attenzione alla review policy `not_creator`:** chi ha portato l'issue in
+`in_review` non può approvarla/chiuderla (403 `review_policy_denied`). Se il
+gate fallisce con quell'errore, la chiusura la deve fare un altro scrittore
+(CEO o amministratore), non chi ha aperto la review.
+
+**Chiavi:** fuori da un run d'agente il gate usa `PAPERCLIP_BOARD_API_KEY`;
+dentro un run usa `PAPERCLIP_AGENT_CEO_KEY` + header `X-Paperclip-Run-Id`
+(la CEO key da sola non può scrivere cross-issue: 403 "Cross-issue writes need a run").
+
+**Ondate:** non assegnare più di ~4 ticket [REVIEW] per volta al reviewer —
+13 run concorrenti su una macchina piccola fanno thrash e i run si cancellano.
+
 ## 4. Se sei bloccato
 
 ```bash

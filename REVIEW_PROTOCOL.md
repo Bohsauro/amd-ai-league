@@ -14,9 +14,10 @@ verdetto motivato. **Non scrivi codice, non modifichi file** (i permessi te lo i
    ```
 3. **Verifica i fatti** (hai permesso di eseguire solo comandi di lettura e test):
    - `python -m py_compile` sui file toccati
-   - `python -m pytest` se esistono test
+   - `python -m pytest -q` in `backend/spesemed/` se il ticket tocca il backend (mock Supabase, offline)
+   - `npm run build` in `frontend/spesemed/frontend-app/` se il ticket tocca il frontend
    - `python3 -c "import json;json.load(open('...'))"` per i JSON
-   - controlla che i numeri dichiarati nel ticket esistano davvero nei file (`run.json`, `baseline_metrics.json`)
+   - controlla che i numeri dichiarati nel ticket esistano davvero nei file (pytest output, run.json, baseline_metrics.json)
 4. **Controlla i 6 punti** sotto.
 5. **Verdetto** con commento sul ticket:
    - `APPROVE` — tutto verificato, con l'elenco dei comandi eseguiti e dei valori trovati
@@ -25,15 +26,48 @@ verdetto motivato. **Non scrivi codice, non modifichi file** (i permessi te lo i
    come commento; la chiusura (`in_review` → `done`) la fa `bin/close-ticket`,
    che esige il tuo `APPROVE`. In caso di `REJECT` l'issue resta `in_review`.
 
+## Come eseguire i test (comandi RIPRODUCIBILI — non improvvisare)
+
+Il python di sistema NON ha le dipendenze del progetto: `python3 -m pytest` in
+`backend/spesemed/` fallisce con `ModuleNotFoundError` (dotenv, pydantic_settings).
+Usa il venv dedicato: `/srv/ai-company/venvs/spesemed/bin/python`.
+
+**Backend** — il branch da revisionare è quello indicato nel ticket
+(`dev/backend` per i task backend, `dev/frontend` per il frontend). Non fare
+checkout (sei read-only): estrai il branch in una dir temporanea e testala lì.
+
+```bash
+rm -rf /tmp/rev && mkdir -p /tmp/rev
+git -C /srv/ai-company/workspace archive dev/backend backend/spesemed | tar -x -C /tmp/rev
+cd /tmp/rev/backend/spesemed && /srv/ai-company/venvs/spesemed/bin/python -m pytest -q
+```
+
+**Frontend** — idem con `dev/frontend` e `frontend/spesemed/frontend-app`:
+
+```bash
+rm -rf /tmp/revfe && mkdir -p /tmp/revfe
+git -C /srv/ai-company/workspace archive dev/frontend frontend/spesemed/frontend-app | tar -x -C /tmp/revfe
+cd /tmp/revfe/frontend/spesemed/frontend-app && npm ci && npm run build
+```
+
+Il working tree condiviso può essere su un branch diverso da quello del ticket:
+per il diff usa sempre `git diff main...<branch> -- <path>` e `git show <branch>:<path>`.
+
 ## I 6 punti di controllo
 
-1. **Contratto**: il codice rispetta l'interfaccia dichiarata in `specs/amd-ai-league/BUILD_SPEC.md`?
-2. **Numeri reali**: ogni cifra mostrata/loggata deriva da una misura, non da una costante inventata?
-3. **Perimetro**: nessuna scrittura fuori dalla directory del ruolo (`backend/`, `frontend/`, `specs/`)?
-4. **Nessun leakage**: il ground truth del corpus (`truth`, `truth_url`, `verdict_in_corpus`) non finisce mai
-   negli snippet passati al generatore?
-5. **Test/compile**: compila e (se ci sono test) passano?
-6. **Onestà**: se qualcosa non è misurabile, il codice lo dichiara (`unresolved`, `INSUFFICIENT`) invece di fingere?
+1. **Contratto**: il codice rispetta l'interfaccia dichiarata nei documenti del progetto?
+   - SPESEMED: `specs/spesemed/README.md` + `PROJECT_STATUS.md` (stato e regole), `TASK_FRONTEND.md`/`DESIGN.md` (contratto UI), `backend/spesemed/src/spesemed/api/schemas.py` e route (contratto API).
+   - AMD AI League: `specs/amd-ai-league/BUILD_SPEC.md`.
+2. **Numeri reali**: ogni cifra mostrata/loggata/asserita deriva da una misura riproducibile
+   (output pytest, log di build, file nel repo), non da una costante inventata o da un self-report.
+3. **Perimetro**: nessuna scrittura fuori dalla directory del ruolo (`specs/`, `backend/`, `frontend/`),
+   nessun commit diretto su `main` (branch per ruolo: `po/specs`, `dev/backend`, `dev/frontend`).
+4. **Segreti e dati sensibili**: nessun secret reale nel workspace (`.env` fuori repo); niente dati
+   utente in `/metrics` o nei log; niente fallback mock auth in produzione; niente leakage del ground
+   truth negli snippet passati al generatore (caso AMD: `truth`/`verdict_in_corpus` del corpus).
+5. **Test/build**: compila (py_compile) e, se ci sono test, passano (pytest, npm build). JSON validi.
+6. **Onestà**: se qualcosa non è misurabile senza secrets reali (es. E2E Supabase, Stripe live),
+   il ticket lo dichiara (`unresolved`, "da eseguire dal proprietario") invece di fingere numeri.
 
 ## Regole
 
@@ -41,3 +75,4 @@ verdetto motivato. **Non scrivi codice, non modifichi file** (i permessi te lo i
 - Se un numero nel ticket non torna con il file, è REJECT anche se il codice "sembra" giusto.
 - Non correggere tu: descrivi il fix richiesto in modo che l'autore possa applicarlo.
 - Sii breve: un APPROVE = 5 righe con le prove; un REJECT = lista puntuale.
+- SPESEMED: il backend live su :8000 è read-only — non va riavviato né modificato; la verifica è in `backend/spesemed/` con pytest offline.

@@ -1,0 +1,81 @@
+# =============================================================================
+# SPESEMED - Dipendenze Python
+# =============================================================================
+# Requisito: Python 3.10+
+# Installazione (sviluppo locale):
+#   python -m venv .venv
+#   source .venv/bin/activate     (oppure .venv\Scripts\activate su Windows)
+#   pip install -r requirements.txt
+#
+# Alternativa (consigliata per il backend, fonte di verità canonica):
+#   pip install -e ".[dev]"       (legge pyproject.toml)
+#
+# NB: pyproject.toml e' la fonte di verità per i pin. Questo file e' mantenuto
+# allineato per chi segue le istruzioni del README via `pip install -r`.
+# Se aggiungi/modifichi una dipendenza, aggiorna ENTRAMBI i file.
+#
+# Poppler (dipendenza di SISTEMA, non Python): richiesto per convertire i PDF.
+#   Windows: https://github.com/oschwartz10612/poppler-windows
+#   macOS:   brew install poppler
+#   Ubuntu:  sudo apt install poppler-utils
+# =============================================================================
+
+# --- Core AI engine (Fase 1) ---------------------------------------------
+httpx>=0.27.0,<1.0.0
+python-dotenv>=1.0.0
+pydantic[email]>=2.5.0,<3.0.0
+Pillow>=10.2.1,<12.0.0
+pdf2image>=1.17.0
+
+# --- API FastAPI (Fase 1) -----------------------------------------------
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.27.0
+gunicorn>=21.2.0,<24.0.0
+python-multipart>=0.0.12,<1.0.0
+pydantic-settings>=2.1.0
+
+# --- Supabase + JWT (Fase 2) -----------------------------------------------
+# supabase-py: client Python per Supabase (PostgreSQL + Storage + Auth).
+# gotrue, storage3, postgrest sono sub-dipendenze autoloaded.
+supabase>=2.4.0,<3.0.0
+# PyJWT[crypto]: validazione JWT LOCALE (NON blocca l'event loop come
+# supabase.auth.get_user). Algoritmo HS256 (default Supabase Auth) + ES256
+# (modern Supabase via JWKS). L'extra [crypto] porta `cryptography` per
+# supporto ES256/RS256 (curve ellittiche + RSA). Senza [crypto],
+# jwt.decode fallisce con InvalidAlgorithmError su token ES256.
+PyJWT[crypto]>=2.8.0,<3.0.0
+cryptography>=42.0.0,<48.0.0
+
+# --- Rate limiting + monitoring (Fase 3 + Fase 4 Redis) ------------------------
+# slowapi: rate limiting per endpoint (in-memory storage, no Redis necessario per MVP).
+# Decoratore @limiter.limit("5/minute") + 429 handler custom per ErrorResponse JSON.
+slowapi>=0.1.9,<1.0.0
+# limits[redis]: backend Redis per slowapi (Fase 4, necessario per multi-worker).
+# NB: limits[redis] tira gia' redis come sub-dipendenza; il pin esplicito
+# redis>=5.0.0,<6.0.0 serve per version-control stretto (v6 ha breaking changes).
+limits[redis]>=3.0.0
+redis>=5.0.0,<6.0.0
+# sentry-sdk[fastapi]: error tracking in produzione (init lazy in main.py).
+sentry-sdk[fastapi]>=2.0.0,<3.0.0
+# prometheus-client: metriche auth / JWT (counters failure reason + histogram latency).
+# PIN: esclude 0.25.0 che ha un bug noto in Metric.clear() (AttributeError _lock).
+prometheus-client>=0.20.0,<0.26.0,!=0.25.0
+
+# --- Export Excel/ZIP (Fase 4B) ----------------------------------------
+# openpyxl: generazione Excel (.xlsx) riepilogativo per categoria.
+openpyxl>=3.1.2,<4.0.0
+
+# --- Stripe billing (Fase 4C) ----------------------------------------
+# Client ufficiale Stripe: checkout session + webhook signature verification.
+# Import LAZY in api/billing.py: senza questa dipendenza l'API resta
+# utilizzabile (no-op mode con 503), senza secrets reali nel workspace.
+# PIN >=9,<11: evita Stripe API version drift; aggiornare solo con test verdi.
+stripe>=9.0.0,<11.0.0
+
+# --- Test (dev) --------------------------------------------------------
+# pytest: framework
+# pytest-asyncio: support async endpoint tests
+# pytest-mock: fixture `mocker` per monkeypatch ergonomico
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.12.0

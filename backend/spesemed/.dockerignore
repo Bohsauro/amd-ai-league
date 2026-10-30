@@ -1,0 +1,52 @@
+# =============================================================================
+# .dockerignore - file esclusi dal build context
+# =============================================================================
+
+# Secrets e configurazione locale
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Documentazione e tool
+README.md
+LICENSE
+*.log
+logs/
+
+# Test e dati
+tests/
+data/
+uploads/
+output/
+
+# Docker stesso
+Dockerfile
+docker-compose.yml
+.dockerignore
