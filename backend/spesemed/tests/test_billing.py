@@ -5,7 +5,7 @@ Verifica:
     rispondono 503 e /billing/plan espone stripe_configured=false.
   - NESSUN secret nel workspace: i test usano chiavi fake esplicite.
   - POST /billing/checkout crea una Stripe Checkout Session (mock del
-    client) e ritorna 201 + URL.
+    client) e ritorna 200 + URL.
   - POST /billing/webhook: 503 se whsec mancante, 400 se firma non valida,
     200 + handle dell'evento se firma valida.
   - handle_webhook_event persiste la subscription su Supabase (best-effort).
@@ -65,15 +65,19 @@ def stripe_settings(monkeypatch):
     monkeypatch.setattr(settings, "stripe_currency", "eur")
     monkeypatch.setattr(settings, "billing_success_url", "https://app.spesemed.local/success?id={CHECKOUT_SESSION_ID}")
     monkeypatch.setattr(settings, "billing_cancel_url", "https://app.spesemed.local/cancel")
+    # Kill switch (task 4C-C1): il default e' OFF, i test di checkout lo attivano.
+    monkeypatch.setattr(settings, "billing_enabled", True)
     yield
 
 
 @pytest.fixture
 def fake_stripe_module(monkeypatch, stripe_settings):
-    from spesemed.api import billing
+    from spesemed.api import billing, billing_client
     fk = FakeStripe()
+    # Skeleton legacy (plan/webhook) + wrapper DI (checkout): stesso fake.
     monkeypatch.setattr(billing, "_get_stripe_module", lambda: fk)
     monkeypatch.setattr(billing, "_stripe_module_cache", fk)
+    monkeypatch.setattr(billing_client, "stripe", fk)
     yield fk
     billing._reset_stripe_module_cache()
 
@@ -137,28 +141,55 @@ class TestPlanEndpoint:
 class TestCheckout:
     def test_checkout_creates_session(self, fake_stripe_module, test_client, auth_headers):
         r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
-        assert r.status_code == 201
+        assert r.status_code == 200
         body = r.json()
         assert body["checkout_url"].startswith("https://checkout.stripe.com")
         assert body["session_id"] == "cs_test_0001"
+        assert body["mode"] == "test"
 
         # Verifica parametri passati a Stripe
         call = fake_stripe_module.create_calls[-1]
         assert call["mode"] == "subscription"
         assert call["client_reference_id"] == "00000000-0000-4000-8000-000000000001"
         assert call["line_items"] == [{"price": "price_test_0123456789", "quantity": 1}]
+        assert call["success_url"] == settings.billing_success_url
+        assert call["cancel_url"] == settings.billing_cancel_url
         assert "test_0123456789" not in call["metadata"]["user_id"]
 
-    def test_checkout_accepts_custom_price_id(self, fake_stripe_module, test_client, auth_headers):
+    def test_checkout_works_without_body(self, fake_stripe_module, test_client, auth_headers):
+        """Il client non deve poter scegliere prezzo/redirect: body non richiesto."""
+        r = test_client.post("/api/v1/billing/checkout", headers=auth_headers)
+        assert r.status_code == 200
+        call = fake_stripe_module.create_calls[-1]
+        assert call["line_items"] == [{"price": "price_test_0123456789", "quantity": 1}]
+        assert "customer_email" not in call
+
+    def test_checkout_accepts_optional_email(self, fake_stripe_module, test_client, auth_headers):
+        """L'email (opzionale) arriva a Stripe come customer_email."""
         r = test_client.post(
             "/api/v1/billing/checkout",
-            json={"price_id": "price_custom_abc"},
+            json={"email": "user@example.test"},
             headers=auth_headers,
         )
-        assert r.status_code == 201
-        assert fake_stripe_module.create_calls[-1]["line_items"] == [
-            {"price": "price_custom_abc", "quantity": 1}
-        ]
+        assert r.status_code == 200
+        assert fake_stripe_module.create_calls[-1]["customer_email"] == "user@example.test"
+
+    def test_checkout_ignores_client_price_and_redirect(self, fake_stripe_module, test_client, auth_headers):
+        """Valori inviati dal client (price_id/success_url) NON sono usati."""
+        r = test_client.post(
+            "/api/v1/billing/checkout",
+            json={
+                "price_id": "price_custom_abc",
+                "success_url": "https://evil.example/redirect",
+                "cancel_url": "https://evil.example/cancel",
+            },
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        call = fake_stripe_module.create_calls[-1]
+        assert call["line_items"] == [{"price": "price_test_0123456789", "quantity": 1}]
+        assert call["success_url"] == settings.billing_success_url
+        assert call["cancel_url"] == settings.billing_cancel_url
 
     def test_checkout_requires_auth(self, stripe_settings, fake_stripe_module, monkeypatch, test_client):
         """Senza header auth e con mock-auth DISABILITATO (come in produzione) => 401."""
@@ -166,15 +197,18 @@ class TestCheckout:
         r = test_client.post("/api/v1/billing/checkout", json={})
         assert r.status_code == 401
 
-    def test_checkout_missing_price_id_returns_503(self, stripe_settings, monkeypatch, test_client, auth_headers):
-        from spesemed.api import billing
-        fk = FakeStripe()
-        monkeypatch.setattr(billing, "_get_stripe_module", lambda: fk)
-        monkeypatch.setattr(billing, "_stripe_module_cache", fk)
+    def test_checkout_missing_price_id_returns_503(self, fake_stripe_module, monkeypatch, test_client, auth_headers):
         monkeypatch.setattr(settings, "stripe_price_id", "")
         r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
         assert r.status_code == 503
-        assert fk.create_calls == []  # nessuna sessione creata senza price_id
+        assert fake_stripe_module.create_calls == []  # nessuna sessione senza price_id
+
+    def test_checkout_kill_switch_returns_503(self, fake_stripe_module, monkeypatch, test_client, auth_headers):
+        """BILLING_ENABLED=false => 503 anche con secret/price presenti."""
+        monkeypatch.setattr(settings, "billing_enabled", False)
+        r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
+        assert r.status_code == 503
+        assert fake_stripe_module.create_calls == []
 
 
 class TestWebhook:
@@ -311,7 +345,7 @@ class TestBillingConfig:
         monkeypatch.setattr(settings, "app_url", "https://app.example.test")
 
         r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
-        assert r.status_code == 201
+        assert r.status_code == 200
         call = fake_stripe_module.create_calls[-1]
         assert call["success_url"] == "https://app.example.test/app/profilo?billing=success"
         assert call["cancel_url"] == "https://app.example.test/app/profilo?billing=cancel"

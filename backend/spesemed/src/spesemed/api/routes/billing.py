@@ -1,7 +1,7 @@
 """SPESEMED API - Billing endpoints (Fase 4C Stripe skeleton).
 
 GET  /api/v1/billing/plan      -> info pubbliche piano (200, nessun secret)
-POST /api/v1/billing/checkout  -> Stripe Checkout Session (201, auth richiesto)
+POST /api/v1/billing/checkout  -> Stripe Checkout Session (200, auth richiesto)
 POST /api/v1/billing/webhook   -> riceve eventi Stripe (200, firma verificata)
 
 No-op mode:
@@ -17,7 +17,8 @@ import logging
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
-from .. import billing
+from .. import billing, billing_client
+from ..config import settings
 from ..dependencies import get_current_user
 from ..rate_limit import limiter
 
@@ -27,17 +28,19 @@ router = APIRouter(tags=["billing"])
 
 
 class CheckoutRequest(BaseModel):
-    """Body per POST /billing/checkout."""
-    price_id: str = Field(
-        default="",
-        description="Price ID Stripe (default: STRIPE_PRICE_ID del server).",
-    )
+    """Body opzionale per POST /billing/checkout.
+
+    L'email serve solo come ``customer_email`` per la ricevuta Stripe: prezzo
+    e URL di redirect restano SEMPRE lato server.
+    """
+    email: str = Field(default="", description="Email per la ricevuta Stripe (opzionale).")
 
 
 class CheckoutResponse(BaseModel):
     """Response con l'URL di checkout per il redirect del client."""
     checkout_url: str = Field(..., description="URL Stripe Checkout (redirect del browser).")
     session_id: str = Field(..., description="ID della sessione checkout (per polling webhook).")
+    mode: str = Field(default="test", description="Modalita' Stripe: test | live.")
     amount_total: int | None = Field(default=None, description="Importo totale in centesimi (se noto).")
     currency: str = Field(default="eur", description="Valuta di fatturazione.")
 
@@ -86,28 +89,41 @@ def billing_plan() -> dict:
 @router.post(
     "/billing/checkout",
     response_model=CheckoutResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     responses={
-        201: {"model": CheckoutResponse, "description": "Checkout session creata."},
+        200: {"model": CheckoutResponse, "description": "Checkout session creata."},
         401: {"description": "Non autenticato."},
-        503: {"description": "Stripe non configurato o STRIPE_PRICE_ID mancante."},
+        503: {"description": "Billing non configurato (kill switch/secret/price)."},
     },
 )
 @limiter.limit("10/minute")
 async def billing_checkout(
     request: Request,
     response: Response,  # richiesto da slowapi (X-RateLimit headers)
-    body: CheckoutRequest,
+    body: CheckoutRequest | None = None,
     user_id: str = Depends(get_current_user),
 ) -> dict:
     """Crea una Stripe Checkout Session (modalita' subscription).
 
     Il client deve redirigere il browser su ``checkout_url``. Il result viene
     notificato via webhook (da configurare lato Stripe).
+
+    Sicurezza: prezzo e URL di redirect arrivano SOLO dalla config server
+    (``STRIPE_PRICE_ID`` / ``STRIPE_SUCCESS_URL`` / ``STRIPE_CANCEL_URL``).
+    Il client non puo' scegliere il prezzo ne' controllare il redirect.
     """
+    if not billing_client.is_billing_configured():
+        logger.warning("Billing checkout rifiutato: billing non configurato (user=%s)", user_id[:12])
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Billing non configurato (Stripe). Contatta l'amministratore.",
+        )
+    email = (body.email if body else "").strip()
     try:
-        result = billing.create_checkout_session(user_id=user_id, price_id=body.price_id or None)
-    except billing.StripeNotConfiguredError as e:
+        result = billing_client.create_checkout_session(user_id=user_id, email=email)
+        result["mode"] = getattr(settings, "stripe_mode", "test")
+        result["currency"] = getattr(settings, "stripe_currency", "eur")
+    except billing_client.BillingNotConfiguredError as e:
         logger.warning("Billing checkout rifiutato: %s (user=%s)", e, user_id[:12])
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

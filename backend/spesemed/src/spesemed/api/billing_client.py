@@ -89,7 +89,7 @@ def _cancel_url() -> str:
     return f"{app_url}/app/profilo?billing=cancel"
 
 
-def create_checkout_session(user_id: str, email: str) -> Dict[str, str]:
+def create_checkout_session(user_id: str, email: str = "") -> Dict[str, str]:
     """Crea una Checkout Session subscription e ritorna URL + session id.
 
     ``client_reference_id`` e ``metadata.user_id`` legano la sessione
@@ -103,17 +103,21 @@ def create_checkout_session(user_id: str, email: str) -> Dict[str, str]:
         raise BillingNotConfiguredError("Billing non configurato.")
 
     stripe_module.api_key = getattr(settings, "stripe_secret_key", "")
-    session = stripe_module.checkout.Session.create(
-        mode="subscription",
-        customer_email=email,
-        line_items=[
+    checkout_kwargs: Dict[str, Any] = {
+        "mode": "subscription",
+        "line_items": [
             {"price": getattr(settings, "stripe_price_id", ""), "quantity": 1}
         ],
-        client_reference_id=user_id,
-        metadata={"user_id": user_id},
-        success_url=_success_url(),
-        cancel_url=_cancel_url(),
-    )
+        "client_reference_id": user_id,
+        "metadata": {"user_id": user_id},
+        "success_url": _success_url(),
+        "cancel_url": _cancel_url(),
+    }
+    # ``customer_email`` e' opzionale: se il client non lo fornisce, Stripe
+    # chiedera' l'email nella sua pagina di checkout.
+    if email.strip():
+        checkout_kwargs["customer_email"] = email.strip()
+    session = stripe_module.checkout.Session.create(**checkout_kwargs)
     logger.info("Checkout session Stripe creata (user=%s).", _short(user_id))
     return {"checkout_url": session.url, "session_id": session.id}
 
