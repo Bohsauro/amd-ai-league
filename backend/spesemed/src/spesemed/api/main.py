@@ -27,7 +27,7 @@ from .config import settings
 from .jwt_decoder import reset_jwks_cache
 from .metrics import prometheus_http_metrics
 from .metrics_acl import check_metrics_authorization
-from .rate_limit import limiter
+from .rate_limit import _redact_redis_uri, limiter
 from .routes import auth, billing, export, extract, health, jobs, summary, waitlist
 from .worker import JobWorker
 
@@ -83,6 +83,59 @@ def _warn_if_multi_worker_memory_rate_limit() -> None:
             "(Vedi .env.example e docker-compose.prod.yml per setup completo.)",
             settings.api_workers, backend or "memory", settings.api_workers,
         )
+
+
+# =============================================================================
+# Helper: readiness Redis per il rate-limit storage (Fase 4C-A2)
+# =============================================================================
+def _check_redis_readiness() -> bool:
+    """Ping Redis se configurato come storage rate-limit. True = ok / non richiesto.
+
+    Il boot NON viene interrotto se Redis e' irraggiungibile (decisione di
+    resilienza: l'app parte, i limiti possono degradare). Il log ERROR e'
+    esplicito cosi' l'operatore/SMOKE_TEST se ne accorge subito, invece di
+    scoprirlo con 500/429 randomici al primo hit.
+    """
+    backend = settings.rate_limit_storage_backend.strip()
+    if backend in ("", "memory"):
+        logger.debug("Redis readiness: storage memory, skip")
+        return True
+
+    if backend == "redis":
+        url = settings.redis_url.strip()
+        if not url:
+            logger.error(
+                "Redis readiness FALLITA: RATE_LIMIT_STORAGE_BACKEND=redis "
+                "ma REDIS_URL e' vuota. Rate-limit multi-worker NON garantito."
+            )
+            return False
+    elif backend.startswith(("redis://", "rediss://")):
+        url = backend
+    else:
+        logger.warning(
+            "Redis readiness: backend %r non riconosciuto, skip (fallback memory).",
+            backend,
+        )
+        return True
+
+    safe_target = _redact_redis_uri(url)
+    try:
+        import redis as redis_lib
+
+        client = redis_lib.from_url(
+            url, socket_connect_timeout=2, socket_timeout=2
+        )
+        client.ping()
+        logger.info("Redis readiness OK (%s)", safe_target)
+        return True
+    except Exception as e:  # noqa: BLE001 - best-effort readiness, mai crash al boot
+        logger.error(
+            "Redis NON raggiungibile (%s): %s. "
+            "Rate-limit multi-worker non garantito.",
+            safe_target,
+            e,
+        )
+        return False
 
 
 # =============================================================================
@@ -240,6 +293,11 @@ async def lifespan(app: FastAPI):
     # WARNING di startup cosi' l'operatore se ne accorge subito e
     # configura Redis (REDIS_URL + RATE_LIMIT_STORAGE_BACKEND=redis).
     _warn_if_multi_worker_memory_rate_limit()
+
+    # Fase 4C-A2: readiness Redis per il rate-limit storage. Se Redis e'
+    # configurato ma irraggiungibile, log ERROR chiaro al boot (mai crash:
+    # l'app parte e i limiti possono degradare, ma l'operatore viene avvisato).
+    _check_redis_readiness()
 
     # SECURITY (FIX M6 audit 2025): se la allowlist di /metrics contiene
     # solo loopback in produzione, gli scraper Prometheus remoti saranno
