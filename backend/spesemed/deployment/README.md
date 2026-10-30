@@ -10,8 +10,10 @@ Questa cartella raccoglie i file operativi per il deploy del backend SPESEMED
 - Endpoint: `GET /metrics` (formato Prometheus exposition).
 - Kill switch: `PROMETHEUS_METRICS_ENABLED=false` → `/metrics` risponde `404`.
 - Metriche HTTP (Fase 4C):
-  - `spesemed_http_requests_total{method,status}` — richieste per metodo e status.
-  - `spesemed_http_request_duration_seconds{method}` — latenza per metodo.
+  - `spesemed_http_requests_total{method,status_class}` — richieste per metodo e
+    classe di status (`2xx`, `3xx`, `4xx`, `5xx`).
+  - `spesemed_http_request_duration_seconds` — latenza delle richieste
+    (Histogram, senza label).
 - Metriche auth/JWT già esistenti (`spesemed_jwt_*`).
 
 ### Allowlist: chi può scrapare
