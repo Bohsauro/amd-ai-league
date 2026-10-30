@@ -208,22 +208,45 @@ def _isolate_test_env(monkeypatch):
 # DIFESA IN PROFONDITA':
 #   pyproject.toml ha pin `"prometheus-client>=0.20.0,<0.26.0,!=0.25.0"` per
 #   escludere 0.25.0 (bug noto in `Metric.clear()` su `_lock`).
+def _safe_set_value(value_obj) -> None:
+    """Set di un Value/Histogram sample, no-op se non ancora inizializzato."""
+    try:
+        value_obj.set(0.0)
+    except AttributeError as e:
+        # Class-level descriptor (metric fresh mai usato): skip + warning
+        # per rendere regression API future visibili in CI.
+        warnings.warn(
+            f"Prometheus reset skip su fresh metric (AttributeError: {e})",
+            stacklevel=2,
+        )
+
+
+def _reset_histogram_buckets(hist) -> None:
+    """Azzera i bucket di un Histogram (lista di Value o dict legacy)."""
+    buckets = getattr(hist, "_buckets", None)
+    if isinstance(buckets, dict):
+        buckets.clear()
+    elif isinstance(buckets, list):
+        for bucket in buckets:
+            _safe_set_value(bucket)
+
+
+def _reset_histogram(hist) -> None:
+    """Azzera sum e bucket di un Histogram, parent e child con label."""
+    if hasattr(hist, "_sum"):
+        _safe_set_value(hist._sum)
+    _reset_histogram_buckets(hist)
+    if hasattr(hist, "_metrics") and isinstance(hist._metrics, dict):
+        for child in list(hist._metrics.values()):
+            if hasattr(child, "_sum"):
+                _safe_set_value(child._sum)
+            _reset_histogram_buckets(child)
+
+
 @pytest.fixture(autouse=True)
 def _reset_prometheus_metrics():
     """Reset dei Counter/Histogram Prometheus prima di ogni test (autouse)."""
     from spesemed.api import metrics
-
-    def _safe_set_value(value_obj) -> None:
-        """Set di un Value/Histogram sample, no-op se non ancora inizializzato."""
-        try:
-            value_obj.set(0.0)
-        except AttributeError as e:
-            # Class-level descriptor (metric fresh mai usato): skip + warning
-            # per rendere regression API future visibili in CI.
-            warnings.warn(
-                f"Prometheus reset skip su fresh metric (AttributeError: {e})",
-                stacklevel=2,
-            )
 
     def _reset_counter(counter) -> None:
         # Reset no-label parent value (per Counter senza labelnames).
@@ -257,14 +280,14 @@ def _reset_prometheus_metrics():
     ):
         _reset_counter(counter)
 
-    # Histogram reset (no-label nel nostro caso).
+    # Histogram reset: i metric con label (es. http_request_duration_seconds
+    # con labelnames=("method",)) non hanno _sum/_buckets sul parent: i valori
+    # stanno nei child (hist._metrics[labelvalues]). Senza questo reset il
+    # parent verrebbe skippato e l'isolamento per-test andrebbe perso.
     for hist in (
         metrics.jwt_decode_duration_seconds,
         metrics.http_request_duration_seconds,
     ):
-        if hasattr(hist, "_sum"):
-            _safe_set_value(hist._sum)
-        if hasattr(hist, "_buckets") and isinstance(hist._buckets, dict):
-            hist._buckets.clear()
+        _reset_histogram(hist)
 
     yield
