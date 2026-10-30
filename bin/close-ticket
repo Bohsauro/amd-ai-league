@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""close-ticket — chiude un'issue SOLO con APPROVE esplicito di agent-reviewer.
+
+Gate di Definition of Done:
+  1. l'issue è in stato `in_review`;
+  2. esiste un commento di agent-reviewer con verdetto APPROVE per QUELL'issue;
+  3. nessun REJECT del reviewer più recente dell'ultimo APPROVE.
+
+Il verdetto può trovarsi:
+  (a) nei commenti dell'issue stessa, oppure
+  (b) nei commenti di un ticket [REVIEW] collegato (titolo contenente "[REVIEW] <IDENT>"),
+      che il reviewer usa per non fare auto-review. In quel caso il commento deve
+      nominare esplicitamente l'IDENT (es. "APPROVE BOH-19").
+
+Uso: bin/close-ticket <identifier>      es. bin/close-ticket BOH-13
+Exit 0 = chiusa (con prove), 1 = gate non soddisfatto, 2 = uso errato.
+"""
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REVIEWER_ID = "3b1b700c-1bad-4ee1-81c7-9d240a648ca9"
+
+
+def load_env(path):
+    env = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k] = v
+    return env
+
+
+E = load_env(os.path.join(ROOT, ".env"))
+URL = E["PAPERCLIP_API_URL"].rstrip("/")
+CID = E["PAPERCLIP_COMPANY_ID"]
+# Chiave di scrittura:
+#  - dentro un run d'agente (PAPERCLIP_RUN_ID presente) → CEO key + header run id
+#    (la CEO key da sola non può scrivere cross-issue: 403 "Cross-issue writes need a run");
+#  - fuori da un run (amministratore) → board key.
+RUN_ID = os.environ.get("PAPERCLIP_RUN_ID", "").strip()
+if RUN_ID:
+    KEY = E["PAPERCLIP_AGENT_CEO_KEY"]
+else:
+    KEY = E.get("PAPERCLIP_BOARD_API_KEY") or E["PAPERCLIP_AGENT_CEO_KEY"]
+# Fallback per i run NON legati a un'issue (run "unassigned"): la CEO key con un
+# run id non riconosciuto viene rifiutata con 403 cross_issue_influence_run_context_required.
+# In quel caso si riprova con la board key senza header di run.
+FALLBACK_KEY = E.get("PAPERCLIP_BOARD_API_KEY")
+
+
+def _request(url, data, method, headers):
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    with urllib.request.urlopen(req) as r:
+        raw = r.read().decode()
+    return json.loads(raw) if raw.strip() else {}
+
+
+def api(path, method="GET", body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    headers = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    if RUN_ID:
+        headers["X-Paperclip-Run-Id"] = RUN_ID
+    try:
+        return _request(f"{URL}{path}", data, method, headers)
+    except urllib.error.HTTPError as e:
+        if e.code not in (401, 403) or not FALLBACK_KEY or KEY == FALLBACK_KEY:
+            raise
+        h2 = {"Authorization": f"Bearer {FALLBACK_KEY}", "Content-Type": "application/json"}
+        return _request(f"{URL}{path}", data, method, h2)
+
+
+def as_list(payload, *keys):
+    if isinstance(payload, list):
+        return payload
+    for k in keys:
+        if isinstance(payload, dict) and isinstance(payload.get(k), list):
+            return payload[k]
+    return []
+
+
+def comments_of(issue_id):
+    return as_list(api(f"/api/issues/{issue_id}/comments"), "comments", "data")
+
+
+def main():
+    ident = sys.argv[1] if len(sys.argv) > 1 else ""
+    if not ident:
+        print("uso: bin/close-ticket <identifier>   (es. BOH-13)", file=sys.stderr)
+        return 2
+
+    issues = as_list(api(f"/api/companies/{CID}/issues"), "issues", "data")
+    target = next((i for i in issues if i.get("identifier") == ident), None)
+    if not target:
+        print(f"ERRORE: issue {ident} non trovata.", file=sys.stderr)
+        return 1
+
+    status = target.get("status")
+    print(f"issue {ident}: stato {status}")
+    if status != "in_review":
+        print("ERRORE: si chiude solo da in_review (stato attuale: %s)." % status, file=sys.stderr)
+        print("       porta l'issue in in_review e fai review prima di chiudere.", file=sys.stderr)
+        return 1
+
+    # ticket [REVIEW] collegati: titolo "[REVIEW] <IDENT> ..." oppure descrizione che cita IDENT
+    linked = []
+    for i in issues:
+        if i.get("id") == target.get("id"):
+            continue
+        title = (i.get("title") or "")
+        desc = (i.get("description") or "")
+        if f"[REVIEW] {ident}" in title or (f"[REVIEW]" in title and ident in title):
+            linked.append(i)
+        elif ident in desc and "[REVIEW]" in title:
+            linked.append(i)
+
+    # raccogli i commenti del reviewer: issue originale + ticket review collegati
+    sources = [(ident, target.get("id"), comments_of(target.get("id")))]
+    for i in linked:
+        sources.append((i.get("identifier"), i.get("id"), comments_of(i.get("id"))))
+
+    # Estrazione del verdetto: NON basta la presenza della parola (un REJECT spiega
+    # spesso "serve un APPROVE" -> falso positivo). Si prende il PRIMO marcatore
+    # APPROVE/REJECT del commento; se è seguito da un IDENT esplicito, quello e' il
+    # target, altrimenti il target e' il ticket su cui e' stato scritto.
+    VERDICT_RE = re.compile(r"\b(APPROVE|REJECT)\b\s*(?:[—\-:]\s*)?\s*(BOH-\d+)?", re.IGNORECASE)
+
+    approve = None   # (comment_id, createdAt, source)
+    reject = None
+    for src_ident, _src_id, cl in sources:
+        for c in cl:
+            if c.get("authorAgentId") != REVIEWER_ID:
+                continue
+            body = c.get("body") or ""
+            m = VERDICT_RE.search(body)
+            if not m:
+                continue
+            verdict = m.group(1).upper()
+            explicit = m.group(2)
+            cid = c.get("id") or "?"
+            cdate = c.get("createdAt") or "?"
+            if explicit:
+                target_ident = explicit
+            elif src_ident != ident and re.search(rf"\b{re.escape(ident)}\b", body):
+                # ticket [REVIEW] collegato: il verdetto vale per l'IDENT citato nel corpo
+                target_ident = ident
+            else:
+                target_ident = src_ident
+            if target_ident != ident:
+                continue
+            if verdict == "APPROVE":
+                approve = (cid, cdate, src_ident)
+            else:
+                reject = (cid, cdate, src_ident)
+
+    if reject and (not approve or reject[1] > approve[1]):
+        print(f"ERRORE: il reviewer ha bocciato (REJECT {reject[0]} su {reject[2]}, {reject[1]}).", file=sys.stderr)
+        print("       L'issue resta in_review: applica i fix richiesti e rifai la review.", file=sys.stderr)
+        return 1
+    if not approve:
+        print("ERRORE: nessun verdetto APPROVE di agent-reviewer trovato.", file=sys.stderr)
+        print(f"       cercato su: {', '.join(s[0] for s in sources)}", file=sys.stderr)
+        print("       senza review non si chiude. Svegliare agent-reviewer e rifare la review.", file=sys.stderr)
+        return 1
+
+    print(f"reviewer: APPROVE (commento {approve[0]} su {approve[2]}, {approve[1]})")
+    api(f"/api/issues/{target['id']}", method="PATCH", body={"status": "done"})
+    print(f"OK: {ident} portata a done con review APPROVE ({approve[0]}).")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

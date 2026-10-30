@@ -32,22 +32,27 @@ Il python di sistema NON ha le dipendenze del progetto: `python3 -m pytest` in
 `backend/spesemed/` fallisce con `ModuleNotFoundError` (dotenv, pydantic_settings).
 Usa il venv dedicato: `/srv/ai-company/venvs/spesemed/bin/python`.
 
+**Dove lavorare:** dentro `/srv/ai-company/workspace/.review-tmp/` (gitignored).
+NON usare `/tmp`: la permission `external_directory: deny` può bloccarne la scrittura.
+Non fare `git checkout` (sei read-only): estrai il branch con `git archive`.
+
 **Backend** — il branch da revisionare è quello indicato nel ticket
-(`dev/backend` per i task backend, `dev/frontend` per il frontend). Non fare
-checkout (sei read-only): estrai il branch in una dir temporanea e testala lì.
+(`dev/backend` per i task backend, `dev/frontend` per il frontend).
 
 ```bash
-rm -rf /tmp/rev && mkdir -p /tmp/rev
-git -C /srv/ai-company/workspace archive dev/backend backend/spesemed | tar -x -C /tmp/rev
-cd /tmp/rev/backend/spesemed && /srv/ai-company/venvs/spesemed/bin/python -m pytest -q
+cd /srv/ai-company/workspace
+rm -rf .review-tmp/be && mkdir -p .review-tmp/be
+git archive dev/backend backend/spesemed | tar -x -C .review-tmp/be
+cd .review-tmp/be/backend/spesemed && /srv/ai-company/venvs/spesemed/bin/python -m pytest -q
 ```
 
 **Frontend** — idem con `dev/frontend` e `frontend/spesemed/frontend-app`:
 
 ```bash
-rm -rf /tmp/revfe && mkdir -p /tmp/revfe
-git -C /srv/ai-company/workspace archive dev/frontend frontend/spesemed/frontend-app | tar -x -C /tmp/revfe
-cd /tmp/revfe/frontend/spesemed/frontend-app && npm ci && npm run build
+cd /srv/ai-company/workspace
+rm -rf .review-tmp/fe && mkdir -p .review-tmp/fe
+git archive dev/frontend frontend/spesemed/frontend-app | tar -x -C .review-tmp/fe
+cd .review-tmp/fe/frontend/spesemed/frontend-app && npm ci && npm run build
 ```
 
 Il working tree condiviso può essere su un branch diverso da quello del ticket:
