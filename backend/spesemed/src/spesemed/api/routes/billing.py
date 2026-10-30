@@ -7,6 +7,8 @@ POST /api/v1/billing/webhook   -> riceve eventi Stripe (200, firma verificata)
 No-op mode:
     Se STRIPE_SECRET_KEY e' vuota / libreria mancante => /checkout risponde 503
     con messaggio chiaro. Se STRIPE_WEBHOOK_SECRET vuota => /webhook 503.
+    Kill switch BILLING_ENABLED=false (default) => /checkout e /webhook 503:
+    il webhook non scrive niente su entitlements / stripe_events.
     Questo permette di deployare il codice PRIMA che Stripe venga configurato,
     senza rompere il resto dell'API (test offline con mock).
 """
@@ -158,10 +160,15 @@ async def billing_checkout(
     responses={
         200: {"model": WebhookResponse, "description": "Evento ricevuto e processato."},
         400: {"description": "Firma Stripe non valida."},
-        503: {"description": "Webhook non configurato (STRIPE_WEBHOOK_SECRET mancante)."},
+        503: {
+            "description": (
+                "Webhook non attivo: kill switch BILLING_ENABLED=false oppure "
+                "STRIPE_WEBHOOK_SECRET mancante."
+            ),
+        },
     },
 )
-@limiter.limit("120/minute")
+@limiter.limit("60/minute")
 async def billing_webhook(
     request: Request,
     response: Response,  # richiesto da slowapi (X-RateLimit headers)
@@ -172,10 +179,29 @@ async def billing_webhook(
     La firma viene verificata con ``stripe.Webhook.construct_event`` usando
     STRIPE_WEBHOOK_SECRET: nessun JWT/Bearer richiesto (by design).
 
+    Kill switch: con ``BILLING_ENABLED=false`` il webhook risponde 503 e NON
+    scrive niente su ``entitlements`` / ``stripe_events`` (stesso comportamento
+    di ``/billing/checkout``). Con ``STRIPE_WEBHOOK_SECRET`` vuota risponde
+    503 "non configurato".
+
     IMPORTANTE per Stripe Dashboard: configure endpoint
     ``https://<api>/api/v1/billing/webhook`` con almeno gli eventi
     ``checkout.session.completed`` e ``customer.subscription.deleted``.
     """
+    if not billing.is_webhook_configured():
+        logger.warning("Webhook non configurato: STRIPE_WEBHOOK_SECRET mancante.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe webhook non configurato (STRIPE_WEBHOOK_SECRET mancante).",
+        )
+    if not billing.is_billing_enabled():
+        logger.warning(
+            "Webhook Stripe rifiutato: billing disabilitato (BILLING_ENABLED=false)."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Billing disabilitato (BILLING_ENABLED=false): webhook non attivo.",
+        )
     payload = await request.body()
     try:
         event = billing.verify_webhook_signature(payload=payload, sig_header=stripe_signature)
@@ -183,7 +209,7 @@ async def billing_webhook(
         logger.warning("Webhook non configurato: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Stripe webhook non configurato (STRIPE_WEBHOOK_SECRET mancante).",
+            detail="Billing non configurato (BILLING_ENABLED=false o Stripe non disponibile).",
         ) from e
     except Exception as e:
         logger.warning("Webhook Stripe: firma non valida (400). %s", type(e).__name__)
@@ -192,7 +218,14 @@ async def billing_webhook(
             detail="Webhook sign check failed.",
         ) from e
 
-    result = await asyncio.to_thread(billing.process_webhook_event, event)
+    try:
+        result = await asyncio.to_thread(billing.process_webhook_event, event)
+    except billing.StripeNotConfiguredError as e:
+        logger.warning("Webhook Stripe non processato: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Billing disabilitato (BILLING_ENABLED=false): webhook non attivo.",
+        ) from e
     logger.info(
         "Webhook Stripe processato: type=%s action=%s replayed=%s",
         result.get("event_type"),

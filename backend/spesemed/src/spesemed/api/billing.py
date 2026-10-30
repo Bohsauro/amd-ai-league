@@ -5,6 +5,9 @@ Skeleton operativo con **no-op mode** senza secrets:
     - Se ``STRIPE_SECRET_KEY`` e' vuota (o la libreria `stripe` non e'
       installata/impoortabile) => billing DISABILITATO: le route ritornano
       503 e nessuna chiamata di rete parte.
+    - Kill switch ``BILLING_ENABLED=false`` (default) => billing SPENTO:
+      ``/billing/checkout`` e ``/billing/webhook`` rispondono 503 e il webhook
+      NON scrive niente su ``entitlements`` / ``stripe_events``.
     - Nessun secret reale nel codice: tutto arriva da env/.env del deploy.
 
 Endpoints esposti (vedi routes/billing.py):
@@ -55,6 +58,16 @@ class StripeNotConfiguredError(RuntimeError):
 # =============================================================================
 # Stato configurazione
 # =============================================================================
+
+
+def is_billing_enabled() -> bool:
+    """True se il kill switch ``BILLING_ENABLED`` e' ON.
+
+    Con il kill switch OFF il billing e' spento: ``/billing/checkout`` e
+    ``/billing/webhook`` rispondono 503 e il webhook non scrive niente su
+    ``entitlements`` / ``stripe_events``.
+    """
+    return bool(getattr(settings, "billing_enabled", False))
 
 
 def is_stripe_configured() -> bool:
@@ -178,9 +191,14 @@ def verify_webhook_signature(
     """Verifica la firma di un webhook Stripe e ritorna l'evento.
 
     Raises:
-        StripeNotConfiguredError: whsec non configurata.
+        StripeNotConfiguredError: kill switch ``BILLING_ENABLED`` OFF o
+            whsec non configurata.
         ValueError/Exception: firma non valida (la route la mappa in 400).
     """
+    if not is_billing_enabled():
+        raise StripeNotConfiguredError(
+            "Billing disabilitato (BILLING_ENABLED=false): webhook non attivo."
+        )
     stripe = _get_stripe_module()
     if not is_webhook_configured():
         raise StripeNotConfiguredError("STRIPE_WEBHOOK_SECRET non configurata.")
@@ -198,7 +216,15 @@ def process_webhook_event(event: Any) -> Dict[str, Any]:
     dispatchato. Un replay (event_id gia' presente) risponde 200 senza
     rieseguire gli upsert. Se Supabase non e' disponibile l'evento viene
     comunque processato best-effort: meglio un ack che un retry infinito.
+
+    Raises:
+        StripeNotConfiguredError: kill switch ``BILLING_ENABLED`` OFF: il
+            webhook non scrive niente su ``entitlements`` / ``stripe_events``.
     """
+    if not is_billing_enabled():
+        raise StripeNotConfiguredError(
+            "Billing disabilitato (BILLING_ENABLED=false): webhook non attivo."
+        )
     client = supabase_client.get_supabase_client()
     if not _record_stripe_event(client, event):
         return {
@@ -237,7 +263,12 @@ def handle_webhook_event(event: Any, client: Any = None) -> Dict[str, Any]:
             period_end=_unix_to_iso(_get_field(session, "current_period_end")),
             client=client,
         )
-        return {"action": "subscription_created", "customer_id": customer_id, "plan": "pro"}
+        return {
+            "action": "subscription_created",
+            "event_type": event_type,
+            "customer_id": customer_id,
+            "plan": "pro",
+        }
 
     if event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
         subscription = _event_object(event)

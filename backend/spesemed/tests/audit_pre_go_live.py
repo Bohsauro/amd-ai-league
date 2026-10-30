@@ -157,6 +157,11 @@ def audit_billing_migration() -> dict:
         "legacy_upgrade_copy": has(
             r"to_regclass\('public\.subscriptions'\).*?to_regclass\('public\.billing_events'\)"
         ),
+        "legacy_upgrade_allowance": has(
+            r"INSERT\s+INTO\s+entitlements\b.*?"
+            r"current_period_start.*?extractions_limit.*?extractions_used"
+        ),
+        "legacy_upgrade_schema_aware": has(r"to_jsonb\s*\("),
     }
 
     parens_open = text.count("(")

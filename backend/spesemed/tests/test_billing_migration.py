@@ -128,6 +128,56 @@ def test_migration_copies_legacy_rows(sql_text):
     )
 
 
+def test_migration_copies_legacy_allowance(sql_text):
+    """L'upgrade deve migrare l'allowance (periodo + quota) delle righe legacy.
+
+    Regressione: la copia perdeva current_period_start / extractions_limit /
+    extractions_used, quindi un utente gia' attivo si ritrovava con quota 0 e
+    il gating 402 lo bloccava.
+    """
+    insert = re.search(
+        r"INSERT\s+INTO\s+entitlements\s*\((.*?)\)\s*SELECT(.*?)FROM\s*\(",
+        sql_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert insert is not None, "blocco INSERT INTO entitlements non trovato"
+    columns = insert.group(1).lower()
+    select = insert.group(2).lower()
+    for column in (
+        "current_period_start",
+        "current_period_end",
+        "extractions_limit",
+        "extractions_used",
+    ):
+        assert column in columns, f"colonna non migrata: {column}"
+        assert column in select, f"colonna non selezionata nell'upgrade: {column}"
+
+
+def test_migration_upgrade_is_schema_aware(sql_text):
+    """La copia legacy deve tollerare schemi 004 diversi (colonne assenti).
+
+    La 004_stripe_subscriptions.sql (prima versione) non aveva
+    current_period_start / extractions_limit / extractions_used: una copia con
+    SELECT esplicito fallirebbe. to_jsonb() + (->>) legge solo le chiavi
+    presenti, quindi l'upgrade resta idempotente su qualunque schema legacy.
+    """
+    assert re.search(r"to_jsonb\s*\(", sql_text, re.IGNORECASE)
+    assert re.search(r"row_json\s*->>\s*'", sql_text, re.IGNORECASE)
+
+
+def test_migration_legacy_defaults_are_fail_closed(sql_text):
+    """Le righe legacy senza status/plan espliciti non devono diventare attive."""
+    insert = re.search(
+        r"INSERT\s+INTO\s+entitlements\s*\((.*?)\)\s*SELECT(.*?)FROM\s*\(",
+        sql_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert insert is not None
+    select = insert.group(2).lower()
+    assert "'none'" in select, "status legacy non mappato su 'none' (fail-closed)"
+    assert "'free'" in select, "plan legacy non mappato su 'free' (fail-closed)"
+
+
 def test_no_secrets_in_migration(sql_text):
     assert "sk_test_" not in sql_text
     assert "sk_live_" not in sql_text

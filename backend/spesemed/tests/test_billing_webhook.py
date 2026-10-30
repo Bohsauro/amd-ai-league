@@ -1,9 +1,10 @@
 """SPESEMED - Test della route POST /api/v1/billing/webhook (Fase 4C-C5).
 
 Copre: firma invalida fail-closed, evento valido (stripe_events + entitlements),
-replay idempotente, eventi fuori scope, aggiornamenti entitlement e assenza di
-payload nei log. Tutto offline: Stripe e Supabase sono fake/mock, nessun secret
-reale nel workspace.
+replay idempotente, eventi fuori scope, aggiornamenti entitlement, assenza di
+payload nei log, ``event_type`` valorizzato in risposta/log (BOH-51 a) e kill
+switch ``BILLING_ENABLED=false`` (503 senza scritture, BOH-51 c). Tutto
+offline: Stripe e Supabase sono fake/mock, nessun secret reale nel workspace.
 """
 from __future__ import annotations
 
@@ -69,6 +70,11 @@ def _post_webhook(test_client):
     )
 
 
+def _called_tables(mock_supabase):
+    """Nomi delle tabelle toccate dal mock Supabase (il worker tocca 'jobs')."""
+    return [call.args[0] for call in mock_supabase.table.call_args_list if call.args]
+
+
 def test_webhook_invalid_signature_returns_400_without_db_write(
     fake_stripe, mock_supabase, test_client
 ):
@@ -78,7 +84,10 @@ def test_webhook_invalid_signature_returns_400_without_db_write(
 
     assert r.status_code == 400
     assert "Webhook sign check failed" in r.json()["detail"]
-    mock_supabase.table.assert_not_called()
+    # Nessuna scrittura sulle tabelle billing (il worker puo' toccare 'jobs').
+    called_tables = _called_tables(mock_supabase)
+    assert "stripe_events" not in called_tables
+    assert "entitlements" not in called_tables
 
 
 def test_webhook_valid_event_records_event_and_upserts_entitlement(
@@ -92,6 +101,7 @@ def test_webhook_valid_event_records_event_and_upserts_entitlement(
     body = r.json()
     assert body["received"] is True
     assert body["action"] == "subscription_created"
+    assert body["event_type"] == "checkout.session.completed"
     assert body["replayed"] is False
 
     table = mock_supabase.table.return_value
@@ -104,8 +114,10 @@ def test_webhook_valid_event_records_event_and_upserts_entitlement(
     assert payload["plan"] == "pro"
     assert payload["status"] == "active"
     # Tabelle canoniche (migrations/004_billing.sql): evento + entitlement.
-    called_tables = [call.args[0] for call in mock_supabase.table.call_args_list if call.args]
-    assert called_tables == ["stripe_events", "entitlements"]
+    billing_tables = [
+        t for t in _called_tables(mock_supabase) if t in ("stripe_events", "entitlements")
+    ]
+    assert billing_tables == ["stripe_events", "entitlements"]
 
 
 def test_webhook_replay_is_idempotent(fake_stripe, mock_supabase, test_client):
@@ -173,3 +185,67 @@ def test_webhook_does_not_log_payload(fake_stripe, mock_supabase, test_client, c
 
     assert r.status_code == 200
     assert "must-not-be-logged" not in caplog.text
+
+
+def test_webhook_checkout_response_and_log_include_event_type(
+    fake_stripe, mock_supabase, test_client, caplog
+):
+    """(a) checkout.session.completed: event_type valorizzato in risposta e log."""
+    fake_stripe.event = _completed_event()
+
+    with caplog.at_level("INFO"):
+        r = _post_webhook(test_client)
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["event_type"] == "checkout.session.completed"
+    assert body["action"] == "subscription_created"
+    # Il log della route riporta il tipo evento (prima era type=None).
+    assert "type=checkout.session.completed" in caplog.text
+    assert "type=None" not in caplog.text
+
+
+def test_webhook_kill_switch_returns_503_without_db_write(
+    fake_stripe, mock_supabase, test_client, monkeypatch
+):
+    """(c) BILLING_ENABLED=false => 503, nessuna scrittura, firma non verificata."""
+    monkeypatch.setattr(settings, "billing_enabled", False)
+    fake_stripe.event = _completed_event()
+    # Se la firma fosse verificata prima del kill switch, la risposta sarebbe 400.
+    fake_stripe.construct_error = ValueError("No signatures found")
+
+    r = _post_webhook(test_client)
+
+    assert r.status_code == 503
+    assert "BILLING_ENABLED=false" in r.json()["detail"]
+    called_tables = _called_tables(mock_supabase)
+    assert "stripe_events" not in called_tables
+    assert "entitlements" not in called_tables
+
+
+def test_webhook_kill_switch_blocks_processing_even_with_valid_signature(
+    fake_stripe, mock_supabase, test_client, monkeypatch
+):
+    """(c) Kill switch OFF: nessuna scrittura su stripe_events/entitlements."""
+    monkeypatch.setattr(settings, "billing_enabled", False)
+    fake_stripe.event = _completed_event()
+
+    r = _post_webhook(test_client)
+
+    assert r.status_code == 503
+    called_tables = _called_tables(mock_supabase)
+    assert "stripe_events" not in called_tables
+    assert "entitlements" not in called_tables
+
+
+def test_webhook_without_secret_returns_503(fake_stripe, mock_supabase, test_client, monkeypatch):
+    """Secret webhook assente => 503 (webhook non configurato)."""
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "")
+
+    r = _post_webhook(test_client)
+
+    assert r.status_code == 503
+    assert "STRIPE_WEBHOOK_SECRET mancante" in r.json()["detail"]
+    called_tables = _called_tables(mock_supabase)
+    assert "stripe_events" not in called_tables
+    assert "entitlements" not in called_tables
