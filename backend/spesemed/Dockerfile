@@ -56,8 +56,8 @@ ENV PATH="/opt/venv/bin:$PATH" \
 # Copia codice sorgente
 COPY --chown=spesemed:spesemed src ./src
 COPY --chown=spesemed:spesemed pyproject.toml ./
-# Landing page statica
-COPY --chown=spesemed:spesemed landing ./landing
+# NB: la landing statica e' opzionale (main.py monta /landing solo se il
+# directory esiste). Non e' versionata: il build non deve fallire se assente.
 
 USER spesemed
 
