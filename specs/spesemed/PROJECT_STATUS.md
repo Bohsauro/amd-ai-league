@@ -86,8 +86,8 @@ Una pipeline che:
 > L'Export Excel/ZIP chiude il ciclo d'uso per il commercialista; il Profilo
 > utente/usage aggiunge riepilogo spese e storico job con export per-job.
 > La Fase 4C backend è completa come **skeleton operativo** (Redis, Prometheus,
-> Stripe, status piano e gating 402); restano UI piano (4C-C9) e
-> validazione E2E con Supabase reale. Dettaglio in §17.
+> Stripe, status piano e gating 402); completata anche la UI piano (4C-C9); resta
+> la validazione E2E con Supabase reale. Dettaglio in §17.
 
 ---
 
@@ -408,9 +408,8 @@ in §10.2 backlog (non più un "bug noto", solo nice-to-have).
 
 ### 10.1 Visible-to-user (alta priorità)
 
-| Item                                          | Impatto                                |
-|-----------------------------------------------|----------------------------------------|
-| 💳 **UI Profilo/piano (4C-C9)**               | mostra piano/stato/uso e gestisce il 402 nel frontend |
+Nessun item residuo: la **UI Profilo/piano (4C-C9)** è completata
+(`ProfilePage.tsx` usa `billingStatus`/`billingCheckout` e gestisce il 402).
 
 ### 10.2 Indurimento (media priorità)
 
@@ -527,7 +526,7 @@ curl http://localhost:8000/api/v1/health
 | Pytest `test_billing`  | 🟢   | 24/24 (mock Stripe, status, kill switch)      |
 | Pytest `test_extract_billing_gate` | 🟢 | 6/6 (402, quota, cache hit)        |
 | Pytest `test_metrics`  | 🟢   | 37/37 (JWT + HTTP metrics)                    |
-| Pytest totale          | 🟢   | **253 passed, 1 skipped, 0 failed**           |
+| Pytest totale          | 🟢   | **260 passed, 1 skipped, 0 failed**           |
 | Live smoke (env empty) | 🟢   | T1-T9 tutti verdi, T6 logout=204 FISSO        |
 | Flutter analyze        | 🟢   | 0 issue (70 lint fixati, `analysis_options` riattivato) |
 | Flutter test           | 🟢   | 47/47 (validators, signup screen, widget, profile DTO) |
@@ -603,9 +602,10 @@ SPESEMED/
 │   ├── test_extract.py               ← 4 test
 │   ├── test_imports.py               ← smoke test Fase 0
 │   ├── test_jwt_decoder.py           ← decode JWT + JWKS
-│   ├── test_metrics.py               ← 34 test metriche Prometheus/JWT/HTTP
-│   ├── test_rate_limit.py            ← 14 test storage memory/Redis + readiness
+│   ├── test_metrics.py               ← 37 test metriche Prometheus/JWT/HTTP
+│   ├── test_rate_limit.py            ← 16 test storage memory/Redis + readiness
 │   ├── test_billing.py               ← 24 test Stripe (mock, no secrets)
+│   ├── test_billing_webhook.py       ← 10 test webhook Stripe (firma, replay, kill switch)
 │   ├── test_extract_billing_gate.py  ← 6 test gating 402/quota/cache
 │   ├── test_security_fixes.py        ← regressioni security
 │   ├── test_operational_smoke.py     ← smoke test operativo
@@ -631,8 +631,8 @@ chiude il ciclo d'uso per il commercialista e il **Profilo utente/usage**
 job e download dell'export per job o completo dal nuovo `GET /api/v1/summary`.
 
 → **Fase 4C (skeleton) fatta**: Redis readiness/test, Prometheus HTTP metrics,
-Stripe status/checkout/webhook + gating 402. Prossimo valore: **UI piano
-(4C-C9)**.
+Stripe status/checkout/webhook + gating 402. Anche la **UI piano (4C-C9)** è
+completata.
 
 → **Test E2E con Supabase reale**: le 4 azioni del runbook sono state eseguite
 dall'utente; resta la validazione del success-path (200 OK) con secrets reali,
@@ -735,7 +735,7 @@ ciò che il runbook abilita.
 ## 17. 🟡 FASE 4C — Redis, Prometheus, Stripe (stato reale)
 
 **Stato**: backend **skeleton operativo** completato e verde offline. Status
-piano e gating 402 sono implementati; restano la UI piano (4C-C9) e la
+piano, gating 402 e UI piano (4C-C9) sono implementati; resta la
 validazione E2E con Supabase reale.
 
 ### 17.1 Redis rate-limit storage + readiness
@@ -793,8 +793,8 @@ subscription updated/deleted e invoice.paid, con idempotenza replay-safe su
 `stripe_events`.
 
 **Nota**: il gating legge `entitlements`, inclusa nella migration 004; non
-serve SQL manuale. Resta la UI piano (4C-C9) per mostrare stato/uso nel
-frontend.
+serve SQL manuale. La UI piano (4C-C9) mostra stato/uso nel frontend
+(`ProfilePage.tsx`).
 
 ### 17.5 Test offline (nessun secret)
 
@@ -804,7 +804,7 @@ frontend.
 | `python -m pytest tests/test_extract_billing_gate.py -v` | 6 passed (402/quota/cache) |
 | `python -m pytest tests/test_rate_limit.py -v` | 16 passed (memory/Redis URI + readiness) |
 | `python -m pytest tests/test_metrics.py -v` | 37 passed (JWT + HTTP metrics) |
-| `python -m pytest -q` | **253 passed, 1 skipped, 0 failed** |
+| `python -m pytest -q` | **260 passed, 1 skipped, 0 failed** |
 | `python -m compileall src tests` | nessun errore |
 | `python tests/audit_pre_go_live.py` | `AUDIT PASSED` (`.env.example` ↔ `config.py`) |
 
@@ -814,12 +814,12 @@ nessuna chiamata di rete, nessun secret reale nel workspace.
 ---
 
 _Documento aggiornato al termine della **Fase 4C (skeleton)**: pytest
-**253 passed, 1 skipped** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
+**260 passed, 1 skipped** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
 **GUI Flutter completata** (47/47 test, analyze 0 issue, 70 lint fixati),
 **Export Excel/ZIP implementato** (Fase 4B: `core/exporter.py` + API
 `POST /api/v1/export` + bottone Esporta in ResultsScreen) e **Profilo
 utente/usage** (Fase 4B+: `GET /api/v1/summary` + ProfileScreen con riepilogo,
 storico job ed export per-job). Le azioni manuali Supabase (migration SQL,
 bucket Storage, .env populate, curl autenticati) sono state eseguite
-dall'utente; restano la validazione E2E del success-path con Supabase reale,
-la UI piano (4C-C9) e la validazione E2E con Supabase reale._
+dall'utente; resta la validazione E2E del success-path con Supabase reale.
+La UI piano (4C-C9) è completata (`ProfilePage.tsx`)._

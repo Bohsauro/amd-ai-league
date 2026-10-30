@@ -471,7 +471,7 @@ Dopo aver completato i 5 step, verifica in Supabase Dashboard e Stripe Dashboard
 
 Dopo il go-live, le evoluzioni naturali sono:
 
-1. **Gating quota/402 + UI Profilo/piano** (4C-C7/C9): bloccare `/extract` senza quota e mostrare lo stato piano nel frontend
+1. ✅ **Gating quota/402 + UI Profilo/piano** (4C-C7/C9): fatto — `/extract` blocca senza quota e il frontend mostra lo stato piano
 2. **UI Streamlit** legacy (drag & drop + tabella editabile) — non più necessaria con la SPA web
 3. **OpenAPI SDK client** auto-generato per il frontend
 4. **CI/CD GitHub Actions** completo (deploy automatico dopo migration merge)

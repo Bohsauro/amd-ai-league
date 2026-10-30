@@ -5,17 +5,17 @@
 > (gunicorn, live), frontend SPA Vite+React18+TS **già costruito** in `frontend-app/`.
 > Il backend 4C è pronto come **skeleton operativo**: Redis readiness, metriche
 > Prometheus HTTP, Stripe (status/checkout/webhook + gating 402 su /extract).
-> Resta la validazione E2E con Supabase reale, l'UI profilo/piano (task separato)
-> e l'audit qualità frontend.
+> Resta la validazione E2E con Supabase reale; l'UI profilo/piano e l'audit
+> qualità frontend sono completati.
 
 ## Stato (fonte: PROJECT_STATUS.md, oct 2026)
 
 - Fasi 0-3, 4A(web), 4B (Export Excel/ZIP), 4B+ (Profilo/usage) ✅ done
-- pytest **253 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
+- pytest **260 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
 - Backend **live su http://localhost:8000** (gunicorn 2 worker, bind 0.0.0.0:8000) → `/api/v1/health` 200
 - Flutter GUI rimossa (ott 2026) → la GUI web reale è `frontend-app/` (Vite+React18+TS, design "Verde Calma")
 - **4C backend done (skeleton)**: Redis rate-limit storage con readiness, metriche HTTP Prometheus, Stripe `status`/`checkout`/`webhook` + gating 402, con no-op mode e test offline
-- **Resta**: validazione E2E success-path con secrets reali, UI Profilo/piano (4C-C9), audit qualità frontend
+- **Resta**: validazione E2E success-path con secrets reali. **Fatti**: UI Profilo/piano (4C-C9) e audit qualità frontend
 
 ## Mappa ruoli → domini di scrittura (path nel workspace)
 
@@ -70,11 +70,9 @@
 
 1. **Validazione E2E success-path con Supabase reale** (health→signup→login→jobs→extract→export;
    200 OK reali) — richiede secrets: preparare script + istruzioni, l'esecuzione finale la fa il proprietario.
-2. **UI Profilo/piano (4C-C9)**: il gating 402 è implementato e il webhook gestisce
-   `checkout.session.completed`, `customer.subscription.updated/deleted`,
-   `invoice.paid`; il frontend non mostra ancora stato piano/uso.
-3. **Audit qualità frontend-app**: impeccable detect, build `npm run build` senza errori,
-   aderenza DESIGN.md, accessibilità, gestione errori/loading, refresh token su 401.
+_(✅ completati: **UI Profilo/piano (4C-C9)** — `ProfilePage.tsx` usa
+`billingStatus`/`billingCheckout` e gestisce il 402; **audit qualità frontend-app** —
+commit `dbe8361`.)_
 
 ## Stripe billing — setup, test locale e runbook incidenti
 
@@ -181,7 +179,7 @@ python -m pytest tests/test_billing.py -v       # 24 passed (mock stripe + supab
 python -m pytest tests/test_extract_billing_gate.py -v  # 6 passed (402/quota/cache)
 python -m pytest tests/test_rate_limit.py -v    # 16 passed (memory/redis URI + readiness)
 python -m pytest tests/test_metrics.py -v       # 37 passed (JWT + HTTP metrics)
-python -m pytest -q                             # 253 passed, 1 skipped, 0 failed
+python -m pytest -q                             # 260 passed, 1 skipped, 0 failed
 python -m compileall src tests                  # nessun errore
 ```
 
