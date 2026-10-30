@@ -94,6 +94,27 @@ gate fallisce con quell'errore, la chiusura la deve fare un altro scrittore
 dentro un run usa `PAPERCLIP_AGENT_CEO_KEY` + header `X-Paperclip-Run-Id`
 (la CEO key da sola non può scrivere cross-issue: 403 "Cross-issue writes need a run").
 
+**Run non assegnati (CEO):** molti wake del CEO partono come run *unassigned*.
+In quel caso la CEO key + run id viene rifiutata con 403
+`cross_issue_influence_run_context_required` su qualunque issue diversa dalla
+propria, e `close-ticket` non riesce a fare la PATCH finale. Workaround per
+commenti e update su altre issue:
+
+```bash
+env -u PAPERCLIP_RUN_ID node "$PAPERCLIP_CLI" issue comment BOH-5 --body "..." \
+  --api-base "$PAPERCLIP_API_URL" --api-key "$PAPERCLIP_BOARD_API_KEY"
+```
+
+La chiusura (`in_review` → `done`) invece la può fare solo un run agganciato
+all'issue: se `close-ticket` risponde `403 review_policy_denied` (policy
+`not_creator`, richiesta di review aperta dall'utente board) aspetta il run CEO
+di review o chiedi all'amministratore. Non forzare `done` a mano.
+
+**Un solo [REVIEW] per volta:** lo stesso wake può generare più run CEO in
+parallelo. Prima di aprire un ticket `[REVIEW]`, cerca se ne esiste già uno per
+lo stesso IDENT (anche con titolo leggermente diverso) e annulla il duplicato:
+due review concorrenti sulla stessa HEAD sprecano run e si cancellano a vicenda.
+
 **Ondate:** non assegnare più di ~4 ticket [REVIEW] per volta al reviewer —
 13 run concorrenti su una macchina piccola fanno thrash e i run si cancellano.
 
