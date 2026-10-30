@@ -11,12 +11,14 @@ Rate limit (Fase 3): slowapi @limiter.limit(settings.rate_limit_extract).
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -28,6 +30,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import JSONResponse
 
 from ...core.extractor import ExtractorError, extract_from_file
 from ..config import settings
@@ -119,6 +122,106 @@ async def _read_upload_streaming(uploaded: UploadFile, max_bytes: int) -> bytes:
 
 
 # =============================================================================
+# Billing gating (Fase 4C-C7)
+# =============================================================================
+_ACTIVE_STATUSES = {"active", "trialing"}
+
+
+def _parse_period_end(value: object) -> Optional[datetime]:
+    """Parsa current_period_end (str ISO o datetime) in datetime UTC-aware."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+async def _fetch_entitlement(user_id: str) -> Optional[dict]:
+    """Legge la riga `entitlements` dell'utente (None se assente/errore)."""
+    client = supabase_client.get_supabase_client()
+    if client is None:
+        return None
+    try:
+        rows = await asyncio.to_thread(
+            lambda: client.table("entitlements")
+            .select("*")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("Entitlement lookup failed (user=%s): %s", user_id[:12], e)
+        return None
+    data = getattr(rows, "data", None) or []
+    return data[0] if data else None
+
+
+async def _user_has_entitlement(user_id: str) -> bool:
+    """True se billing disabilitato o utente con entitlement attivo e quota residua."""
+    if not settings.billing_enabled:
+        return True
+
+    row = await _fetch_entitlement(user_id)
+    if not row:
+        return False
+    if row.get("status") not in _ACTIVE_STATUSES:
+        return False
+
+    period_end = _parse_period_end(row.get("current_period_end"))
+    if period_end is not None and period_end <= datetime.now(timezone.utc):
+        return False
+
+    try:
+        used = int(row.get("extractions_used", 0) or 0)
+        limit = int(row.get("extractions_limit", 0) or 0)
+    except (TypeError, ValueError):
+        return False
+    return used < limit
+
+
+async def _bump_extraction_usage(user_id: str, count: int = 1) -> None:
+    """Incrementa extractions_used (best-effort, mai blocca l'estrazione)."""
+    if not settings.billing_enabled or count <= 0:
+        return
+    client = supabase_client.get_supabase_client()
+    if client is None:
+        return
+    try:
+        rows = await asyncio.to_thread(
+            lambda: client.table("entitlements")
+            .select("extractions_used")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        data = getattr(rows, "data", None) or []
+        if not data:
+            return
+        used = int((data[0] or {}).get("extractions_used", 0) or 0)
+        await asyncio.to_thread(
+            lambda: client.table("entitlements")
+            .update({"extractions_used": used + count})
+            .eq("user_id", user_id)
+            .execute()
+        )
+        logger.info("Entitlement usage bumped (user=%s, +%d)", user_id[:12], count)
+    except Exception as e:
+        logger.warning("Entitlement usage bump failed (user=%s): %s", user_id[:12], e)
+
+
+# =============================================================================
 # Entry point: auto-routing
 # =============================================================================
 @router.post(
@@ -128,6 +231,7 @@ async def _read_upload_streaming(uploaded: UploadFile, max_bytes: int) -> bytes:
         200: {"model": ExtractSyncResponse, "description": "Sync (N<=max_sync_files)."},
         202: {"model": JobPendingResponse, "description": "Async (N>max_sync_files)."},
         400: {"model": ErrorResponse, "description": "N fuori range o estensione non supportata."},
+        402: {"model": ErrorResponse, "description": "Piano esaurito o abbonamento non attivo."},
         413: {"model": ErrorResponse, "description": "File troppo grande."},
         422: {"model": ErrorResponse, "description": "Sync: tutti i file falliti."},
         429: {"model": ErrorResponse, "description": "Troppe richieste di estrazione."},
@@ -171,6 +275,18 @@ async def extract(
             detail="Supabase non configurato sul server (richiesto per idempotency + storage).",
         )
 
+    if not await _user_has_entitlement(user_id):
+        return JSONResponse(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            content={
+                "detail": (
+                    "Piano gratuito esaurito o abbonamento non attivo. "
+                    "Abbonati per continuare."
+                ),
+                "code": "payment_required",
+            },
+        )
+
     # Branch
     if n > settings.max_sync_files:
         response.status_code = status.HTTP_202_ACCEPTED
@@ -202,6 +318,7 @@ async def _process_sync(
     file_hashes: list[str] = []
     cached_flags: list[bool] = []
     errors: list[str] = []
+    new_extractions = 0
 
     for uploaded in files:
         filename = uploaded.filename or "unnamed"
@@ -293,6 +410,7 @@ async def _process_sync(
                         file_hash[:12], e,
                     )
                 results.append(spesa)
+                new_extractions += 1
                 # SECURITY (FIX M2 audit): MAI loggare filename utente +
                 # categoria_spesa/importo_totale (entrambi PII/sanitarie in chiaro
                 # nei log = GDPR cat. speciale art. 9). Logghiamo solo:
@@ -330,6 +448,9 @@ async def _process_sync(
             "Estrazione parziale: %d/%d file OK. Errori: %s",
             len(results), len(files), "; ".join(errors),
         )
+
+    if new_extractions:
+        await _bump_extraction_usage(user_id, new_extractions)
 
     return ExtractSyncResponse(
         results=results,
@@ -412,6 +533,8 @@ async def _create_async_job(
         "Async job %s creato (user=%s, %d files, %d errori upload)",
         job_id, user_id, len(file_hashes), len(upload_errors),
     )
+
+    await _bump_extraction_usage(user_id, len(file_hashes))
 
     return JobPendingResponse(
         job_id=job_id,

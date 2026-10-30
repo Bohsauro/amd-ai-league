@@ -31,6 +31,8 @@ os.environ.setdefault("SUPABASE_URL", "")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "")
 os.environ.setdefault("SUPABASE_JWT_SECRET", "")
 os.environ.setdefault("RATE_LIMIT_EXTRACT", "100/minute")
+os.environ["RATE_LIMIT_STORAGE_BACKEND"] = "memory"
+os.environ["REDIS_URL"] = ""
 os.environ.setdefault("RATE_LIMIT_LOGIN", "100/minute")
 os.environ.setdefault("RATE_LIMIT_SIGNUP", "100/hour")
 os.environ.setdefault("RATE_LIMIT_JOBS", "100/minute")
@@ -173,6 +175,8 @@ def _isolate_test_env(monkeypatch):
         "api_env": "development",
         "allow_dev_mock_auth": True,
         "prometheus_metrics_enabled": True,
+        "rate_limit_storage_backend": "memory",
+        "redis_url": "",
         "admin_token": "test-admin-token-32chars-min-12345",
         # NB: lista vuota in development = fail-open (by design in
         # check_metrics_authorization). TestClient usa "testclient" come
