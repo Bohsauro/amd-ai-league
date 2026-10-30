@@ -322,10 +322,16 @@ app.add_middleware(SlowAPIMiddleware)
 # =============================================================================
 @app.middleware("http")
 async def _prometheus_http_metrics(request: Request, call_next):
-    """Registra metriche HTTP generiche (method + status_class, NO path/utente).
+    """Registra metriche HTTP RED (method + status_class, NO path/utente).
+
+    Kill-switch: con PROMETHEUS_METRICS_ENABLED=False non si raccoglie nulla
+    (oltre a non esporre /metrics), cosi' il monitoring spento non aggiunge
+    overhead ne' sample orfani. L'ACL IP di /metrics resta invariata.
 
     Path /metrics escluso (lo scraper non deve inquinare i suoi stessi conteggi).
     """
+    if not settings.prometheus_metrics_enabled:
+        return await call_next(request)
     return await prometheus_http_metrics(request, call_next)
 
 

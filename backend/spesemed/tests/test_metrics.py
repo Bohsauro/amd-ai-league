@@ -488,6 +488,35 @@ class TestHTTPMetrics:
         # Se /metrics fosse conteggiato, +3; qui nessun incremento.
         assert after == before
 
+    def test_metrics_scrape_not_observed_in_duration(self):
+        """/metrics e' escluso anche dall'histogram di durata (self-scrape noise)."""
+        from spesemed.api.metrics import http_request_duration_seconds
+
+        with TestClient(_app_for_metrics(), client=("127.0.0.1", 50000)) as client:
+            before = http_request_duration_seconds._sum.get()
+            for _ in range(3):
+                client.get("/metrics")
+            after = http_request_duration_seconds._sum.get()
+        assert after == before
+
+    def test_kill_switch_disables_http_metrics_recording(self, monkeypatch, test_client):
+        """PROMETHEUS_METRICS_ENABLED=False: nessuna raccolta (non solo /metrics 404)."""
+        monkeypatch.setattr(settings, "prometheus_metrics_enabled", False)
+        before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        r = test_client.get("/api/v1/health")
+        assert r.status_code == 200
+        after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        assert after == before
+
+    def test_kill_switch_enabled_keeps_recording(self, monkeypatch, test_client):
+        """Con kill-switch ON (default) il middleware registra come prima."""
+        monkeypatch.setattr(settings, "prometheus_metrics_enabled", True)
+        before = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        r = test_client.get("/api/v1/health")
+        assert r.status_code == 200
+        after = http_requests_total.labels(method="GET", status_class="2xx")._value.get()
+        assert after == before + 1.0
+
 
 def _app_for_metrics():
     """Import dell'app con settings ACL di default (loopback) per i test HTTP metrics."""
