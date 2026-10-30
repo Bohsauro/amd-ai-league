@@ -11,7 +11,7 @@
 ## Stato (fonte: PROJECT_STATUS.md, oct 2026)
 
 - Fasi 0-3, 4A(web), 4B (Export Excel/ZIP), 4B+ (Profilo/usage) ✅ done
-- pytest **253 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
+- pytest **260 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
 - Backend **live su http://localhost:8000** (gunicorn 2 worker, bind 0.0.0.0:8000) → `/api/v1/health` 200
 - Flutter GUI rimossa (ott 2026) → la GUI web reale è `frontend-app/` (Vite+React18+TS, design "Verde Calma")
 - **4C backend done (skeleton)**: Redis rate-limit storage con readiness, metriche HTTP Prometheus, Stripe `status`/`checkout`/`webhook` + gating 402, con no-op mode e test offline
@@ -181,7 +181,7 @@ python -m pytest tests/test_billing.py -v       # 24 passed (mock stripe + supab
 python -m pytest tests/test_extract_billing_gate.py -v  # 6 passed (402/quota/cache)
 python -m pytest tests/test_rate_limit.py -v    # 16 passed (memory/redis URI + readiness)
 python -m pytest tests/test_metrics.py -v       # 37 passed (JWT + HTTP metrics)
-python -m pytest -q                             # 253 passed, 1 skipped, 0 failed
+python -m pytest -q                             # 260 passed, 1 skipped, 0 failed
 python -m compileall src tests                  # nessun errore
 ```
 

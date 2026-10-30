@@ -527,7 +527,7 @@ curl http://localhost:8000/api/v1/health
 | Pytest `test_billing`  | 🟢   | 24/24 (mock Stripe, status, kill switch)      |
 | Pytest `test_extract_billing_gate` | 🟢 | 6/6 (402, quota, cache hit)        |
 | Pytest `test_metrics`  | 🟢   | 37/37 (JWT + HTTP metrics)                    |
-| Pytest totale          | 🟢   | **253 passed, 1 skipped, 0 failed**           |
+| Pytest totale          | 🟢   | **260 passed, 1 skipped, 0 failed**           |
 | Live smoke (env empty) | 🟢   | T1-T9 tutti verdi, T6 logout=204 FISSO        |
 | Flutter analyze        | 🟢   | 0 issue (70 lint fixati, `analysis_options` riattivato) |
 | Flutter test           | 🟢   | 47/47 (validators, signup screen, widget, profile DTO) |
@@ -603,9 +603,10 @@ SPESEMED/
 │   ├── test_extract.py               ← 4 test
 │   ├── test_imports.py               ← smoke test Fase 0
 │   ├── test_jwt_decoder.py           ← decode JWT + JWKS
-│   ├── test_metrics.py               ← 34 test metriche Prometheus/JWT/HTTP
-│   ├── test_rate_limit.py            ← 14 test storage memory/Redis + readiness
+│   ├── test_metrics.py               ← 37 test metriche Prometheus/JWT/HTTP
+│   ├── test_rate_limit.py            ← 16 test storage memory/Redis + readiness
 │   ├── test_billing.py               ← 24 test Stripe (mock, no secrets)
+│   ├── test_billing_webhook.py       ← 10 test webhook Stripe (firma, replay, kill switch)
 │   ├── test_extract_billing_gate.py  ← 6 test gating 402/quota/cache
 │   ├── test_security_fixes.py        ← regressioni security
 │   ├── test_operational_smoke.py     ← smoke test operativo
@@ -804,7 +805,7 @@ frontend.
 | `python -m pytest tests/test_extract_billing_gate.py -v` | 6 passed (402/quota/cache) |
 | `python -m pytest tests/test_rate_limit.py -v` | 16 passed (memory/Redis URI + readiness) |
 | `python -m pytest tests/test_metrics.py -v` | 37 passed (JWT + HTTP metrics) |
-| `python -m pytest -q` | **253 passed, 1 skipped, 0 failed** |
+| `python -m pytest -q` | **260 passed, 1 skipped, 0 failed** |
 | `python -m compileall src tests` | nessun errore |
 | `python tests/audit_pre_go_live.py` | `AUDIT PASSED` (`.env.example` ↔ `config.py`) |
 
@@ -814,7 +815,7 @@ nessuna chiamata di rete, nessun secret reale nel workspace.
 ---
 
 _Documento aggiornato al termine della **Fase 4C (skeleton)**: pytest
-**253 passed, 1 skipped** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
+**260 passed, 1 skipped** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
 **GUI Flutter completata** (47/47 test, analyze 0 issue, 70 lint fixati),
 **Export Excel/ZIP implementato** (Fase 4B: `core/exporter.py` + API
 `POST /api/v1/export` + bottone Esporta in ResultsScreen) e **Profilo
