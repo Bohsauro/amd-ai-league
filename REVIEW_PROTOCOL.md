@@ -26,6 +26,33 @@ verdetto motivato. **Non scrivi codice, non modifichi file** (i permessi te lo i
    come commento; la chiusura (`in_review` → `done`) la fa `bin/close-ticket`,
    che esige il tuo `APPROVE`. In caso di `REJECT` l'issue resta `in_review`.
 
+## Come eseguire i test (comandi RIPRODUCIBILI — non improvvisare)
+
+Il python di sistema NON ha le dipendenze del progetto: `python3 -m pytest` in
+`backend/spesemed/` fallisce con `ModuleNotFoundError` (dotenv, pydantic_settings).
+Usa il venv dedicato: `/srv/ai-company/venvs/spesemed/bin/python`.
+
+**Backend** — il branch da revisionare è quello indicato nel ticket
+(`dev/backend` per i task backend, `dev/frontend` per il frontend). Non fare
+checkout (sei read-only): estrai il branch in una dir temporanea e testala lì.
+
+```bash
+rm -rf /tmp/rev && mkdir -p /tmp/rev
+git -C /srv/ai-company/workspace archive dev/backend backend/spesemed | tar -x -C /tmp/rev
+cd /tmp/rev/backend/spesemed && /srv/ai-company/venvs/spesemed/bin/python -m pytest -q
+```
+
+**Frontend** — idem con `dev/frontend` e `frontend/spesemed/frontend-app`:
+
+```bash
+rm -rf /tmp/revfe && mkdir -p /tmp/revfe
+git -C /srv/ai-company/workspace archive dev/frontend frontend/spesemed/frontend-app | tar -x -C /tmp/revfe
+cd /tmp/revfe/frontend/spesemed/frontend-app && npm ci && npm run build
+```
+
+Il working tree condiviso può essere su un branch diverso da quello del ticket:
+per il diff usa sempre `git diff main...<branch> -- <path>` e `git show <branch>:<path>`.
+
 ## I 6 punti di controllo
 
 1. **Contratto**: il codice rispetta l'interfaccia dichiarata nei documenti del progetto?
