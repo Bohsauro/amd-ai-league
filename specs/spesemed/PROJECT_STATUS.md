@@ -80,13 +80,14 @@ Una pipeline che:
 | 4A   | ✅ done    | UI Flutter (auth, upload, results, jobs)                  |
 | 4B   | ✅ done    | Export Excel/ZIP (`exporter.py` + API `/export` + UI)     |
 | 4B+  | ✅ done    | Profilo utente/usage (`GET /summary` + UI Profilo)        |
-| 4C   | ⏳ TODO    | Redis, Prometheus, Stripe                                  |
+| 4C   | 🟡 done (skeleton) | Redis readiness, Prometheus HTTP metrics, Stripe plan/checkout/webhook |
 
 > **Fasi 0+1+2+3+4A+4B + 4B+ (Export + Profilo) sono completate e validate.
 > L'Export Excel/ZIP chiude il ciclo d'uso per il commercialista; il Profilo
 > utente/usage aggiunge riepilogo spese e storico job con export per-job.
-> Restano i deliverable 4C (Redis, Prometheus, Stripe) per indurimento e
-> monetizzazione.
+> La Fase 4C backend è completa come **skeleton operativo** (Redis, Prometheus,
+> Stripe); restano gating quota/402 e UI piano (4C-C7/C9) + validazione E2E
+> con Supabase reale. Dettaglio in §17.
 
 ---
 
@@ -409,15 +410,14 @@ in §10.2 backlog (non più un "bug noto", solo nice-to-have).
 
 | Item                                          | Impatto                                |
 |-----------------------------------------------|----------------------------------------|
-| 💳 **Billing (Stripe)**                       | Micro-SaaS = monetizzazione            |
+| 💳 **Gating quota/402 + UI piano**            | chiude il loop di monetizzazione (skeleton Stripe già pronto) |
+| 🧾 **Stripe subscription lifecycle completo** | gestire update/delete/invoice, non solo checkout completato |
 
 ### 10.2 Indurimento (media priorità)
 
 | Item                                                       | Note                                     |
 |------------------------------------------------------------|------------------------------------------|
 | 🔁 **`/auth/refresh` su Redis revocation list**            | perdita della scelta performance-only-local |
-| 🟥 **Rate limit storage Redis**                            | risolve moltiplicazione × worker           |
-| 📈 **Prometheus /metrics endpoint**                        | counter richieste, errori per status, latenza |
 | 🪵 **`structlog` con request-id**                          | osservabilità end-to-end                  |
 | 🧪 **Test coverage > 80%**                                 | pytest-cov con soglia in CI               |
 | 🐳 **docker-compose staging** (staging env separato)       | test pre-prod                             |
@@ -524,6 +524,10 @@ curl http://localhost:8000/api/v1/health
 | Pytest `test_auth`     | 🟢   | 9/9 (DI-friendly + fixture-shadowing fix)     |
 | Pytest `test_exporter` | 🟢   | 16/16 (Excel, ZIP, naming, dedup, CLI)        |
 | Pytest `test_summary`  | 🟢   | 5/5 (aggregazione usage, 503, openapi)        |
+| Pytest `test_rate_limit` | 🟢 | 14/14 (memory/Redis URI + readiness)          |
+| Pytest `test_billing`  | 🟢   | 13/13 (mock Stripe, no secrets)               |
+| Pytest `test_metrics`  | 🟢   | 34/34 (JWT + HTTP metrics)                    |
+| Pytest totale          | 🟢   | **176/176 passed, 0 failed**                  |
 | Live smoke (env empty) | 🟢   | T1-T9 tutti verdi, T6 logout=204 FISSO        |
 | Flutter analyze        | 🟢   | 0 issue (70 lint fixati, `analysis_options` riattivato) |
 | Flutter test           | 🟢   | 47/47 (validators, signup screen, widget, profile DTO) |
@@ -559,7 +563,8 @@ SPESEMED/
 ├── .dockerignore
 │
 ├── migrations/
-│   └── 001_init.sql                  ← jobs, extractions, RPC, triggers
+│   ├── 001_init.sql                  ← jobs, extractions, RPC, triggers
+│   └── 004_stripe_subscriptions.sql  ← subscriptions + RLS service_role (Fase 4C)
 │
 ├── src/spesemed/
 │   ├── core/
@@ -570,22 +575,24 @@ SPESEMED/
 │   │   ├── models.py
 │   │   └── taxonomy.py
 │   └── api/
-│       ├── main.py                   ← FastAPI app + lifespan + Sentry
+│       ├── main.py                   ← FastAPI app + lifespan + Sentry + HTTP metrics
 │       ├── config.py                 ← Settings env-driven
 │       ├── schemas.py                ← Pydantic DTO
 │       ├── supabase_client.py        ← singleton + graceful degradation
 │       ├── worker.py                 ← JobWorker async
 │       ├── dependencies.py           ← get_current_user (PyJWT locale)
 │       ├── jwt_decoder.py            ← decode JWT + cache JWKS
-│       ├── metrics.py                ← metriche Prometheus (jwt failures, latenza)
+│       ├── metrics.py                ← metriche Prometheus (JWT + HTTP)
 │       ├── metrics_acl.py            ← ACL sui metric endpoint
-│       ├── rate_limit.py             ← slowapi Limiter + key_func
+│       ├── rate_limit.py             ← slowapi Limiter + storage memory/Redis
+│       ├── billing.py                ← wrapper Stripe (plan/checkout/webhook)
 │       └── routes/
 │           ├── health.py             ← GET /health
 │           ├── extract.py            ← POST /extract (sync+async routing)
 │           ├── jobs.py               ← GET /jobs/{id}
 │           ├── export.py             ← POST /export (Fase 4B: ZIP commercialista)
 │           ├── summary.py            ← GET /summary (Fase 4B+: riepilogo usage)
+│           ├── billing.py            ← GET /billing/plan + checkout + webhook
 │           └── auth.py               ← signup / login / refresh / logout
 │
 ├── tests/
@@ -595,7 +602,9 @@ SPESEMED/
 │   ├── test_extract.py               ← 4 test
 │   ├── test_imports.py               ← smoke test Fase 0
 │   ├── test_jwt_decoder.py           ← decode JWT + JWKS
-│   ├── test_metrics.py               ← metriche Prometheus
+│   ├── test_metrics.py               ← 34 test metriche Prometheus/JWT/HTTP
+│   ├── test_rate_limit.py            ← 14 test storage memory/Redis + readiness
+│   ├── test_billing.py               ← 13 test Stripe (mock, no secrets)
 │   ├── test_security_fixes.py        ← regressioni security
 │   ├── test_operational_smoke.py     ← smoke test operativo
 │   ├── test_exporter.py              ← 16 test Excel/ZIP + CLI (Fase 4B)
@@ -619,8 +628,9 @@ chiude il ciclo d'uso per il commercialista e il **Profilo utente/usage**
 (4B+) mostra riepilogo spese (totale, conteggio, per-categoria), storico
 job e download dell'export per job o completo dal nuovo `GET /api/v1/summary`.
 
-→ **Fase 4C — Indurimento & monetizzazione**: Redis rate-limit storage,
-Prometheus /metrics, Stripe billing.
+→ **Fase 4C (skeleton) fatta**: Redis readiness/test, Prometheus HTTP metrics,
+Stripe plan/checkout/webhook. Prossimo valore: **gating quota/402 + UI piano**
+(4C-C7/C9), poi lifecycle subscription completo.
 
 → **Test E2E con Supabase reale**: le 4 azioni del runbook sono state eseguite
 dall'utente; resta la validazione del success-path (200 OK) con secrets reali,
@@ -679,10 +689,13 @@ Manuale operativo step-by-step per portare il backend in produzione
   `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `OPENROUTER_API_KEY`).
 - **STEP 4**: Boot + 5 curl smoke tests (health, signup, login, jobs/{id},
   extract con idempotency cache hit al 2° invio).
+- **STEP 5**: Stripe billing (Product/Price, API keys, webhook endpoint,
+  `stripe listen` locale, carte di test, migration `004`, Redis readiness,
+  incidenti/rollback).
 
-Includo troubleshooting con 6 errori comuni, security checklist
-post-go-live, e 3 followups per la Fase 4 (Redis rate-limit, OpenAPI
-SDK, k8s) — l'Export Excel/ZIP è ormai implementato (Fase 4B).
+Include troubleshooting con 6 errori comuni + tabella incidenti billing,
+security checklist post-go-live, e followups per la Fase 4 (gating 402/UI
+piano, OpenAPI SDK, k8s).
 
 ### 16.4 Cosa NON posso fare io (limiti onesti)
 
@@ -717,13 +730,84 @@ ciò che il runbook abilita.
 
 ---
 
-_Documento aggiornato al termine del **check completo (ago 2026)**: backend
-production-ready al 100% (pytest 135/135 + audit pre-go-live PASSED +
-GO_LIVE_RUNBOOK.md operativo), **GUI Flutter completata** (47/47 test,
-analyze 0 issue, 70 lint fixati), **Export Excel/ZIP implementato** (Fase 4B:
-`core/exporter.py` + API `POST /api/v1/export` + bottone Esporta in
-ResultsScreen) e **Profilo utente/usage** (Fase 4B+: `GET /api/v1/summary`
-+ ProfileScreen con riepilogo, storico job ed export per-job). Le azioni
-manuali Supabase (migration SQL, bucket Storage, .env populate, curl
-autenticati) sono state eseguite dall'utente; resta la validazione E2E del
-success-path con Supabase reale, incluso il nuovo endpoint `/export`._
+## 17. 🟡 FASE 4C — Redis, Prometheus, Stripe (stato reale)
+
+**Stato**: backend **skeleton operativo** completato e verde offline; il piano
+4C prevedeva anche gating 402/entitlements e UI piano, tracciati separatamente
+(4C-C7/C9) e non inclusi in questo stato "done (skeleton)".
+
+### 17.1 Redis rate-limit storage + readiness
+
+- `api/rate_limit.py::_build_storage_uri()` risolve:
+  - `memory` → `memory://` (default, single-worker);
+  - `redis://...` → URI diretta;
+  - `redis` → `REDIS_URL` (fallback `memory://` con WARNING se vuota).
+- Le password negli URI vengono redatte nei log (`_redact_redis_uri`).
+- `main.py::_check_redis_readiness()` esegue un ping al boot quando il backend
+  è Redis: errore chiaro se irraggiungibile, nessun crash randomico al primo 429.
+- `main.py::_warn_if_multi_worker_memory_rate_limit()` avvisa se
+  `API_WORKERS > 1` con storage `memory` (limiti moltiplicati × worker).
+
+### 17.2 Prometheus HTTP metrics
+
+- Metriche in `api/metrics.py`, esposte da `GET /metrics` (ACL IP allowlist):
+  - `spesemed_http_requests_total{method,status_class}`;
+  - `spesemed_http_request_duration_seconds`;
+  - metriche JWT già esistenti (`spesemed_jwt_failures_total`, ecc.).
+- Middleware ASGI in `main.py`: nessuna label per path/utente (cardinalità
+  bassa, no PII); `/metrics` e `/favicon.ico` esclusi dal conteggio.
+- `PROMETHEUS_METRICS_ENABLED=false` → `/metrics` 404; allowlist vuota in
+  produzione → fail-closed 403.
+
+### 17.3 Stripe billing (no-op mode → test/live)
+
+- Modulo `api/billing.py` + `api/routes/billing.py`.
+- Endpoint:
+  - `GET /api/v1/billing/plan` (pubblico): piano, `price_id`, valuta,
+    `stripe_configured`, `webhook_configured`; **nessun secret**.
+  - `POST /api/v1/billing/checkout` (Bearer): Checkout Session subscription,
+    `201 {checkout_url, session_id, amount_total, currency}`; `503` se
+    `STRIPE_SECRET_KEY`/`STRIPE_PRICE_ID` mancano; `401` senza auth.
+  - `POST /api/v1/billing/webhook` (firma Stripe): `200` evento valido,
+    `400` firma invalida, `503` se `STRIPE_WEBHOOK_SECRET` manca.
+- Evento gestito: `checkout.session.completed` → upsert best-effort in
+  `subscriptions` (migration `004_stripe_subscriptions.sql`, RLS service_role).
+  Altri eventi: `200 action=ignored` (lifecycle completo = backlog).
+- Import `stripe` lazy: senza libreria/secret l'API resta su e risponde `503`
+  solo sulle route billing.
+
+### 17.4 Nota di allineamento piano ↔ implementazione
+
+Il piano `specs/spesemed/tasks/02-plan-4c.md` descrive un contratto più ampio
+(`GET /billing/status`, tabella `entitlements`, gating 402 su `/extract`).
+L'implementazione attuale su `dev/backend` espone `GET /billing/plan`, persiste
+su `subscriptions` e **non** blocca `/extract`. La riconciliazione è nei task
+4C-C7 (gating) e 4C-C9 (UI piano); questo documento descrive ciò che è
+effettivamente deployabile oggi, non il target futuro.
+
+### 17.5 Test offline (nessun secret)
+
+| Comando (da `backend/spesemed/`) | Atteso |
+|---|---|
+| `python -m pytest tests/test_billing.py -v` | 13 passed (mock `stripe` + Supabase) |
+| `python -m pytest tests/test_rate_limit.py -v` | 14 passed (memory/Redis URI + readiness) |
+| `python -m pytest tests/test_metrics.py -v` | 34 passed (JWT + HTTP metrics) |
+| `python -m pytest -q` | **176 passed, 0 failed** |
+| `python -m compileall src tests` | nessun errore |
+| `python tests/audit_pre_go_live.py` | `AUDIT PASSED` (`.env.example` ↔ `config.py`) |
+
+I test usano solo chiavi finte (`sk_test_fake_...`, `whsec_test_...`) e mock:
+nessuna chiamata di rete, nessun secret reale nel workspace.
+
+---
+
+_Documento aggiornato al termine della **Fase 4C (skeleton)**: pytest
+**176/176** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
+**GUI Flutter completata** (47/47 test, analyze 0 issue, 70 lint fixati),
+**Export Excel/ZIP implementato** (Fase 4B: `core/exporter.py` + API
+`POST /api/v1/export` + bottone Esporta in ResultsScreen) e **Profilo
+utente/usage** (Fase 4B+: `GET /api/v1/summary` + ProfileScreen con riepilogo,
+storico job ed export per-job). Le azioni manuali Supabase (migration SQL,
+bucket Storage, .env populate, curl autenticati) sono state eseguite
+dall'utente; restano la validazione E2E del success-path con Supabase reale e
+il gating 402/UI piano (4C-C7/C9)._

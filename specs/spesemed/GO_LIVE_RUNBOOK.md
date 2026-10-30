@@ -299,6 +299,128 @@ Atteso: `"cached": [true]` (no nuovo consumo crediti OpenRouter).
 
 ---
 
+## STEP 5 — Stripe billing (opzionale, test mode → live)
+
+> Cosa installa: Checkout Session hosted da Stripe, webhook firmato e
+> persistenza della subscription su Supabase. **Nessun dato carta transita
+> dal backend** (PCI scope = SAQ A).
+>
+> Nota di stato: questa fase espone `GET /billing/plan`, `POST /billing/checkout`
+> e `POST /billing/webhook`. Il **gating quota/402 su `/extract`** è un task
+> separato e non è richiesto per configurare il billing.
+
+### 5.1 Crea Product + Price ricorrente
+
+1. Stripe Dashboard → **Product catalog → Add product**.
+2. Nome: `SPESEMED PRO` (o il nome commerciale scelto).
+3. Prezzo: ricorrente, mensile, importo desiderato (es. `9.99 EUR`).
+4. Salva e copia il **Price ID** (`price_...`): va in `STRIPE_PRICE_ID`.
+5. (Solo live) Configura **Stripe Tax** / dati fiscali dell'account secondo
+   il tuo commercialista. La tassazione è una scelta di prodotto: il codice
+   non la impone.
+
+### 5.2 API keys
+
+Stripe Dashboard → **Developers → API keys**:
+
+- **Secret key** (`sk_test_...` o `sk_live_...`) → `STRIPE_SECRET_KEY`.
+- La **publishable key** NON serve al backend: il browser riceve solo
+  `checkout_url` e completa il pagamento su Stripe.
+
+### 5.3 Webhook endpoint
+
+Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
+
+- **Endpoint URL**: `https://<api-host>/api/v1/billing/webhook`
+- **Eventi**: minimo `checkout.session.completed`.
+  Gli altri eventi (`customer.subscription.*`, `invoice.*`) vengono accettati
+  e ack-ati con `action=ignored`; l'aggiornamento del loro stato è backlog.
+- Copia la **Signing secret** (`whsec_...`) → `STRIPE_WEBHOOK_SECRET`.
+
+Il webhook non usa Bearer/JWT: l'autenticazione è la firma `Stripe-Signature`.
+Una firma invalida restituisce `400` (fail-closed); un secret mancante `503`.
+
+### 5.4 Popola `.env` e riavvia
+
+```dotenv
+STRIPE_SECRET_KEY=sk_live_...          # sk_test_... finché sei in test
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ID=price_...
+STRIPE_CURRENCY=eur
+STRIPE_SUCCESS_URL=https://app.spesemed.it/app/profilo?billing=success
+STRIPE_CANCEL_URL=https://app.spesemed.it/app/profilo?billing=cancel
+BILLING_PLAN_NAME=SPESEMED PRO
+```
+
+```bash
+# verifica a caldo (nessun secret nella risposta)
+curl -sS https://<api-host>/api/v1/billing/plan | python3 -m json.tool
+# atteso: "stripe_configured": true, "webhook_configured": true
+```
+
+### 5.5 Persistenza subscription (consigliata)
+
+Applica `backend/spesemed/migrations/004_stripe_subscriptions.sql` nella SQL
+Editor di Supabase. La migration è idempotente e crea `subscriptions` con RLS
+service_role-only. Senza migration il webhook risponde comunque `200` ma logga
+un WARNING e non persiste la riga.
+
+### 5.6 Test locale con Stripe CLI e carte finte
+
+```bash
+stripe login
+stripe listen --forward-to localhost:8000/api/v1/billing/webhook
+# copia il whsec_... stampato in STRIPE_WEBHOOK_SECRET e riavvia l'API
+
+stripe trigger checkout.session.completed
+```
+
+`stripe trigger` verifica firma e ack: l'evento sintetico può non contenere
+`client_reference_id`, quindi non aspettarti la persistenza. Per il flusso
+completo usa una Checkout Session reale (`POST /billing/checkout` con Bearer)
+e le carte pubbliche di test Stripe:
+
+| Scenario | Numero | Scadenza / CVC |
+|---|---|---|
+| Successo | `4242 4242 4242 4242` | data futura / qualsiasi 3 cifre |
+| Rifiuto | `4000 0000 0000 0002` | data futura / qualsiasi 3 cifre |
+| 3DS | `4000 0027 6000 3184` | data futura / qualsiasi 3 cifre |
+
+Mai usare carte reali in test. Verifica nei log `subscription_created` e la
+riga in `subscriptions`.
+
+### 5.7 Redis readiness (multi-worker)
+
+Se `API_WORKERS > 1`, lo storage in-memory di slowapi moltiplica i limiti per
+worker. Configura:
+
+```dotenv
+RATE_LIMIT_STORAGE_BACKEND=redis
+REDIS_URL=redis://redis:6379/0
+```
+
+Al boot l'API esegue un readiness check e logga un ERRORE chiaro se Redis non
+è raggiungibile; con `memory` + multi-worker logga un WARNING. Per un singolo
+worker il default `memory` resta valido.
+
+### 5.8 Incidenti e rollback billing
+
+| Sintomo | Causa | Remediation |
+|---|---|---|
+| `/billing/checkout` → `503` | Secret/price mancanti o libreria `stripe` assente | Verifica `.env` + `GET /billing/plan`; reinstalla requirements; riavvia |
+| Webhook → `503` | `STRIPE_WEBHOOK_SECRET` mancante | Imposta il signing secret dell'endpoint corretto |
+| Webhook → `400` | Firma invalida / secret di un altro endpoint / body riscritto dal proxy | Usa il secret giusto, non modificare il body, rigenera il secret se serve |
+| Webhook `200` ma niente in `subscriptions` | Migration 004 assente o Supabase non configurato | Applica migration, verifica `SUPABASE_*`, controlla i WARNING nei log |
+| Sospetto leak chiave | Secret finita in log/repo | Ruota subito in Stripe, aggiorna `.env`/vault, riavvia, controlla i log |
+| Vuoi disattivare il billing | — | Svuota `STRIPE_SECRET_KEY` (checkout → `503`, nessuna chiamata Stripe). Svuota anche `STRIPE_WEBHOOK_SECRET` per far rispondere `503` al webhook |
+
+**Mai** loggare chiavi o body webhook completi: contengono PII. Ruota i secret
+se esposti e usa sempre il test mode finché il prodotto non è pronto.
+
+✅ Step 5 completo → **BILLING CONFIGURATO** (test o live).
+
+---
+
 ## 🔍 Troubleshooting
 
 | Errore | Causa probabile | Fix |
@@ -314,7 +436,7 @@ Atteso: `"cached": [true]` (no nuovo consumo crediti OpenRouter).
 
 ## 🔐 Security checklist post-go-live
 
-Dopo aver completato i 4 step, verifica in Supabase Dashboard:
+Dopo aver completato i 5 step, verifica in Supabase Dashboard e Stripe Dashboard:
 
 - [ ] **Authentication → Providers**: solo `Email` (disabilita Google/GitHub se non usati)
 - [ ] **Authentication → URL Configuration**:
@@ -324,6 +446,10 @@ Dopo aver completato i 4 step, verifica in Supabase Dashboard:
 - [ ] **Storage → receipts → Policies**: vuoto (nessuna policy = solo service_role può leggere/scrivere)
 - [ ] **Settings → API → Service Role Key**: ruotala periodicamente (90 giorni)
 - [ ] **Settings → Billing → Spend Cap**: imposta un cap su OpenRouter per evitare bill shock
+- [ ] **Stripe → API keys**: la secret key è solo in `.env`/vault, mai in git o log
+- [ ] **Stripe → Webhooks**: endpoint HTTPS, signing secret ruotabile, evento minimo `checkout.session.completed`
+- [ ] **Stripe → Tax/fiscal settings**: configurazione fiscale decisa dal proprietario/commercialista
+- [ ] **Redis**: se `API_WORKERS > 1`, `RATE_LIMIT_STORAGE_BACKEND=redis` + `REDIS_URL` e readiness verde al boot
 
 ---
 
@@ -331,11 +457,11 @@ Dopo aver completato i 4 step, verifica in Supabase Dashboard:
 
 Dopo il go-live, le evoluzioni naturali sono:
 
-1. **UI Streamlit** (drag & drop + tabella editabile + export Excel) — chiude il loop utente finale
-2. **Redis rate-limit storage** (`RATE_LIMIT_STORAGE_BACKEND=redis://...`) — per multi-worker gunicorn
+1. **Gating quota/402 + UI Profilo/piano** (4C-C7/C9): bloccare `/extract` senza quota e mostrare lo stato piano nel frontend
+2. **UI Streamlit** legacy (drag & drop + tabella editabile) — non più necessaria con la SPA web
 3. **OpenAPI SDK client** auto-generato per il frontend
 4. **CI/CD GitHub Actions** completo (deploy automatico dopo migration merge)
-5. **Sentry + Prometheus** monitoring (i settings sono gia' pronti: `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`)
+5. **Sentry + Prometheus** monitoring (settings pronti: `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`)
 
 ---
 
@@ -354,6 +480,9 @@ Dopo il go-live, le evoluzioni naturali sono:
     `role_unauthorized`, `missing_required_claim`, `general_decode_error`).
   - `spesemed_jwt_decode_duration_seconds` — Histogram latenza decode JWT.
   - `spesemed_jwt_jwks_cache_resets_total` — Counter reset manuali cache JWKS.
+  - `spesemed_http_requests_total{method,status_class}` — Counter richieste HTTP
+    (cardinalità bassa: nessun path/utente, `/metrics` escluso).
+  - `spesemed_http_request_duration_seconds` — Histogram latenza richieste HTTP.
 
 ### Disabilitazione (solo dietro proxy con auth custom)
 ```bash

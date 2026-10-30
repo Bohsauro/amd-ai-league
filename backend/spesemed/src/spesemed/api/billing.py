@@ -301,6 +301,7 @@ def _record_subscription(
 def build_public_plan_info() -> Dict[str, Any]:
     """Info pubbliche del piano per GET /billing/plan (noc secret)."""
     pro = dict(PLAN_CATALOG["pro"])
+    pro["name"] = settings.billing_plan_name or pro["name"]
     pro["price_id"] = settings.stripe_price_id  # l'id price e' pubblico (non-secret)
     pro["currency"] = settings.stripe_currency
     pro["configured"] = is_stripe_configured()
