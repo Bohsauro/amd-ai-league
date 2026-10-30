@@ -145,6 +145,37 @@ def _warn_if_wildcard_cors_in_prod() -> None:
 
 
 # =============================================================================
+# Helper: warning billing config incompleta (Fase 4C-C1)
+# =============================================================================
+def _warn_if_billing_misconfigured() -> None:
+    """ERROR di startup se BILLING_ENABLED=true ma mancano secrets/price.
+
+    Il boot NON viene interrotto (kill switch resiliente): le route billing
+    risponderanno 503 e /extract non applichera' il gating. Il log e' ERROR
+    perche' un billing "acceso" ma incompleto e' quasi sempre un deploy rotto.
+    """
+    if not settings.billing_enabled:
+        return
+    missing = [
+        name
+        for name, value in (
+            ("STRIPE_SECRET_KEY", settings.stripe_secret_key),
+            ("STRIPE_WEBHOOK_SECRET", settings.stripe_webhook_secret),
+            ("STRIPE_PRICE_ID", settings.stripe_price_id),
+        )
+        if not value.strip()
+    ]
+    if missing:
+        logger.error(
+            "BILLING_ENABLED=true ma configurazione Stripe incompleta: mancano %s. "
+            "Le route billing risponderanno 503 e /extract non sara' gated. "
+            "Configura le variabili in .env (vedi .env.example) oppure imposta "
+            "BILLING_ENABLED=false per disattivare il billing.",
+            ", ".join(missing),
+        )
+
+
+# =============================================================================
 # Sentry (opzionale, Fase 3)
 # =============================================================================
 def _init_sentry() -> None:
@@ -219,6 +250,9 @@ async def lifespan(app: FastAPI):
 
     # SECURITY (FIX M4 audit 2026): warning se CORS wildcard in produzione.
     _warn_if_wildcard_cors_in_prod()
+
+    # Fase 4C-C1: billing "acceso" ma incompleto (secrets/price mancanti).
+    _warn_if_billing_misconfigured()
 
     if settings.sentry_dsn:
         _init_sentry()

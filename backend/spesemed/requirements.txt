@@ -69,7 +69,8 @@ openpyxl>=3.1.2,<4.0.0
 # Client ufficiale Stripe: checkout session + webhook signature verification.
 # Import LAZY in api/billing.py: senza questa dipendenza l'API resta
 # utilizzabile (no-op mode con 503), senza secrets reali nel workspace.
-stripe>=9.0.0,<14.0.0
+# PIN >=9,<11: evita Stripe API version drift; aggiornare solo con test verdi.
+stripe>=9.0.0,<11.0.0
 
 # --- Test (dev) --------------------------------------------------------
 # pytest: framework

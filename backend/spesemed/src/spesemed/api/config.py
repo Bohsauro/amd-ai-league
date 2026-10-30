@@ -257,14 +257,21 @@ class Settings(BaseSettings):
     )
 
     # =====================================================================
-    # Stripe billing (Fase 4C)
+    # Stripe billing (Fase 4C) — kill switch: default OFF (nessun cambio)
     # =====================================================================
+    billing_enabled: bool = Field(
+        default=False,
+        description=(
+            "Abilita Stripe billing e gating su /extract. Default False: "
+            "comportamento identico a prima del billing (nessun 402/503 extra)."
+        ),
+    )
     stripe_secret_key: str = Field(
         default="",
         description=(
             "Chiave segreta Stripe (sk_live_... / sk_test_...). Vuota = billing "
-            "disabilitato: gli endpoint restituiscono 503 (no-op mode). "
-            "MAI committata: solo via env/.env del deploy."
+            "non configurato. MAI committata: solo via env/.env del deploy. "
+            "Mai loggare il valore."
         ),
     )
     stripe_webhook_secret: str = Field(
@@ -276,26 +283,36 @@ class Settings(BaseSettings):
     )
     stripe_price_id: str = Field(
         default="",
-        description="Price ID Stripe del piano PRO (es. price_1Q...). Richiesto da /billing/checkout.",
+        description="Price ID Stripe del piano Pro (es. price_1Q...). Richiesto da /billing/checkout.",
     )
     stripe_currency: str = Field(
         default="eur",
-        description="Valuta di fatturazione ISO 4217 (es. eur, usd).",
+        description="Valuta per Checkout (ISO 4217, default eur).",
     )
-    stripe_success_url: str = Field(
-        default="https://app.spesemed.local/billing/success?session_id={CHECKOUT_SESSION_ID}",
+    stripe_mode: str = Field(
+        default="test",
+        description="test|live — usato per log/etichette, non cambia le API key.",
+    )
+    billing_extractions_limit: int = Field(
+        default=100,
+        ge=1,
+        le=100000,
+        description="Estrazioni mensili incluse nel piano Pro.",
+    )
+    billing_success_url: str = Field(
+        default="",
         description=(
-            "Redirect dopo checkout riuscito. Placeholder {CHECKOUT_SESSION_ID} "
-            "viene sostituito da Stripe con l'ID sessione reale."
+            "Redirect post-checkout. Vuoto = derivato da APP_URL "
+            "(/app/profilo?billing=success). Placeholder {CHECKOUT_SESSION_ID} supportato."
         ),
     )
-    stripe_cancel_url: str = Field(
-        default="https://app.spesemed.local/billing/cancel",
-        description="Redirect se l'utente annulla il checkout.",
+    billing_cancel_url: str = Field(
+        default="",
+        description="Redirect se l'utente annulla. Vuoto = derivato da APP_URL.",
     )
     billing_plan_name: str = Field(
         default="SPESEMED PRO",
-        description="Nome commerciale del piano in fatturazione (mostrato in /billing/plan).",
+        description="Nome commerciale del piano in fatturazione.",
     )
 
     # =====================================================================

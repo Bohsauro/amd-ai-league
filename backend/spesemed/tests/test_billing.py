@@ -63,8 +63,8 @@ def stripe_settings(monkeypatch):
     monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test_0123456789")
     monkeypatch.setattr(settings, "stripe_price_id", "price_test_0123456789")
     monkeypatch.setattr(settings, "stripe_currency", "eur")
-    monkeypatch.setattr(settings, "stripe_success_url", "https://app.spesemed.local/success?id={CHECKOUT_SESSION_ID}")
-    monkeypatch.setattr(settings, "stripe_cancel_url", "https://app.spesemed.local/cancel")
+    monkeypatch.setattr(settings, "billing_success_url", "https://app.spesemed.local/success?id={CHECKOUT_SESSION_ID}")
+    monkeypatch.setattr(settings, "billing_cancel_url", "https://app.spesemed.local/cancel")
     yield
 
 
@@ -236,3 +236,82 @@ class TestWebhook:
         assert payload["user_id"] == "00000000-0000-4000-8000-000000000001"
         assert payload["plan"] == "pro"
         assert payload["status"] == "active"
+
+# =============================================================================
+# Fase 4C-C1: config + kill switch (nessun secret reale)
+# =============================================================================
+
+class TestBillingConfig:
+    def test_billing_settings_defaults(self):
+        """Kill switch OFF e default sicuri (nessun secret)."""
+        from spesemed.api.config import settings
+
+        assert settings.billing_enabled is False
+        assert settings.stripe_secret_key == ""
+        assert settings.stripe_webhook_secret == ""
+        assert settings.stripe_price_id == ""
+        assert settings.stripe_currency == "eur"
+        assert settings.stripe_mode == "test"
+        assert settings.billing_extractions_limit == 100
+        assert settings.billing_success_url == ""
+        assert settings.billing_cancel_url == ""
+
+    def test_startup_error_when_billing_enabled_but_incomplete(self, monkeypatch, caplog):
+        import logging
+
+        from spesemed.api.main import _warn_if_billing_misconfigured
+
+        monkeypatch.setattr(settings, "billing_enabled", True)
+        monkeypatch.setattr(settings, "stripe_secret_key", "")
+        monkeypatch.setattr(settings, "stripe_webhook_secret", "")
+        monkeypatch.setattr(settings, "stripe_price_id", "")
+
+        with caplog.at_level(logging.ERROR, logger="spesemed.api"):
+            _warn_if_billing_misconfigured()
+
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert any("BILLING_ENABLED=true" in m and "STRIPE_SECRET_KEY" in m for m in errors)
+        assert any("STRIPE_WEBHOOK_SECRET" in m for m in errors)
+        assert any("STRIPE_PRICE_ID" in m for m in errors)
+
+    def test_startup_no_error_when_billing_disabled(self, monkeypatch, caplog):
+        import logging
+
+        from spesemed.api.main import _warn_if_billing_misconfigured
+
+        monkeypatch.setattr(settings, "billing_enabled", False)
+        monkeypatch.setattr(settings, "stripe_secret_key", "")
+        monkeypatch.setattr(settings, "stripe_webhook_secret", "")
+        monkeypatch.setattr(settings, "stripe_price_id", "")
+
+        with caplog.at_level(logging.ERROR, logger="spesemed.api"):
+            _warn_if_billing_misconfigured()
+
+        assert not [r for r in caplog.records if r.levelno == logging.ERROR]
+
+    def test_startup_no_error_when_billing_complete(self, monkeypatch, caplog):
+        import logging
+
+        from spesemed.api.main import _warn_if_billing_misconfigured
+
+        monkeypatch.setattr(settings, "billing_enabled", True)
+        monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_fake_0123456789")
+        monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test_0123456789")
+        monkeypatch.setattr(settings, "stripe_price_id", "price_test_0123456789")
+
+        with caplog.at_level(logging.ERROR, logger="spesemed.api"):
+            _warn_if_billing_misconfigured()
+
+        assert not [r for r in caplog.records if r.levelno == logging.ERROR]
+
+    def test_checkout_url_falls_back_to_app_url(self, fake_stripe_module, monkeypatch, test_client, auth_headers):
+        """Con BILLING_*_URL vuoti, il checkout deriva i redirect da APP_URL."""
+        monkeypatch.setattr(settings, "billing_success_url", "")
+        monkeypatch.setattr(settings, "billing_cancel_url", "")
+        monkeypatch.setattr(settings, "app_url", "https://app.example.test")
+
+        r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
+        assert r.status_code == 201
+        call = fake_stripe_module.create_calls[-1]
+        assert call["success_url"] == "https://app.example.test/app/profilo?billing=success"
+        assert call["cancel_url"] == "https://app.example.test/app/profilo?billing=cancel"

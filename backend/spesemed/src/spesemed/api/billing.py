@@ -167,8 +167,14 @@ def create_checkout_session(
         client_reference_id=user_id,
         metadata={"user_id": user_id, "plan": "pro"},
         line_items=[{"price": price, "quantity": 1}],
-success_url=settings.stripe_success_url,
-        cancel_url=settings.stripe_cancel_url,
+        success_url=(
+            settings.billing_success_url
+            or f"{settings.app_url}/app/profilo?billing=success"
+        ),
+        cancel_url=(
+            settings.billing_cancel_url
+            or f"{settings.app_url}/app/profilo?billing=cancel"
+        ),
     )
     return {
         "checkout_url": session.url,
