@@ -1,68 +1,74 @@
-# STATUS — handoff (2026-10-26, 15:30 UTC)
+# STATUS — handoff (2026-10-30, 11:30 UTC)
 
 > Leggi questo prima di toccare qualsiasi cosa. È il biglietto d'ingresso per una sessione nuova.
 
 ## Stato in una riga
 
-Demo **AMD AI League Match 4** pronta e verificata: `bin/verify` **17/17** (77 test unitari),
-corpus **10 casi**, demo live misurata su Groq, `bin/demo` fa tutto con un comando,
-`bin/close-ticket` rende il reviewer obbligatorio prima di `done`.
+**SPESEMED** — Fase 4C (Redis, Prometheus, Stripe) completata e mergiata su `main`
+(`3489f9b`, allineato a `origin/main`): backend **260 passed, 1 skipped**, frontend
+build verde (58 moduli). Resta solo la validazione **E2E con Supabase reale**, che
+richiede i secrets del proprietario. Progetto AMD AI League: archiviato (sotto).
 
-## Numeri (dalla fonte unica, mai a mano)
+## Numeri (misurati su `main`, 30/10)
 
-Fonte: `specs/amd-ai-league/VERIFIED_NUMBERS.md` — rigenerare con `bin/gen-verified-numbers` dopo ogni run.
-
-| | pipeline | baseline agentica |
+| Verifica | Comando | Esito |
 |---|---|---|
-| chiamate LLM | **1** | 5 |
-| token | **1,572** (1,390+182) | 46,563 (43,127+3,436) |
-| latenza e2e | **440 ms** | 30,570 ms |
-| esito | CONFLICT · resolved · 3 citazioni | prosa che collassa GAAP/non-GAAP |
+| Backend | `git archive main backend/spesemed` → `venv pytest -q` | **260 passed, 1 skipped** (1.8 s) |
+| Frontend | `git archive main frontend/spesemed/frontend-app` → `npm ci && npm run build` | **verde**, 58 moduli · JS 254,24 kB (gzip 77,48) · CSS 12,25 kB (gzip 3,29) |
+| Secrets | `git grep -E 'sk_live_\|sk_test_\|whsec_'` su tree + `dist/` | 0 match |
+| E2E script | `py_compile` su `tests/e2e/run_e2e.py` e `tasks/scripts/e2e_success_path.py` | OK |
 
-NOUL: **19/53 keep** (34 scartati, 64,2%) · CHOICE conf 0,63 · **discriminative 7 ms · generator 433 ms**
-Modello: `meta-llama/llama-3.1-8b-instruct` (provider: **Groq**, pinnato). Costo baseline: $0,0102 (3 run).
-Batch: 10 run paralleli, max 526 ms. run.json sha256 `1d5c70e7aab1` · baseline sha256 `02adbf40c2a9`.
+## Cosa è su `main`
+
+`main` = merge di `dev/backend` (34 commit) + `dev/frontend` (4) + `po/specs` (2),
+più i commit di review/merge del CEO. Nessun conflitto, nessun commit di ruolo su main.
+
+- **Backend 4C** (`backend/spesemed/`): rate-limit storage Redis + readiness nel lifespan;
+  metriche HTTP RED (`api/metrics_http.py`, label bounded) esposte su `/metrics` con
+  allowlist; migration `004_billing.sql` (`entitlements` + `stripe_events`, upgrade-safe,
+  migra l'allowance legacy); billing Stripe (`/billing/checkout`, `/billing/webhook`
+  idempotente con kill switch `BILLING_ENABLED` e rate limit 60/min, `/billing/status`);
+  gating 402 su `/extract`; docs allineate al codice (niente più `/billing/plan`).
+- **Frontend** (`frontend/spesemed/frontend-app/`): audit qualità (design system, a11y,
+  microcopy, robustezza); pagina Profilo con piano/stato/rinnovo e CTA checkout; ritorno
+  checkout su `/app/profilo` (alias route, allineato al default backend); gestione 402
+  in upload con messaggio calmo e file conservati.
+- **Specs** (`specs/spesemed/`): gap analysis + piano 4C + piano E2E in `tasks/`
+  (`01-gap-analysis.md`, `02-plan-4c.md`, `03-e2e-plan.md`, `scripts/e2e_success_path.py`).
+
+## Cosa resta
+
+1. **E2E con Supabase reale** — lo esegue il **proprietario** (i secrets stanno sul server,
+   non nel workspace). Script pronti e secret-free:
+   - `backend/spesemed/tests/e2e/run_e2e.py` (vedi `tests/e2e/README.md`): env
+     `SPESEMED_API_BASE`, `SPESEMED_TEST_EMAIL`, `SPESEMED_TEST_PASSWORD`,
+     `SPESEMED_TEST_RECEIPT` (opzionale) → exit 0 = PASS.
+   - `specs/spesemed/tasks/scripts/e2e_success_path.py` (solo stdlib, stesso flusso).
+2. **Giro 2 docs** solo se il re-sync introduce nuovi scostamenti: nessuno aperto oggi.
+3. Nient'altro: board SPESEMED chiusa (16 task 4C + 13 ticket [REVIEW] `done`,
+   epic `BOH-12` in chiusura con verdetto reviewer).
 
 ## Comandi
 
 ```bash
-/srv/ai-company/bin/verify            # gate DoD (17 check + pytest; exit 1 se rosso)
-/srv/ai-company/bin/status            # cruscotto board/run/file
-/srv/ai-company/bin/demo              # 10 casi live -> run.json -> frontend/ + ticker (niente serve)
-/srv/ai-company/bin/demo --freeze     # come sopra + congela backend/run.frozen.json
-/srv/ai-company/bin/demo --frozen     # registra dal run congelato (fallback se OpenRouter giu')
-/srv/ai-company/bin/demo --offline    # verifica veloce: NON tocca run.json/frontend
-/srv/ai-company/bin/demo --serve      # genera e serve frontend/ su 0.0.0.0:8500
-/srv/ai-company/bin/close-ticket BOH-13  # in_review -> done SOLO con APPROVE del reviewer
-/srv/ai-company/bin/gen-verified-numbers # riscrive VERIFIED_NUMBERS.md dai file reali
+# test backend (venv dedicato: il python di sistema non ha le dipendenze)
+cd /srv/ai-company/workspace
+rm -rf .review-tmp/be && mkdir -p .review-tmp/be
+git archive main backend/spesemed | tar -x -C .review-tmp/be
+cd .review-tmp/be/backend/spesemed && /srv/ai-company/venvs/spesemed/bin/python -m pytest -q
+
+# build frontend
+cd /srv/ai-company/workspace
+rm -rf .review-tmp/fe && mkdir -p .review-tmp/fe
+git archive main frontend/spesemed/frontend-app | tar -x -C .review-tmp/fe
+cd .review-tmp/fe/frontend/spesemed/frontend-app && npm ci && npm run build
+
+# chiusura ticket: in_review -> done SOLO con APPROVE del reviewer
+/srv/ai-company/bin/close-ticket BOH-12
 ```
 
-Demo UI: `bin/demo --serve` o `python3 -m http.server 8500 --bind 0.0.0.0` in `frontend/`
-→ http://100.69.55.38:8500/index.html (legge `run.json`, niente numeri hardcoded).
-
-## Cosa è cambiato oggi (26/10)
-
-1. **Test unitari** (`backend/tests/`, 77 test): gate NOUL (quota solo su pool>=10), ordinamento SCORE,
-   soglia GUARD, validazione corpus (modulo unico `corpus_validation.py` condiviso con `bin/verify`),
-   pipeline offline. Wiring nel gate: 17/17.
-2. **`bin/demo`**: un comando per i 10 casi, run.json, copia frontend, ticker, throughput, freeze/fallback.
-3. **Fallback offline**: `run.frozen.json` + auto-fallback se il generatore va in errore.
-4. **Corpus 6 → 10 casi** (FC-07 NVIDIA Q3FY25 · FC-08 AMD Q3 2024 · FC-09 iPhone 16/Apple Intelligence ·
-   FC-10 Amazon-Anthropic $4B/$8B). Ogni URL verificato HTTP 200; 2 fonti Apple via Internet Archive
-   (pagine live riscritte) dichiarate nei `notes`. **SERPAPI: non usata** (nessuna key; canale live =
-   snapshot `--live PATH`; UI non rivendica "live"). Decisione documentata in `specs/.../CORPUS.md`.
-5. **Cleanup**: validazione corpus unica; `textutil.py` duplicato era solo una copia di review in
-   `agents/ceo/` (fuori repo); `grow_corpus.py` (builder one-shot) rimosso.
-6. **Reviewer obbligatorio**: `bin/close-ticket` — `done` solo da `in_review` con APPROVE di agent-reviewer.
-7. **Repo self-contained per la submission**: `bin/verify|demo|gen-verified-numbers` spostati in
-   `workspace/bin/` (path relativi, funzionano da clone senza `.env`); `/srv/ai-company/bin/*` sono
-   ora symlink. README.md riscritto per GitHub (inglese, numeri misurati, quick start da clone).
-
-## Cosa resta (in ordine di valore)
-
-1. **Registrare il video 120s** seguendo `specs/amd-ai-league/DEMO_SCRIPT.md` + `VERIFIED_NUMBERS.md`
-   (sezione FC-06 del fallimento tipizzato ORA è misurata: insert 8s legittimo). Poi submit.
-2. Nient'altro di tecnico: gate, test, demo, fallback e processo sono chiusi e verificati.
+Il backend live su `:8000` è **read-only**: non riavviarlo, non modificarlo. Ogni verifica
+si fa offline sui sorgenti in `backend/spesemed/` con pytest (mock Supabase).
 
 ## Team agenti (Paperclip)
 
@@ -75,17 +81,32 @@ Demo UI: `bin/demo --serve` o `python3 -m http.server 8500 --bind 0.0.0.0` in `f
 | agent-reviewer | OpenCode read-only | nulla | `3b1b700c-1bad-4ee1-81c7-9d240a648ca9` |
 
 Workflow ticket: `workspace/PAPERCLIP_PLAYBOOK.md` (§3: `in_review` → `bin/close-ticket`);
-review: `workspace/REVIEW_PROTOCOL.md` (il reviewer non chiude più direttamente).
+review: `workspace/REVIEW_PROTOCOL.md` (ticket `[REVIEW]` separato, il reviewer non chiude).
 
 ## Gotchas (nuovi e vecchi)
 
-- **OpenRouter `sort: latency` devia su provider lenti** (CoreWeave ~1.8s) anche quando Groq è su:
-  `generator.py` pinnà Groq (`OPENROUTER_PROVIDER_ONLY`, default "Groq"). Se Groq cade, la chiamata va
-  in errore → `bin/demo` ricade sul run congelato. Non rimettere `sort: latency` senza pin.
-- **`source .env` non basta** per processi figli: i wrapper usano `set -a; source .env; set +a`.
-- Se `verify` è rosso su "latenza < 1.2s" dopo un run: probabilmente il run è stato preso sotto carico
-  o su provider non-Groq → rilancia `bin/demo --freeze` a sistema scarico, poi `bin/gen-verified-numbers`.
-- Gli agenti dichiarano più di quanto fanno. Fidati solo di `bin/verify`, `git log` e dei file.
-- `main` locale ≠ `origin/main` su GitHub (storie non correlate); il delivery verificato è su `delivery-verified`.
-- Il redattore di segreti può corrompere i file scritti se contengono `<NOME_SECRETO>=`: costruisci i nomi a runtime.
+- **Working tree condiviso**: il tree può stare su un branch di ruolo diverso da quello che
+  stai guardando — per diff/test usa `git archive <branch>` o `git show <branch>:<path>`,
+  mai il working tree. Lavora in `.review-tmp/` (gitignored), **non in `/tmp`** (la permission
+  `external_directory: deny` può bloccare la scrittura).
+- **File orfani**: `backend/spesemed/tests/AUDIT_REPORT.md` non è tracciato su nessun branch
+  (audit del progetto originale): non includerlo nei commit, non fa parte di alcun deliverable.
+- **`done` solo col gate**: `bin/close-ticket` esige un `APPROVE` di agent-reviewer più recente
+  di ogni `REJECT`, sul task o su un ticket `[REVIEW]` che cita l'IDENT. Auto-chiusura = fuori procedura.
+- **Review policy `not_creator`**: chi porta l'issue in `in_review` non può approvarla; la
+  chiusura la fa il CEO (o un altro scrittore) col gate.
+- **Ondate di review**: non assegnare più di ~4 ticket `[REVIEW]` per volta al reviewer —
+  run concorrenti su macchina piccola si cancellano a vicenda.
+- Gli agenti dichiarano più di quanto fanno. Fidati solo dei comandi riproducibili, di
+  `git log` e dei file.
 - Paperclip: `blocked` può essere il watchdog (run terminato senza finire), non un blocco reale.
+- Il redattore di segreti può corrompere i file scritti se contengono `<NOME_SECRETO>=`:
+  costruisci i nomi a runtime.
+
+## Archivio — AMD AI League Match 4 (consegnato 26/10)
+
+Demo pronta e verificata (`bin/verify` 17/17, 77 test unitari, corpus 10 casi, demo live su
+Groq): 1 chiamata LLM, 1.572 token, 440 ms e2e contro 5 chiamate / 46.563 token / 30,57 s
+del baseline agentico. Numeri rigenerabili con `bin/gen-verified-numbers`
+(fonte: `specs/amd-ai-league/VERIFIED_NUMBERS.md`). Il delivery verificato è sul branch
+`delivery-verified`; il repo GitHub è `Bohsauro/amd-ai-league`.
