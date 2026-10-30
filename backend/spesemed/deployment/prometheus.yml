@@ -1,0 +1,30 @@
+# =============================================================================
+# SPESEMED - Prometheus scrape config (esempio)
+# =============================================================================
+# Punto di partenza per lo scraper. Non contiene credenziali: l'autorizzazione
+# a /metrics e' gestita dall'allowlist IP applicativa e dal reverse proxy.
+#
+# Target `api:8000` vale quando Prometheus gira nella stessa rete Docker
+# Compose del servizio `api` (vedi docker-compose.yml). Se Prometheus gira
+# su un host esterno, sostituire con `<host-api>:8000` o con l'URL HTTPS
+# pubblicato dal reverse proxy.
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: spesemed-api
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["api:8000"]   # nome servizio docker-compose
+    # NB: aggiungere l'IP (o CIDR) del runner Prometheus all'allowlist in .env,
+    # altrimenti /metrics risponde 403. Con Prometheus nella stessa rete
+    # Docker usare la subnet dei container (es. 172.18.0.0/16), non solo
+    # 127.0.0.1:
+    #   METRICS_IP_ALLOWLIST=["127.0.0.1","::1","<IP_PROMETHEUS>"]
+    # Se lo scrape passa dal reverse proxy, l'allowlist edge (Caddyfile /
+    # nginx.conf) resta la protezione primaria; abilitare METRICS_TRUST_XFF=true
+    # solo se il peer TCP del proxy e' gia' in allowlist.
