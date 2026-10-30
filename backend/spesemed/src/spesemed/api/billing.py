@@ -34,6 +34,7 @@ Cosa serve per ATTIVARE il billing (niente di questo e' nel workspace):
 """
 from __future__ import annotations
 
+import datetime
 import logging
 from typing import Any, Dict, Optional
 
@@ -189,12 +190,34 @@ def verify_webhook_signature(
     )
 
 
-def handle_webhook_event(event: Any) -> Dict[str, Any]:
+def process_webhook_event(event: Any) -> Dict[str, Any]:
+    """Processa un evento verificato con idempotenza su ``billing_events``.
+
+    Il primo arrivo dell'evento viene registrato (PK ``event_id``) e poi
+    dispatchato. Un replay (event_id gia' presente) risponde 200 senza
+    rieseguire gli upsert. Se Supabase non e' disponibile l'evento viene
+    comunque processato best-effort: meglio un ack che un retry infinito.
+    """
+    client = supabase_client.get_supabase_client()
+    if not _record_billing_event(client, event):
+        return {
+            "action": "ignored",
+            "event_type": _event_type(event),
+            "replayed": True,
+        }
+    result = handle_webhook_event(event, client=client)
+    result.setdefault("replayed", False)
+    return result
+
+
+def handle_webhook_event(event: Any, client: Any = None) -> Dict[str, Any]:
     """Dispatch dell'evento verificato.
 
-    Supportati (skeleton Fase 4C):
-        - ``checkout.session.completed``: registra la subscription (best-effort);
-          eventi non gestiti vengono ack-ati come ``ignored``.
+    Supportati (Fase 4C):
+        - ``checkout.session.completed``: registra la subscription;
+        - ``customer.subscription.updated/deleted``: aggiorna stato e periodo;
+        - ``invoice.paid``: rinnova il periodo della subscription.
+    Eventi non gestiti vengono ack-ati come ``ignored``.
 
     Accepts sia un oggetto ``stripe.Event`` (dict-like) sia un dict puro
     (utile nei test e per pipeline che serializzano l'evento).
@@ -210,8 +233,41 @@ def handle_webhook_event(event: Any) -> Dict[str, Any]:
             customer_id=customer_id,
             subscription_id=subscription_id,
             plan="pro",
+            client=client,
         )
         return {"action": "subscription_created", "customer_id": customer_id, "plan": "pro"}
+
+    if event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
+        subscription = _event_object(event)
+        customer_id = _get_field(subscription, "customer")
+        subscription_id = _get_field(subscription, "id")
+        deleted = event_type.endswith(".deleted")
+        status_value = "canceled" if deleted else (_get_field(subscription, "status") or "active")
+        _update_subscription(
+            client=client,
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+            values={
+                "status": status_value,
+                "current_period_end": _unix_to_iso(_get_field(subscription, "current_period_end")),
+                "stripe_subscription_id": str(subscription_id) if subscription_id else None,
+            },
+        )
+        action = "subscription_canceled" if deleted else "subscription_updated"
+        return {"action": action, "event_type": event_type, "status": status_value}
+
+    if event_type == "invoice.paid":
+        invoice = _event_object(event)
+        _update_subscription(
+            client=client,
+            customer_id=_get_field(invoice, "customer"),
+            subscription_id=_get_field(invoice, "subscription"),
+            values={
+                "status": "active",
+                "current_period_end": _unix_to_iso(_get_field(invoice, "period_end")),
+            },
+        )
+        return {"action": "invoice_paid", "event_type": event_type}
 
     logger.info("Webhook Stripe: evento %r ignorato (nessun handler).", event_type)
     return {"action": "ignored", "event_type": event_type}
@@ -241,11 +297,103 @@ def _get_field(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
 
 
+def _is_duplicate_key_error(exc: Exception) -> bool:
+    """True se l'errore Supabase/Postgres e' una violazione di PK/unique."""
+    code = getattr(exc, "code", None)
+    if code in ("23505", "409"):
+        return True
+    message = str(exc).lower()
+    return "23505" in message or "duplicate key" in message or "already exists" in message
+
+
+def _record_billing_event(client: Any, event: Any) -> bool:
+    """Registra l'evento su ``billing_events``. True = nuovo, False = replay.
+
+    L'INSERT con PK su ``event_id`` e' atomico: due consegne concorrenti dello
+    stesso evento producono una sola riga e un solo processing. Se la tabella
+    non esiste / il DB e' giu', degradiamo processando l'evento (best-effort).
+    """
+    if client is None:
+        return True
+    event_id = _get_field(event, "id")
+    event_type = _event_type(event)
+    if not event_id:
+        logger.warning("Webhook Stripe senza event.id: idempotenza non garantita.")
+        return True
+    try:
+        client.table("billing_events").insert(
+            {"event_id": str(event_id), "type": event_type}
+        ).execute()
+        return True
+    except Exception as e:  # noqa: BLE001 - best-effort, non blocca l'ack
+        if _is_duplicate_key_error(e):
+            logger.info("Webhook Stripe replay ignorato (id=%s, type=%s).", event_id, event_type)
+            return False
+        logger.warning(
+            "Persistenza billing_event fallita (id=%s, type=%s): %s. Evento processato comunque.",
+            event_id,
+            event_type,
+            e,
+        )
+        return True
+
+
+def _unix_to_iso(value: Any) -> Optional[str]:
+    """Converte un timestamp Unix (Stripe) in ISO 8601 UTC, senza sollevare."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.datetime.fromtimestamp(value, datetime.timezone.utc).isoformat()
+        except (OverflowError, OSError, ValueError):
+            return None
+    return _iso_or_none(value)
+
+
+def _update_subscription(
+    client: Any,
+    customer_id: Any,
+    subscription_id: Any,
+    values: Dict[str, Any],
+) -> bool:
+    """Aggiorna la subscription Stripe per id subscription o customer."""
+    if client is None:
+        logger.warning("Supabase non disponibile: subscription non aggiornata.")
+        return False
+    clean_values = {key: value for key, value in values.items() if value is not None}
+    if not clean_values:
+        return False
+    try:
+        if subscription_id:
+            (
+                client.table("subscriptions")
+                .update(clean_values)
+                .eq("stripe_subscription_id", str(subscription_id))
+                .execute()
+            )
+        elif customer_id:
+            (
+                client.table("subscriptions")
+                .update(clean_values)
+                .eq("stripe_customer_id", str(customer_id))
+                .execute()
+            )
+        else:
+            logger.warning("Evento subscription senza customer/subscription id: skip update.")
+            return False
+        logger.info("Subscription aggiornata (stato=%s).", clean_values.get("status"))
+        return True
+    except Exception as e:  # noqa: BLE001 - best-effort, non blocca l'ack
+        logger.warning("Aggiornamento subscription fallito: %s", e)
+        return False
+
+
 def _record_subscription(
     user_id: Optional[str],
     customer_id: Any,
     subscription_id: Any,
     plan: str,
+    client: Any = None,
 ) -> bool:
     """Scrive la subscription su Supabase (best-effort, non blocca l'ack).
 
@@ -256,7 +404,8 @@ def _record_subscription(
     if not user_id:
         logger.warning("Webhook checkout.completed senza client_reference_id: skip persistenza.")
         return False
-    client = supabase_client.get_supabase_client()
+    if client is None:
+        client = supabase_client.get_supabase_client()
     if client is None:
         logger.warning("Supabase non disponibile: subscription non persistita (user=%s).", user_id[:12])
         return False

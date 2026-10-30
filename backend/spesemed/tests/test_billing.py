@@ -210,10 +210,10 @@ class TestWebhook:
         assert body["action"] == "subscription_created"
 
     def test_webhook_unsupported_event_ack_ignored(self, fake_stripe_module, test_client):
-        fake_stripe_module.event_to_return = {"type": "customer.subscription.deleted", "data": {"object": {}}}
+        fake_stripe_module.event_to_return = {"type": "customer.created", "data": {"object": {}}}
         r = test_client.post(
             "/api/v1/billing/webhook",
-            content=b'{"type":"customer.subscription.deleted"}',
+            content=b'{"type":"customer.created"}',
             headers={"Stripe-Signature": "t=1,v1=validsig"},
         )
         assert r.status_code == 200

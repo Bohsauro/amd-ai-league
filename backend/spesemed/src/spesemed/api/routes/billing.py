@@ -12,6 +12,7 @@ No-op mode:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
@@ -51,11 +52,16 @@ class WebhookResponse(BaseModel):
     received: bool = Field(default=True)
     action: str | None = Field(
         default=None,
-        description="Azione eseguita: subscription_created | ignored.",
+        description="Azione eseguita: subscription_created | subscription_updated | "
+        "subscription_canceled | invoice_paid | ignored.",
     )
     event_type: str | None = Field(
         default=None,
         description="Tipo di evento Stripe processato (per il logging client).",
+    )
+    replayed: bool = Field(
+        default=False,
+        description="True se l'evento era gia' stato processato (idempotenza).",
     )
 
 
@@ -186,6 +192,11 @@ async def billing_webhook(
             detail="Webhook sign check failed.",
         ) from e
 
-    result = billing.handle_webhook_event(event)
-    logger.info("Webhook Stripe processato: %s", result)
+    result = await asyncio.to_thread(billing.process_webhook_event, event)
+    logger.info(
+        "Webhook Stripe processato: type=%s action=%s replayed=%s",
+        result.get("event_type"),
+        result.get("action"),
+        result.get("replayed", False),
+    )
     return {"received": True, **result}
