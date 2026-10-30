@@ -5,9 +5,10 @@
 ## Stato in una riga
 
 **SPESEMED** — Fase 4C (Redis, Prometheus, Stripe) completata e mergiata su `main`
-(`3489f9b`, allineato a `origin/main`): backend **260 passed, 1 skipped**, frontend
-build verde (58 moduli). Resta solo la validazione **E2E con Supabase reale**, che
-richiede i secrets del proprietario. Progetto AMD AI League: archiviato (sotto).
+(`92bc0f5`, allineato a `origin/main`): backend **260 passed, 1 skipped**, frontend
+build verde (58 moduli). Epic **BOH-12 chiuso** (`done`, APPROVE reviewer 3eaa3b01) e
+BOH-56 (docs fix) chiuso con APPROVE. Resta solo la validazione **E2E con Supabase
+reale**, che richiede i secrets del proprietario. Progetto AMD AI League: archiviato (sotto).
 
 ## Numeri (misurati su `main`, 30/10)
 
@@ -45,8 +46,11 @@ più i commit di review/merge del CEO. Nessun conflitto, nessun commit di ruolo 
      `SPESEMED_TEST_RECEIPT` (opzionale) → exit 0 = PASS.
    - `specs/spesemed/tasks/scripts/e2e_success_path.py` (solo stdlib, stesso flusso).
 2. **Giro 2 docs** solo se il re-sync introduce nuovi scostamenti: nessuno aperto oggi.
-3. Nient'altro: board SPESEMED chiusa (16 task 4C + 13 ticket [REVIEW] `done`,
-   epic `BOH-12` in chiusura con verdetto reviewer).
+3. **BOH-60** (PO, `in_review`): riallineare `po/specs` su `main` — il branch è stale e
+   un merge alla cieca revertirebbe il fix BOH-56 (conteggi 260 + stato 4C-C9/audit).
+   Va mergiato solo dopo re-sync del PO e review.
+4. Nient'altro: board SPESEMED chiusa (16 task 4C + 13 ticket [REVIEW] `done`,
+   epic `BOH-12` **done** con APPROVE reviewer, BOH-56 `done`).
 
 ## Comandi
 
