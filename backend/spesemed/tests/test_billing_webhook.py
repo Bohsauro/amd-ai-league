@@ -1,7 +1,7 @@
 """SPESEMED - Test della route POST /api/v1/billing/webhook (Fase 4C-C5).
 
-Copre: firma invalida fail-closed, evento valido (billing_events + subscriptions),
-replay idempotente, eventi fuori scope, aggiornamenti subscription e assenza di
+Copre: firma invalida fail-closed, evento valido (stripe_events + entitlements),
+replay idempotente, eventi fuori scope, aggiornamenti entitlement e assenza di
 payload nei log. Tutto offline: Stripe e Supabase sono fake/mock, nessun secret
 reale nel workspace.
 """
@@ -81,7 +81,7 @@ def test_webhook_invalid_signature_returns_400_without_db_write(
     mock_supabase.table.assert_not_called()
 
 
-def test_webhook_valid_event_records_event_and_upserts_subscription(
+def test_webhook_valid_event_records_event_and_upserts_entitlement(
     fake_stripe, mock_supabase, test_client
 ):
     fake_stripe.event = _completed_event()
@@ -103,6 +103,9 @@ def test_webhook_valid_event_records_event_and_upserts_subscription(
     assert payload["user_id"] == "00000000-0000-4000-8000-000000000001"
     assert payload["plan"] == "pro"
     assert payload["status"] == "active"
+    # Tabelle canoniche (migrations/004_billing.sql): evento + entitlement.
+    called_tables = [call.args[0] for call in mock_supabase.table.call_args_list if call.args]
+    assert called_tables == ["stripe_events", "entitlements"]
 
 
 def test_webhook_replay_is_idempotent(fake_stripe, mock_supabase, test_client):
@@ -158,6 +161,8 @@ def test_webhook_subscription_updated_updates_status(fake_stripe, mock_supabase,
     values = table.update.call_args.args[0]
     assert values["status"] == "past_due"
     assert values["current_period_end"].startswith("2023-11-14")
+    called_tables = [call.args[0] for call in mock_supabase.table.call_args_list if call.args]
+    assert "entitlements" in called_tables
 
 
 def test_webhook_does_not_log_payload(fake_stripe, mock_supabase, test_client, caplog):

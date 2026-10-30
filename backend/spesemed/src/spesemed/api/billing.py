@@ -17,8 +17,8 @@ Design:
       senza la libreria installata (no-op mode che risponde 503 con un
       messaggio chiaro per l'operatore).
     - Webhook: verifica firma con ``stripe.Webhook.construct_event``.
-    - Persistenza: alla ``checkout.session.completed`` la subscription viene
-      scritta best-effort nella tabella `subscriptions` (vedi
+    - Persistenza: alla ``checkout.session.completed`` l'entitlement viene
+      scritto best-effort nella tabella `entitlements` (vedi
       migrations/004_billing.sql). Se Supabase/DB non e'
       disponibile, l'evento viene comunque ack-ato con un log (idempotenza
       garantita dal fare retry piu' tardi).
@@ -191,7 +191,7 @@ def verify_webhook_signature(
 
 
 def process_webhook_event(event: Any) -> Dict[str, Any]:
-    """Processa un evento verificato con idempotenza su ``billing_events``.
+    """Processa un evento verificato con idempotenza su ``stripe_events``.
 
     Il primo arrivo dell'evento viene registrato (PK ``event_id``) e poi
     dispatchato. Un replay (event_id gia' presente) risponde 200 senza
@@ -199,7 +199,7 @@ def process_webhook_event(event: Any) -> Dict[str, Any]:
     comunque processato best-effort: meglio un ack che un retry infinito.
     """
     client = supabase_client.get_supabase_client()
-    if not _record_billing_event(client, event):
+    if not _record_stripe_event(client, event):
         return {
             "action": "ignored",
             "event_type": _event_type(event),
@@ -228,11 +228,12 @@ def handle_webhook_event(event: Any, client: Any = None) -> Dict[str, Any]:
         customer_id = _get_field(session, "customer")
         user_id = _get_field(session, "client_reference_id")
         subscription_id = _get_field(session, "subscription")
-        _record_subscription(
+        _upsert_entitlement(
             user_id=user_id,
             customer_id=customer_id,
             subscription_id=subscription_id,
             plan="pro",
+            period_end=_unix_to_iso(_get_field(session, "current_period_end")),
             client=client,
         )
         return {"action": "subscription_created", "customer_id": customer_id, "plan": "pro"}
@@ -243,7 +244,7 @@ def handle_webhook_event(event: Any, client: Any = None) -> Dict[str, Any]:
         subscription_id = _get_field(subscription, "id")
         deleted = event_type.endswith(".deleted")
         status_value = "canceled" if deleted else (_get_field(subscription, "status") or "active")
-        _update_subscription(
+        _update_entitlement(
             client=client,
             customer_id=customer_id,
             subscription_id=subscription_id,
@@ -258,7 +259,7 @@ def handle_webhook_event(event: Any, client: Any = None) -> Dict[str, Any]:
 
     if event_type == "invoice.paid":
         invoice = _event_object(event)
-        _update_subscription(
+        _update_entitlement(
             client=client,
             customer_id=_get_field(invoice, "customer"),
             subscription_id=_get_field(invoice, "subscription"),
@@ -306,8 +307,8 @@ def _is_duplicate_key_error(exc: Exception) -> bool:
     return "23505" in message or "duplicate key" in message or "already exists" in message
 
 
-def _record_billing_event(client: Any, event: Any) -> bool:
-    """Registra l'evento su ``billing_events``. True = nuovo, False = replay.
+def _record_stripe_event(client: Any, event: Any) -> bool:
+    """Registra l'evento su ``stripe_events``. True = nuovo, False = replay.
 
     L'INSERT con PK su ``event_id`` e' atomico: due consegne concorrenti dello
     stesso evento producono una sola riga e un solo processing. Se la tabella
@@ -321,7 +322,7 @@ def _record_billing_event(client: Any, event: Any) -> bool:
         logger.warning("Webhook Stripe senza event.id: idempotenza non garantita.")
         return True
     try:
-        client.table("billing_events").insert(
+        client.table("stripe_events").insert(
             {"event_id": str(event_id), "type": event_type}
         ).execute()
         return True
@@ -330,7 +331,7 @@ def _record_billing_event(client: Any, event: Any) -> bool:
             logger.info("Webhook Stripe replay ignorato (id=%s, type=%s).", event_id, event_type)
             return False
         logger.warning(
-            "Persistenza billing_event fallita (id=%s, type=%s): %s. Evento processato comunque.",
+            "Persistenza stripe_event fallita (id=%s, type=%s): %s. Evento processato comunque.",
             event_id,
             event_type,
             e,
@@ -350,15 +351,15 @@ def _unix_to_iso(value: Any) -> Optional[str]:
     return _iso_or_none(value)
 
 
-def _update_subscription(
+def _update_entitlement(
     client: Any,
     customer_id: Any,
     subscription_id: Any,
     values: Dict[str, Any],
 ) -> bool:
-    """Aggiorna la subscription Stripe per id subscription o customer."""
+    """Aggiorna l'entitlement Stripe per id subscription o customer."""
     if client is None:
-        logger.warning("Supabase non disponibile: subscription non aggiornata.")
+        logger.warning("Supabase non disponibile: entitlement non aggiornato.")
         return False
     clean_values = {key: value for key, value in values.items() if value is not None}
     if not clean_values:
@@ -366,14 +367,14 @@ def _update_subscription(
     try:
         if subscription_id:
             (
-                client.table("subscriptions")
+                client.table("entitlements")
                 .update(clean_values)
                 .eq("stripe_subscription_id", str(subscription_id))
                 .execute()
             )
         elif customer_id:
             (
-                client.table("subscriptions")
+                client.table("entitlements")
                 .update(clean_values)
                 .eq("stripe_customer_id", str(customer_id))
                 .execute()
@@ -381,23 +382,24 @@ def _update_subscription(
         else:
             logger.warning("Evento subscription senza customer/subscription id: skip update.")
             return False
-        logger.info("Subscription aggiornata (stato=%s).", clean_values.get("status"))
+        logger.info("Entitlement aggiornato (stato=%s).", clean_values.get("status"))
         return True
     except Exception as e:  # noqa: BLE001 - best-effort, non blocca l'ack
-        logger.warning("Aggiornamento subscription fallito: %s", e)
+        logger.warning("Aggiornamento entitlement fallito: %s", e)
         return False
 
 
-def _record_subscription(
+def _upsert_entitlement(
     user_id: Optional[str],
     customer_id: Any,
     subscription_id: Any,
     plan: str,
+    period_end: Optional[str] = None,
     client: Any = None,
 ) -> bool:
-    """Scrive la subscription su Supabase (best-effort, non blocca l'ack).
+    """Scrive l'entitlement su Supabase (best-effort, non blocca l'ack).
 
-    Richiede la tabella `subscriptions` (migrations/004_billing.sql).
+    Richiede la tabella `entitlements` (migrations/004_billing.sql).
     Se Supabase/DB non e' disponibile, logga un WARNING e torna False:
     il webhook Stripe ritenta in automatico fino a successo.
     """
@@ -407,23 +409,25 @@ def _record_subscription(
     if client is None:
         client = supabase_client.get_supabase_client()
     if client is None:
-        logger.warning("Supabase non disponibile: subscription non persistita (user=%s).", user_id[:12])
+        logger.warning("Supabase non disponibile: entitlement non persistito (user=%s).", user_id[:12])
         return False
+    payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "stripe_customer_id": str(customer_id) if customer_id else None,
+        "stripe_subscription_id": str(subscription_id) if subscription_id else None,
+        "plan": plan,
+        "status": "active",
+        "extractions_limit": settings.billing_extractions_limit,
+        "extractions_used": 0,
+    }
+    if period_end:
+        payload["current_period_end"] = period_end
     try:
-        client.table("subscriptions").upsert(
-            {
-                "user_id": user_id,
-                "stripe_customer_id": str(customer_id) if customer_id else None,
-                "stripe_subscription_id": str(subscription_id) if subscription_id else None,
-                "plan": plan,
-                "status": "active",
-            },
-            on_conflict="user_id",
-        ).execute()
-        logger.info("Subscription persistita (user=%s, plan=%s).", user_id[:12], plan)
+        client.table("entitlements").upsert(payload, on_conflict="user_id").execute()
+        logger.info("Entitlement persistito (user=%s, plan=%s).", user_id[:12], plan)
         return True
     except Exception as e:  # pragma: no cover - dipende dal runtime DB
-        logger.warning("Persistenza subscription fallita (user=%s): %s", user_id[:12], e)
+        logger.warning("Persistenza entitlement fallita (user=%s): %s", user_id[:12], e)
         return False
 
 
@@ -540,8 +544,8 @@ def get_user_billing_status(user_id: str) -> Dict[str, Any]:
     """Stato piano dell'utente autenticato (contratto GET /billing/status).
 
     - Kill switch OFF (default): risponde subito free senza toccare il DB.
-    - Tabella ``entitlements`` (piano Fase 4C) oppure ``subscriptions``
-      (skeleton gia' deployato) come fallback.
+    - Tabella ``entitlements`` (canonica, migrations/004_billing.sql) oppure
+      ``subscriptions`` (skeleton legacy pre-4C) come fallback di sola lettura.
     - Nessuna eccezione propagata: il client riceve sempre un payload valido.
     """
     enabled = bool(settings.billing_enabled)

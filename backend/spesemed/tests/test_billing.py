@@ -8,7 +8,8 @@ Verifica:
     client) e ritorna 200 + URL.
   - POST /billing/webhook: 503 se whsec mancante, 400 se firma non valida,
     200 + handle dell'evento se firma valida.
-  - handle_webhook_event persiste la subscription su Supabase (best-effort).
+  - handle_webhook_event registra l'evento su `stripe_events` e persiste
+    l'entitlement su `entitlements` (best-effort).
 """
 from __future__ import annotations
 
@@ -82,6 +83,7 @@ def fake_stripe_module(monkeypatch, stripe_settings):
 
 
 COMPLETED_EVENT_DICT = {
+    "id": "evt_test_completed_1",
     "type": "checkout.session.completed",
     "data": {
         "object": {
@@ -219,13 +221,13 @@ class TestWebhook:
         assert r.status_code == 200
         assert r.json()["action"] == "ignored"
 
-    def test_webhook_persists_subscription_on_supabase(self, fake_stripe_module, mock_supabase, test_client):
-        """Con Supabase mockato, l'evento completed fa l'upsert sulla tabella subscriptions."""
+    def test_webhook_persists_entitlement_on_supabase(self, fake_stripe_module, mock_supabase, test_client):
+        """Con Supabase mockato, l'evento completed scrive su stripe_events + entitlements."""
         fake_stripe_module.event_to_return = dict(COMPLETED_EVENT_DICT)
 
         client = supabase_client.get_supabase_client()
-        # Programmiamo la tabella subscriptions sul mock.
-        subs_table = client.table("subscriptions")
+        # La tabella canonica dell'entitlement (migrations/004_billing.sql).
+        entitlements_table = client.table("entitlements")
 
         r = test_client.post(
             "/api/v1/billing/webhook",
@@ -233,15 +235,22 @@ class TestWebhook:
             headers={"Stripe-Signature": "t=1,v1=validsig"},
         )
         assert r.status_code == 200
-        subs_table.upsert.assert_called_once()
-        kwargs = subs_table.upsert.call_args.kwargs
+        entitlements_table.upsert.assert_called_once()
+        kwargs = entitlements_table.upsert.call_args.kwargs
         payload = kwargs.get("object") or kwargs.get("values")
         # upsert(...) puo' essere chiamato posizionalmente; verifichiamo il dato.
-        if payload is None and subs_table.upsert.call_args.args:
-            payload = subs_table.upsert.call_args.args[0]
+        if payload is None and entitlements_table.upsert.call_args.args:
+            payload = entitlements_table.upsert.call_args.args[0]
         assert payload["user_id"] == "00000000-0000-4000-8000-000000000001"
         assert payload["plan"] == "pro"
         assert payload["status"] == "active"
+        # Il gating 402 legge extractions_limit/used: devono essere valorizzati.
+        assert payload["extractions_limit"] == settings.billing_extractions_limit
+        assert payload["extractions_used"] == 0
+        # Idempotenza: l'evento va registrato su stripe_events.
+        called_tables = [call.args[0] for call in client.table.call_args_list if call.args]
+        assert "stripe_events" in called_tables
+        assert "entitlements" in called_tables
 
 # =============================================================================
 # Fase 4C-C1: config + kill switch (nessun secret reale)
