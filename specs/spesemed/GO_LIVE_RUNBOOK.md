@@ -332,9 +332,9 @@ Stripe Dashboard → **Developers → API keys**:
 Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
 
 - **Endpoint URL**: `https://<api-host>/api/v1/billing/webhook`
-- **Eventi**: minimo `checkout.session.completed`.
-  Gli altri eventi (`customer.subscription.*`, `invoice.*`) vengono accettati
-  e ack-ati con `action=ignored`; l'aggiornamento del loro stato è backlog.
+- **Eventi**: `checkout.session.completed` (minimo) + `customer.subscription.updated`,
+  `invoice.paid` (consigliati). Lo skeleton attuale persiste il primo; gli altri
+  vengono accettati e ack-ati con `action=ignored` finché non arriva il lifecycle completo.
 - Copia la **Signing secret** (`whsec_...`) → `STRIPE_WEBHOOK_SECRET`.
 
 Il webhook non usa Bearer/JWT: l'autenticazione è la firma `Stripe-Signature`.
@@ -343,12 +343,15 @@ Una firma invalida restituisce `400` (fail-closed); un secret mancante `503`.
 ### 5.4 Popola `.env` e riavvia
 
 ```dotenv
+BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_live_...          # sk_test_... finché sei in test
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ID=price_...
 STRIPE_CURRENCY=eur
-STRIPE_SUCCESS_URL=https://app.spesemed.it/app/profilo?billing=success
-STRIPE_CANCEL_URL=https://app.spesemed.it/app/profilo?billing=cancel
+STRIPE_MODE=live                       # test|live, per log/etichette
+BILLING_EXTRACTIONS_LIMIT=100
+BILLING_SUCCESS_URL=https://app.spesemed.it/app/profilo?billing=success
+BILLING_CANCEL_URL=https://app.spesemed.it/app/profilo?billing=cancel
 BILLING_PLAN_NAME=SPESEMED PRO
 ```
 
@@ -360,10 +363,10 @@ curl -sS https://<api-host>/api/v1/billing/plan | python3 -m json.tool
 
 ### 5.5 Persistenza subscription (consigliata)
 
-Applica `backend/spesemed/migrations/004_stripe_subscriptions.sql` nella SQL
-Editor di Supabase. La migration è idempotente e crea `subscriptions` con RLS
-service_role-only. Senza migration il webhook risponde comunque `200` ma logga
-un WARNING e non persiste la riga.
+Applica `backend/spesemed/migrations/004_billing.sql` nella SQL Editor di
+Supabase. La migration è idempotente e crea `subscriptions` + `billing_events`
+con RLS service_role-only. Senza migration il webhook risponde comunque `200`
+ma logga un WARNING e non persiste la riga.
 
 ### 5.6 Test locale con Stripe CLI e carte finte
 
@@ -407,12 +410,12 @@ worker il default `memory` resta valido.
 
 | Sintomo | Causa | Remediation |
 |---|---|---|
-| `/billing/checkout` → `503` | Secret/price mancanti o libreria `stripe` assente | Verifica `.env` + `GET /billing/plan`; reinstalla requirements; riavvia |
+| `/billing/checkout` → `503` | `BILLING_ENABLED=false`, secret/price mancanti o libreria `stripe` assente | Verifica `.env` (kill switch + chiavi) e `GET /billing/plan`; reinstalla requirements; riavvia |
 | Webhook → `503` | `STRIPE_WEBHOOK_SECRET` mancante | Imposta il signing secret dell'endpoint corretto |
 | Webhook → `400` | Firma invalida / secret di un altro endpoint / body riscritto dal proxy | Usa il secret giusto, non modificare il body, rigenera il secret se serve |
 | Webhook `200` ma niente in `subscriptions` | Migration 004 assente o Supabase non configurato | Applica migration, verifica `SUPABASE_*`, controlla i WARNING nei log |
 | Sospetto leak chiave | Secret finita in log/repo | Ruota subito in Stripe, aggiorna `.env`/vault, riavvia, controlla i log |
-| Vuoi disattivare il billing | — | Svuota `STRIPE_SECRET_KEY` (checkout → `503`, nessuna chiamata Stripe). Svuota anche `STRIPE_WEBHOOK_SECRET` per far rispondere `503` al webhook |
+| Vuoi disattivare il billing | — | Imposta `BILLING_ENABLED=false` (checkout → `503`, nessuna chiamata Stripe). Svuota anche `STRIPE_WEBHOOK_SECRET` per far rispondere `503` al webhook |
 
 **Mai** loggare chiavi o body webhook completi: contengono PII. Ruota i secret
 se esposti e usa sempre il test mode finché il prodotto non è pronto.

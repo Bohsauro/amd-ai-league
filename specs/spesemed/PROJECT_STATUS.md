@@ -524,10 +524,10 @@ curl http://localhost:8000/api/v1/health
 | Pytest `test_auth`     | 🟢   | 9/9 (DI-friendly + fixture-shadowing fix)     |
 | Pytest `test_exporter` | 🟢   | 16/16 (Excel, ZIP, naming, dedup, CLI)        |
 | Pytest `test_summary`  | 🟢   | 5/5 (aggregazione usage, 503, openapi)        |
-| Pytest `test_rate_limit` | 🟢 | 14/14 (memory/Redis URI + readiness)          |
-| Pytest `test_billing`  | 🟢   | 13/13 (mock Stripe, no secrets)               |
-| Pytest `test_metrics`  | 🟢   | 34/34 (JWT + HTTP metrics)                    |
-| Pytest totale          | 🟢   | **176/176 passed, 0 failed**                  |
+| Pytest `test_rate_limit` | 🟢 | 16/16 (memory/Redis URI + readiness)          |
+| Pytest `test_billing`  | 🟢   | 21/21 (mock Stripe, kill switch, no secrets)  |
+| Pytest `test_metrics`  | 🟢   | 37/37 (JWT + HTTP metrics)                    |
+| Pytest totale          | 🟢   | **218 passed, 1 skipped, 0 failed**           |
 | Live smoke (env empty) | 🟢   | T1-T9 tutti verdi, T6 logout=204 FISSO        |
 | Flutter analyze        | 🟢   | 0 issue (70 lint fixati, `analysis_options` riattivato) |
 | Flutter test           | 🟢   | 47/47 (validators, signup screen, widget, profile DTO) |
@@ -564,7 +564,7 @@ SPESEMED/
 │
 ├── migrations/
 │   ├── 001_init.sql                  ← jobs, extractions, RPC, triggers
-│   └── 004_stripe_subscriptions.sql  ← subscriptions + RLS service_role (Fase 4C)
+│   └── 004_billing.sql  ← subscriptions + billing_events + RLS (Fase 4C)
 │
 ├── src/spesemed/
 │   ├── core/
@@ -585,7 +585,8 @@ SPESEMED/
 │       ├── metrics.py                ← metriche Prometheus (JWT + HTTP)
 │       ├── metrics_acl.py            ← ACL sui metric endpoint
 │       ├── rate_limit.py             ← slowapi Limiter + storage memory/Redis
-│       ├── billing.py                ← wrapper Stripe (plan/checkout/webhook)
+│       ├── billing.py                ← plan/webhook + persistenza subscription
+│       ├── billing_client.py         ← wrapper Stripe DI-friendly (checkout/event map)
 │       └── routes/
 │           ├── health.py             ← GET /health
 │           ├── extract.py            ← POST /extract (sync+async routing)
@@ -604,7 +605,7 @@ SPESEMED/
 │   ├── test_jwt_decoder.py           ← decode JWT + JWKS
 │   ├── test_metrics.py               ← 34 test metriche Prometheus/JWT/HTTP
 │   ├── test_rate_limit.py            ← 14 test storage memory/Redis + readiness
-│   ├── test_billing.py               ← 13 test Stripe (mock, no secrets)
+│   ├── test_billing.py               ← 21 test Stripe (mock, no secrets)
 │   ├── test_security_fixes.py        ← regressioni security
 │   ├── test_operational_smoke.py     ← smoke test operativo
 │   ├── test_exporter.py              ← 16 test Excel/ZIP + CLI (Fase 4B)
@@ -761,17 +762,22 @@ ciò che il runbook abilita.
 
 ### 17.3 Stripe billing (no-op mode → test/live)
 
-- Modulo `api/billing.py` + `api/routes/billing.py`.
+- Moduli `api/billing.py` (plan/webhook/persistenza) e
+  `api/billing_client.py` (wrapper Stripe DI-friendly per checkout/event map)
+  + `api/routes/billing.py`.
 - Endpoint:
   - `GET /api/v1/billing/plan` (pubblico): piano, `price_id`, valuta,
     `stripe_configured`, `webhook_configured`; **nessun secret**.
   - `POST /api/v1/billing/checkout` (Bearer): Checkout Session subscription,
-    `201 {checkout_url, session_id, amount_total, currency}`; `503` se
-    `STRIPE_SECRET_KEY`/`STRIPE_PRICE_ID` mancano; `401` senza auth.
+    `200 {checkout_url, session_id, mode, amount_total, currency}`; body
+    opzionale `{email}`; `503` se `BILLING_ENABLED=false` o chiavi/price
+    mancanti; `401` senza auth.
   - `POST /api/v1/billing/webhook` (firma Stripe): `200` evento valido,
     `400` firma invalida, `503` se `STRIPE_WEBHOOK_SECRET` manca.
+- Kill switch `BILLING_ENABLED=false` (default): nessun cambio di comportamento
+  e nessuna chiamata di rete a Stripe.
 - Evento gestito: `checkout.session.completed` → upsert best-effort in
-  `subscriptions` (migration `004_stripe_subscriptions.sql`, RLS service_role).
+  `subscriptions` (migration `004_billing.sql`, RLS service_role).
   Altri eventi: `200 action=ignored` (lifecycle completo = backlog).
 - Import `stripe` lazy: senza libreria/secret l'API resta su e risponde `503`
   solo sulle route billing.
@@ -781,18 +787,20 @@ ciò che il runbook abilita.
 Il piano `specs/spesemed/tasks/02-plan-4c.md` descrive un contratto più ampio
 (`GET /billing/status`, tabella `entitlements`, gating 402 su `/extract`).
 L'implementazione attuale su `dev/backend` espone `GET /billing/plan`, persiste
-su `subscriptions` e **non** blocca `/extract`. La riconciliazione è nei task
-4C-C7 (gating) e 4C-C9 (UI piano); questo documento descrive ciò che è
-effettivamente deployabile oggi, non il target futuro.
+su `subscriptions` (la migration `004_billing.sql` crea anche `billing_events`,
+ma l'idempotenza replay-safe del webhook è nel task 4C-C5) e **non** blocca
+`/extract`. La riconciliazione è nei task 4C-C5/C7 (webhook lifecycle/gating) e
+4C-C9 (UI piano); questo documento descrive ciò che è effettivamente
+deployabile oggi, non il target futuro.
 
 ### 17.5 Test offline (nessun secret)
 
 | Comando (da `backend/spesemed/`) | Atteso |
 |---|---|
-| `python -m pytest tests/test_billing.py -v` | 13 passed (mock `stripe` + Supabase) |
-| `python -m pytest tests/test_rate_limit.py -v` | 14 passed (memory/Redis URI + readiness) |
-| `python -m pytest tests/test_metrics.py -v` | 34 passed (JWT + HTTP metrics) |
-| `python -m pytest -q` | **176 passed, 0 failed** |
+| `python -m pytest tests/test_billing.py -v` | 21 passed (mock `stripe` + Supabase) |
+| `python -m pytest tests/test_rate_limit.py -v` | 16 passed (memory/Redis URI + readiness) |
+| `python -m pytest tests/test_metrics.py -v` | 37 passed (JWT + HTTP metrics) |
+| `python -m pytest -q` | **218 passed, 1 skipped, 0 failed** |
 | `python -m compileall src tests` | nessun errore |
 | `python tests/audit_pre_go_live.py` | `AUDIT PASSED` (`.env.example` ↔ `config.py`) |
 
@@ -802,7 +810,7 @@ nessuna chiamata di rete, nessun secret reale nel workspace.
 ---
 
 _Documento aggiornato al termine della **Fase 4C (skeleton)**: pytest
-**176/176** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
+**218 passed, 1 skipped** offline + audit pre-go-live PASSED + runbook Stripe/Redis,
 **GUI Flutter completata** (47/47 test, analyze 0 issue, 70 lint fixati),
 **Export Excel/ZIP implementato** (Fase 4B: `core/exporter.py` + API
 `POST /api/v1/export` + bottone Esporta in ResultsScreen) e **Profilo
