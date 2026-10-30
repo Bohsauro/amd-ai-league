@@ -11,3 +11,6 @@ backend/runs/
 backend/run.offline.json
 backend/demo_runs.json
 frontend/demo_runs.json
+
+# dir di lavoro temporanea per le review (non tracciata)
+.review-tmp/
