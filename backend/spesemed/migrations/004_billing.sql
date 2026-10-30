@@ -105,6 +105,14 @@ CREATE POLICY "Service role full access on stripe_events" ON stripe_events
 -- 004_stripe_subscriptions.sql: copia i dati legacy nelle tabelle canoniche.
 -- Le tabelle legacy NON vengono cancellate (il backend le legge solo come
 -- fallback di compatibilita' su GET /billing/status).
+--
+-- La copia e' schema-aware: la riga legacy viene letta con to_jsonb(), quindi
+-- le colonne assenti nella versione legacy applicata (current_period_start,
+-- extractions_limit, extractions_used esistono solo nella 004 piu' recente)
+-- non fanno fallire la migration. L'allowance degli utenti gia' attivi viene
+-- migrata per intero: una riga legacy senza quota esplicita riceve il default
+-- di settings.billing_extractions_limit (100, vedi api/config.py), altrimenti
+-- l'utente pagante resterebbe con quota 0 e il gating 402 lo bloccherebbe.
 -- =============================================================================
 DO $$
 BEGIN
@@ -113,25 +121,57 @@ BEGIN
             user_id,
             plan,
             status,
+            current_period_start,
             current_period_end,
+            extractions_limit,
+            extractions_used,
             stripe_customer_id,
-            stripe_subscription_id
+            stripe_subscription_id,
+            created_at
         )
         SELECT
-            user_id::text,
-            plan,
-            status,
-            current_period_end,
-            stripe_customer_id,
-            stripe_subscription_id
-        FROM subscriptions
+            legacy.row_json->>'user_id',
+            COALESCE(legacy.row_json->>'plan', 'free'),
+            CASE
+                WHEN COALESCE(legacy.row_json->>'status', 'none')
+                     IN ('active', 'trialing', 'past_due', 'canceled')
+                    THEN legacy.row_json->>'status'
+                ELSE 'none'
+            END,
+            NULLIF(legacy.row_json->>'current_period_start', '')::timestamptz,
+            NULLIF(legacy.row_json->>'current_period_end', '')::timestamptz,
+            CASE
+                WHEN COALESCE(legacy.row_json->>'plan', 'free') <> 'free'
+                    THEN COALESCE(
+                        NULLIF(NULLIF(legacy.row_json->>'extractions_limit', '')::int, 0),
+                        100
+                    )
+                ELSE COALESCE(NULLIF(legacy.row_json->>'extractions_limit', '')::int, 0)
+            END,
+            COALESCE(NULLIF(legacy.row_json->>'extractions_used', '')::int, 0),
+            legacy.row_json->>'stripe_customer_id',
+            legacy.row_json->>'stripe_subscription_id',
+            COALESCE(NULLIF(legacy.row_json->>'created_at', '')::timestamptz, NOW())
+        FROM (
+            SELECT to_jsonb(s) AS row_json
+            FROM public.subscriptions s
+        ) AS legacy
+        WHERE legacy.row_json->>'user_id' IS NOT NULL
         ON CONFLICT (user_id) DO NOTHING;
     END IF;
 
     IF to_regclass('public.billing_events') IS NOT NULL THEN
         INSERT INTO stripe_events (event_id, type, created_at, processed_at)
-        SELECT event_id, type, created_at, processed_at
-        FROM billing_events
+        SELECT
+            legacy.row_json->>'event_id',
+            legacy.row_json->>'type',
+            COALESCE(NULLIF(legacy.row_json->>'created_at', '')::timestamptz, NOW()),
+            COALESCE(NULLIF(legacy.row_json->>'processed_at', '')::timestamptz, NOW())
+        FROM (
+            SELECT to_jsonb(e) AS row_json
+            FROM public.billing_events e
+        ) AS legacy
+        WHERE legacy.row_json->>'event_id' IS NOT NULL
         ON CONFLICT (event_id) DO NOTHING;
     END IF;
 END $$;
