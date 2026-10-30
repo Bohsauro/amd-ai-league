@@ -4,18 +4,18 @@
 > per assicurazione e dichiarazione 730. Backend FastAPI **già in produzione su :8000**
 > (gunicorn, live), frontend SPA Vite+React18+TS **già costruito** in `frontend-app/`.
 > Il backend 4C è pronto come **skeleton operativo**: Redis readiness, metriche
-> Prometheus HTTP e Stripe (plan/checkout/webhook + persistenza subscription).
-> Restano validazione E2E con Supabase reale, gating quota/402 e UI piano (task
-> separati) e audit qualità frontend.
+> Prometheus HTTP, Stripe (plan/status/checkout/webhook + gating 402 su /extract).
+> Restano validazione E2E con Supabase reale, lifecycle webhook completo + UI
+> piano (task separati) e audit qualità frontend.
 
 ## Stato (fonte: PROJECT_STATUS.md, oct 2026)
 
 - Fasi 0-3, 4A(web), 4B (Export Excel/ZIP), 4B+ (Profilo/usage) ✅ done
-- pytest **218 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
+- pytest **239 passed, 1 skipped** offline (mock Supabase) + audit pre-go-live PASSED + GO_LIVE_RUNBOOK operativo
 - Backend **live su http://localhost:8000** (gunicorn 2 worker, bind 0.0.0.0:8000) → `/api/v1/health` 200
 - Flutter GUI rimossa (ott 2026) → la GUI web reale è `frontend-app/` (Vite+React18+TS, design "Verde Calma")
-- **4C backend done (skeleton)**: Redis rate-limit storage con readiness, metriche HTTP Prometheus, Stripe `plan`/`checkout`/`webhook` con no-op mode e test offline
-- **Resta**: validazione E2E success-path con secrets reali, gating 402 + UI Profilo/piano (4C-C7/C9), audit qualità frontend
+- **4C backend done (skeleton)**: Redis rate-limit storage con readiness, metriche HTTP Prometheus, Stripe `plan`/`status`/`checkout`/`webhook` + gating 402, con no-op mode e test offline
+- **Resta**: validazione E2E success-path con secrets reali, lifecycle webhook completo (4C-C5) + UI Profilo/piano (4C-C9), audit qualità frontend
 
 ## Mappa ruoli → domini di scrittura (path nel workspace)
 
@@ -70,9 +70,9 @@
 
 1. **Validazione E2E success-path con Supabase reale** (health→signup→login→jobs→extract→export;
    200 OK reali) — richiede secrets: preparare script + istruzioni, l'esecuzione finale la fa il proprietario.
-2. **Gating quota/402 + UI Profilo/piano** (4C-C7/C9): il billing backend è uno skeleton
-   funzionante (checkout + webhook + persistenza subscription), ma `/extract` non è ancora
-   bloccato da 402 e il frontend non mostra lo stato piano.
+2. **Lifecycle webhook + UI Profilo/piano** (4C-C5/C9): il gating 402 è implementato,
+   ma il webhook gestisce solo `checkout.session.completed` e il frontend non mostra
+   ancora stato piano/uso.
 3. **Audit qualità frontend-app**: impeccable detect, build `npm run build` senza errori,
    aderenza DESIGN.md, accessibilità, gestione errori/loading, refresh token su 401.
 
@@ -86,8 +86,14 @@ Questa sezione copre il billing **test mode**. Per la produzione vedi anche
 | Metodo | Path | Auth | Comportamento |
 |---|---|---|---|
 | GET | `/api/v1/billing/plan` | no | Info pubbliche piano (`stripe_configured`, `webhook_configured`, `price_id`, valuta). Nessun secret. |
+| GET | `/api/v1/billing/status` | Bearer | Stato piano dell'utente (`billing_enabled`, `plan`, `status`, `period_end`, limit/used). Mai 5xx: degrada a free. |
 | POST | `/api/v1/billing/checkout` | Bearer | Crea una Checkout Session (`200 {checkout_url, session_id, mode, amount_total, currency}`). Body opzionale `{email}`. `503` se kill switch OFF o config incompleta. |
 | POST | `/api/v1/billing/webhook` | firma Stripe | Verifica `Stripe-Signature`; `400` firma invalida, `503` se `STRIPE_WEBHOOK_SECRET` manca, `200` altrimenti. |
+
+Con `BILLING_ENABLED=true`, `POST /api/v1/extract` risponde `402 payment_required`
+se l'utente non ha un entitlement attivo o ha esaurito la quota; il consumo non
+aumenta sui cache hit. La quota vive nella tabella `entitlements` (vedi §5.5 del
+runbook per lo SQL se la migration non la include ancora).
 
 No-op mode: con `BILLING_ENABLED=false` (default) o chiavi/price mancanti il billing
 non chiama Stripe e `/billing/checkout` risponde `503` con messaggio chiaro. Il resto
@@ -164,7 +170,7 @@ pubbliche Stripe**:
 | Autenticazione 3DS richiesta | `4000 0027 6000 3184` | qualsiasi data futura / qualsiasi 3 cifre |
 
 Non usare numeri di carte reali, nemmeno in test. Dopo il pagamento verifica:
-`GET /billing/plan` invariato, log webhook `subscription_created`, riga in `subscriptions`.
+`GET /billing/status` con piano/limite aggiornati, log webhook `subscription_created`, riga in `subscriptions`.
 Il redirect finale è `BILLING_SUCCESS_URL` (o `BILLING_CANCEL_URL` se annulli).
 
 ### 4. Test offline (nessun secret, nessuna rete)
@@ -172,10 +178,11 @@ Il redirect finale è `BILLING_SUCCESS_URL` (o `BILLING_CANCEL_URL` se annulli).
 Esegui da `backend/spesemed/`:
 
 ```bash
-python -m pytest tests/test_billing.py -v       # 21 passed (mock stripe + supabase)
+python -m pytest tests/test_billing.py -v       # 27 passed (mock stripe + supabase)
+python -m pytest tests/test_extract_billing_gate.py -v  # 6 passed (402/quota/cache)
 python -m pytest tests/test_rate_limit.py -v    # 16 passed (memory/redis URI + readiness)
 python -m pytest tests/test_metrics.py -v       # 37 passed (JWT + HTTP metrics)
-python -m pytest -q                             # 218 passed, 1 skipped, 0 failed
+python -m pytest -q                             # 239 passed, 1 skipped, 0 failed
 python -m compileall src tests                  # nessun errore
 ```
 

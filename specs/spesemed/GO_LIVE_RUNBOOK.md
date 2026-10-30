@@ -305,9 +305,9 @@ Atteso: `"cached": [true]` (no nuovo consumo crediti OpenRouter).
 > persistenza della subscription su Supabase. **Nessun dato carta transita
 > dal backend** (PCI scope = SAQ A).
 >
-> Nota di stato: questa fase espone `GET /billing/plan`, `POST /billing/checkout`
-> e `POST /billing/webhook`. Il **gating quota/402 su `/extract`** è un task
-> separato e non è richiesto per configurare il billing.
+> Nota di stato: questa fase espone `GET /billing/plan`, `GET /billing/status`,
+> `POST /billing/checkout` e `POST /billing/webhook`. Con `BILLING_ENABLED=true`
+> il `POST /extract` è gated con `402 payment_required` per utenti senza quota.
 
 ### 5.1 Crea Product + Price ricorrente
 
@@ -361,12 +361,44 @@ curl -sS https://<api-host>/api/v1/billing/plan | python3 -m json.tool
 # atteso: "stripe_configured": true, "webhook_configured": true
 ```
 
-### 5.5 Persistenza subscription (consigliata)
+### 5.5 Persistenza subscription + entitlements (obbligatoria per il gating)
 
 Applica `backend/spesemed/migrations/004_billing.sql` nella SQL Editor di
 Supabase. La migration è idempotente e crea `subscriptions` + `billing_events`
 con RLS service_role-only. Senza migration il webhook risponde comunque `200`
 ma logga un WARNING e non persiste la riga.
+
+Il gating 402 legge la tabella `entitlements` (con fallback in lettura su
+`subscriptions` per lo status). Se la migration applicata non include ancora
+`entitlements`, creala con questo blocco idempotente prima di attivare
+`BILLING_ENABLED=true`:
+
+```sql
+CREATE TABLE IF NOT EXISTS entitlements (
+    user_id UUID PRIMARY KEY,
+    plan TEXT NOT NULL DEFAULT 'pro',
+    status TEXT NOT NULL DEFAULT 'active',
+    current_period_start TIMESTAMPTZ,
+    current_period_end TIMESTAMPTZ,
+    extractions_limit INT NOT NULL DEFAULT 0,
+    extractions_used INT NOT NULL DEFAULT 0,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE entitlements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access on entitlements" ON entitlements;
+CREATE POLICY "Service role full access on entitlements" ON entitlements
+    FOR ALL
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
+```
+
+Senza una riga `entitlements` attiva, con billing acceso ogni `/extract`
+risponde `402`: è il comportamento voluto (free senza quota), ma va verificato
+con un utente reale prima del go-live.
 
 ### 5.6 Test locale con Stripe CLI e carte finte
 
@@ -452,6 +484,7 @@ Dopo aver completato i 5 step, verifica in Supabase Dashboard e Stripe Dashboard
 - [ ] **Stripe → API keys**: la secret key è solo in `.env`/vault, mai in git o log
 - [ ] **Stripe → Webhooks**: endpoint HTTPS, signing secret ruotabile, evento minimo `checkout.session.completed`
 - [ ] **Stripe → Tax/fiscal settings**: configurazione fiscale decisa dal proprietario/commercialista
+- [ ] **Supabase → entitlements**: tabella presente + almeno una riga attiva per l'utente di test prima di `BILLING_ENABLED=true`
 - [ ] **Redis**: se `API_WORKERS > 1`, `RATE_LIMIT_STORAGE_BACKEND=redis` + `REDIS_URL` e readiness verde al boot
 
 ---
