@@ -73,7 +73,6 @@ Endpoints esposti:
 
 | Endpoint | Descrizione |
 |----------|-------------|
-| `GET  /api/v1/billing/plan`     | info pubbliche piano (nessun secret) |
 | `POST /api/v1/billing/checkout` | crea Stripe Checkout Session (auth) |
 | `POST /api/v1/billing/webhook`  | riceve eventi Stripe (firma verificata) |
 

@@ -2,14 +2,13 @@
 
 Verifica:
   - No-op mode: senza STRIPE_SECRET_KEY / WEBHOOK_SECRET gli endpoint
-    rispondono 503 e /billing/plan espone stripe_configured=false.
+    rispondono 503.
   - NESSUN secret nel workspace: i test usano chiavi fake esplicite.
   - POST /billing/checkout crea una Stripe Checkout Session (mock del
     client) e ritorna 200 + URL.
   - POST /billing/webhook: 503 se whsec mancante, 400 se firma non valida,
     200 + handle dell'evento se firma valida.
   - handle_webhook_event persiste la subscription su Supabase (best-effort).
-  - /billing/plan non espone segreti.
 """
 from __future__ import annotations
 
@@ -96,13 +95,6 @@ COMPLETED_EVENT_DICT = {
 
 
 class TestNoOpMode:
-    def test_plan_reports_not_configured(self, test_client):
-        r = test_client.get("/api/v1/billing/plan")
-        assert r.status_code == 200
-        body = r.json()
-        assert body["stripe_configured"] is False
-        assert body["webhook_configured"] is False
-
     def test_checkout_returns_503_when_not_configured(self, test_client, auth_headers):
         r = test_client.post("/api/v1/billing/checkout", json={}, headers=auth_headers)
         assert r.status_code == 503
@@ -116,26 +108,6 @@ class TestNoOpMode:
         )
         assert r.status_code == 503
         assert "STRIPE_WEBHOOK_SECRET mancante" in r.json()["detail"]
-
-
-class TestPlanEndpoint:
-    def test_plan_reports_configured_with_secrets(self, stripe_settings, fake_stripe_module, test_client):
-        r = test_client.get("/api/v1/billing/plan")
-        assert r.status_code == 200
-        body = r.json()
-        assert body["stripe_configured"] is True
-        assert body["webhook_configured"] is True
-        assert body["currency"] == "eur"
-        assert body["plans"][0]["name"] == "SPESEMED PRO"
-        assert body["plans"][0]["price_id"] == "price_test_0123456789"
-
-    def test_plan_does_not_leak_secrets(self, stripe_settings, fake_stripe_module, test_client):
-        r = test_client.get("/api/v1/billing/plan")
-        assert r.status_code == 200
-        raw = r.text
-        assert "sk_test_fake_0123456789" not in raw
-        assert "whsec_test_0123456789" not in raw
-        assert "sk_" not in raw
 
 
 class TestCheckout:

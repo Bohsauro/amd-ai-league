@@ -8,7 +8,7 @@ Skeleton operativo con **no-op mode** senza secrets:
     - Nessun secret reale nel codice: tutto arriva da env/.env del deploy.
 
 Endpoints esposti (vedi routes/billing.py):
-    GET  /api/v1/billing/plan      - info pubbliche del piano (NESSUN secret).
+    GET  /api/v1/billing/status    - stato piano dell'utente (auth).
     POST /api/v1/billing/checkout  - crea una Stripe Checkout Session (auth).
     POST /api/v1/billing/webhook   - riceve eventi Stripe (firma verificata).
 
@@ -41,26 +41,6 @@ from .config import settings
 from . import supabase_client
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# Catalogo piani (meta pubblico, NESSUNA informazione sensibile)
-# =============================================================================
-# In uno skeleton basta un piano; l'estensione multi-piano passa dall'aggiunta
-# di altri dizionari + env STRIPE_PRICE_ID_* dedicati.
-PLAN_CATALOG = {
-    "pro": {
-        "name": "SPESEMED PRO",
-        "price_id": "",  # valorizzato runtime da settings.stripe_price_id
-        "currency": "eur",
-        "period": "month",
-        "features": [
-            "Estrazioni illimitate",
-            "Export Excel/ZIP per il commercialista",
-            "Supporto prioritario",
-        ],
-    },
-}
 
 
 class StripeNotConfiguredError(RuntimeError):
@@ -297,20 +277,6 @@ def _record_subscription(
         logger.warning("Persistenza subscription fallita (user=%s): %s", user_id[:12], e)
         return False
 
-
-def build_public_plan_info() -> Dict[str, Any]:
-    """Info pubbliche del piano per GET /billing/plan (noc secret)."""
-    pro = dict(PLAN_CATALOG["pro"])
-    pro["name"] = settings.billing_plan_name or pro["name"]
-    pro["price_id"] = settings.stripe_price_id  # l'id price e' pubblico (non-secret)
-    pro["currency"] = settings.stripe_currency
-    pro["configured"] = is_stripe_configured()
-    return {
-        "stripe_configured": is_stripe_configured(),
-        "webhook_configured": is_webhook_configured(),
-        "currency": settings.stripe_currency,
-        "plans": [pro],
-    }
 
 # =============================================================================
 # Stato billing per il client (GET /billing/status)

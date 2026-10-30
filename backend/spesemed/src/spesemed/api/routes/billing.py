@@ -1,7 +1,6 @@
 """SPESEMED API - Billing endpoints (Fase 4C Stripe skeleton).
 
 GET  /api/v1/billing/status    -> stato piano utente (200, auth richiesto)
-GET  /api/v1/billing/plan      -> info pubbliche piano (200, nessun secret)
 POST /api/v1/billing/checkout  -> Stripe Checkout Session (200, auth richiesto)
 POST /api/v1/billing/webhook   -> riceve eventi Stripe (200, firma verificata)
 
@@ -60,14 +59,6 @@ class WebhookResponse(BaseModel):
     )
 
 
-class BillingPlanResponse(BaseModel):
-    """Info pubbliche del piano per la UI di pricing (nessun secret)."""
-    stripe_configured: bool = Field(...)
-    webhook_configured: bool = Field(...)
-    currency: str = Field(...)
-    plans: list = Field(default_factory=list, description="Lista piani (name, features, price_id,...).")
-
-
 # =============================================================================
 # Status (auth): contratto letto dal Profilo del client
 # =============================================================================
@@ -94,23 +85,6 @@ async def billing_status(
     free in caso di DB non disponibile.
     """
     return billing.get_user_billing_status(user_id)
-
-
-# =============================================================================
-# Plan / pricing info (pubblico, la UI lo usa per la landing)
-# =============================================================================
-@router.get(
-    "/billing/plan",
-    response_model=BillingPlanResponse,
-    summary="Info pubbliche del piano (nessun segreto esposto).",
-)
-def billing_plan() -> dict:
-    """Ritorna nome, prezzo e feature del piano attivo.
-
-    NOTA: NON espone STRIPE_SECRET_KEY ne' altre credenziali: solo meta
-    pubblico (nome piano, price_id, valuta) + flag di configurazione.
-    """
-    return billing.build_public_plan_info()
 
 
 # =============================================================================
