@@ -1,9 +1,12 @@
 import React from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export const Layout: React.FC = () => {
   const { userEmail } = useAuth();
+  const location = useLocation();
+  const isProfileRoute =
+    location.pathname === '/app/profile' || location.pathname === '/app/profilo';
 
   // Genera iniziali dall'email o nome
   const getInitials = (email: string) => {
@@ -59,7 +62,7 @@ export const Layout: React.FC = () => {
             </NavLink>
             <NavLink
               to="/app/profile"
-              className={({ isActive }) => (isActive ? 'active' : '')}
+              className={() => (isProfileRoute ? 'active' : '')}
             >
               Profilo
             </NavLink>

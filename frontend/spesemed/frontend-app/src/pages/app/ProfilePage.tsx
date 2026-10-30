@@ -14,6 +14,9 @@ import {
   ArrowRightIcon,
 } from '../../components/Icons';
 
+const isPlanActive = (data: BillingStatusResponse) =>
+  data.plan === 'pro' && (data.status === 'active' || data.status === 'trialing');
+
 export const ProfilePage: React.FC = () => {
   const { session, userEmail, userId, logout, refreshToken } = useAuth();
   const navigate = useNavigate();
@@ -47,7 +50,12 @@ export const ProfilePage: React.FC = () => {
     loadBilling();
   }, [loadBilling]);
 
-  const billingResult = searchParams.get('billing');
+  const rawBillingResult = searchParams.get('billing');
+  const billingResult =
+    rawBillingResult === 'success' || rawBillingResult === 'cancel' ? rawBillingResult : null;
+
+  const [isPaymentPending, setIsPaymentPending] = useState(false);
+  const [isPaymentChecking, setIsPaymentChecking] = useState(false);
 
   useEffect(() => {
     if (billingResult !== 'success') return;
@@ -62,15 +70,19 @@ export const ProfilePage: React.FC = () => {
         const data = await api.billingStatus();
         if (cancelled) return;
         setBilling(data);
-        active =
-          data.plan === 'pro' && (data.status === 'active' || data.status === 'trialing');
+        active = isPlanActive(data);
       } catch {
         active = false;
       }
-      if (active) return;
+      if (active) {
+        setIsPaymentPending(false);
+        return;
+      }
       attempts += 1;
       if (attempts < 5) {
         timer = window.setTimeout(checkStatus, 3000);
+      } else {
+        setIsPaymentPending(true);
       }
     };
 
@@ -81,10 +93,24 @@ export const ProfilePage: React.FC = () => {
     };
   }, [billingResult]);
 
+  const retryPaymentCheck = async () => {
+    setIsPaymentChecking(true);
+    try {
+      const data = await api.billingStatus();
+      setBilling(data);
+      setIsPaymentPending(!isPlanActive(data));
+    } catch {
+      setIsPaymentPending(true);
+    } finally {
+      setIsPaymentChecking(false);
+    }
+  };
+
   const dismissBillingResult = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('billing');
     setSearchParams(next, { replace: true });
+    setIsPaymentPending(false);
   };
 
   const handleCheckout = async () => {
@@ -106,10 +132,7 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const isPro =
-    !!billing &&
-    billing.plan === 'pro' &&
-    (billing.status === 'active' || billing.status === 'trialing');
+  const isPro = !!billing && isPlanActive(billing);
 
   const canSubscribe = !!billing && billing.billing_enabled && !isPro;
 
@@ -120,7 +143,7 @@ export const ProfilePage: React.FC = () => {
 
   const planLabel = billing?.plan === 'pro' ? 'Pro' : 'Gratuito';
   const checkoutLabel =
-    billing?.status === 'past_due' ? 'Aggiorna il pagamento' : 'Abbonati a Pro';
+    billing?.status === 'past_due' ? 'Riprova il pagamento' : 'Abbonati a Pro';
 
   const statusLabel = (status?: string) => {
     switch (status) {
@@ -129,7 +152,7 @@ export const ProfilePage: React.FC = () => {
       case 'trialing':
         return 'In prova';
       case 'past_due':
-        return 'Pagamento da aggiornare';
+        return 'Pagamento non riuscito';
       case 'canceled':
         return 'Annullato';
       case 'unpaid':
@@ -209,11 +232,40 @@ export const ProfilePage: React.FC = () => {
           {billingResult === 'success' ? <CheckIcon size={16} /> : <AlertCircleIcon size={16} />}
           <span style={{ flex: '1 1 220px' }}>
             {billingResult === 'success'
-              ? 'Pagamento completato. Stiamo attivando il piano Pro: può richiedere qualche secondo.'
+              ? isPro
+                ? 'Pagamento completato: il piano Pro è attivo.'
+                : 'Pagamento completato. Stiamo attivando il piano Pro: può richiedere qualche secondo.'
               : 'Pagamento annullato. Nessun addebito è stato effettuato.'}
           </span>
           <button type="button" className="btn btn-ghost btn-sm" onClick={dismissBillingResult}>
             Chiudi
+          </button>
+        </div>
+      )}
+
+      {isPaymentPending && (
+        <div
+          className="banner banner-info"
+          style={{ marginBottom: '1.4rem', alignItems: 'center', flexWrap: 'wrap' }}
+          role="status"
+        >
+          <AlertCircleIcon size={16} />
+          <span style={{ flex: '1 1 220px' }}>
+            Non riusciamo ancora a confermare l’attivazione del piano Pro. Controlliamo di nuovo tra poco.
+          </span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={retryPaymentCheck}
+            disabled={isPaymentChecking}
+          >
+            {isPaymentChecking ? (
+              <>
+                <SpinnerIcon size={14} /> Controllo...
+              </>
+            ) : (
+              'Riprova'
+            )}
           </button>
         </div>
       )}
