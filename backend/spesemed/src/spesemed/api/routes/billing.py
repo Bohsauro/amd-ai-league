@@ -119,7 +119,7 @@ async def billing_checkout(
     notificato via webhook (da configurare lato Stripe).
 
     Sicurezza: prezzo e URL di redirect arrivano SOLO dalla config server
-    (``STRIPE_PRICE_ID`` / ``STRIPE_SUCCESS_URL`` / ``STRIPE_CANCEL_URL``).
+    (``STRIPE_PRICE_ID`` / ``BILLING_SUCCESS_URL`` / ``BILLING_CANCEL_URL``).
     Il client non puo' scegliere il prezzo ne' controllare il redirect.
     """
     if not billing_client.is_billing_configured():

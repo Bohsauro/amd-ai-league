@@ -54,9 +54,11 @@ python -m pytest -q          # 173 test (135+ richiesti)
 
 ## Stripe billing (Fase 4C) — cosa serve per attivarlo
 
-Il billing è un skeleton in `no-op mode`: senza secrets gli endpoint
-rispondono `503` senza che parta alcuna chiamata di rete. Per attivarlo:
+Il billing è un skeleton in `no-op mode`: con `BILLING_ENABLED=false` (default)
+o senza secrets gli endpoint rispondono `503` senza che parta alcuna chiamata
+di rete. Per attivarlo:
 
+0. **Kill switch**: `BILLING_ENABLED=true` nel `.env` (default `false`).
 1. **Account Stripe** → Dashboard → Developers → API keys: copia la
    **secret key** (`sk_test_...`) in `STRIPE_SECRET_KEY` (nel `.env`, mai nel repo).
 2. **Product + Price** ricorrente (es. 9.99 EUR/mese) → copia il `price_id`
@@ -64,8 +66,8 @@ rispondono `503` senza che parta alcuna chiamata di rete. Per attivarlo:
 3. **Webhook** → "Add endpoint": `https://<api-host>/api/v1/billing/webhook`
    con eventi `checkout.session.completed` e `customer.subscription.deleted`;
    copia la **signing secret** (`whsec_...`) in `STRIPE_WEBHOOK_SECRET`.
-4. **Redirect** configurati: `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`
-   (default: `app.spesemed.local`, da adattare al dominio reale).
+4. **Redirect** configurati: `BILLING_SUCCESS_URL` / `BILLING_CANCEL_URL`
+   (se vuoti, derivati da `APP_URL`; da adattare al dominio reale).
 5. (Opzionale) applica `migrations/004_billing.sql` su Supabase:
    la subscription verrà persistita best-effort (`service_role`).
 

@@ -29,7 +29,8 @@ Cosa serve per ATTIVARE il billing (niente di questo e' nel workspace):
     3. Webhook endpoint https://<api>/api/v1/billing/webhook con eventi
        abilitati: checkout.session.completed, customer.subscription.deleted.
     4. La Secret con "whsec_..." -> STRIPE_WEBHOOK_SECRET.
-    5. Redirect URLs raggiungibili -> STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL.
+    5. Redirect URLs raggiungibili -> BILLING_SUCCESS_URL / BILLING_CANCEL_URL
+       (se vuoti, derivati da APP_URL).
     6. (Opzionale) migration 004 applicata su Supabase.
 """
 from __future__ import annotations
