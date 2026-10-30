@@ -66,7 +66,7 @@ rispondono `503` senza che parta alcuna chiamata di rete. Per attivarlo:
    copia la **signing secret** (`whsec_...`) in `STRIPE_WEBHOOK_SECRET`.
 4. **Redirect** configurati: `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`
    (default: `app.spesemed.local`, da adattare al dominio reale).
-5. (Opzionale) applica `migrations/004_stripe_subscriptions.sql` su Supabase:
+5. (Opzionale) applica `migrations/004_billing.sql` su Supabase:
    la subscription verrà persistita best-effort (`service_role`).
 
 Endpoints esposti:

@@ -51,9 +51,9 @@ def _extract_settings_class_body(text: str) -> str:
     return rest[:end]
 
 
-def audit_sql() -> dict:
-    """Audit migrations/001_init.sql."""
-    path = ROOT / "migrations" / "001_init.sql"
+def audit_sql(path: Path | None = None) -> dict:
+    """Audit a migration SQL file (default: migrations/001_init.sql)."""
+    path = path or ROOT / "migrations" / "001_init.sql"
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
 
@@ -110,6 +110,70 @@ def audit_sql() -> dict:
             "comment_lines": comment_lines,
         },
     }
+
+
+def audit_billing_migration() -> dict:
+    """Audit offline di migrations/004_billing.sql (Fase 4C, BOH-25).
+
+    Non esegue SQL: verifica struttura/idempotenza/RLS con gli stessi criteri
+    conservativi dell'audit 001 (parentesi bilanciate, terminazione `;`) piu'
+    i requisiti specifici del billing.
+    """
+    path = ROOT / "migrations" / "004_billing.sql"
+    result = {"file": str(path), "exists": path.exists()}
+    if not path.exists():
+        result.update({"checks": {}, "ok": False})
+        return result
+
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    def has(pattern: str) -> bool:
+        return bool(re.search(pattern, text, re.IGNORECASE | re.DOTALL))
+
+    checks = {
+        "create_subscriptions": has(
+            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+subscriptions\b"
+        ),
+        "create_billing_events": has(
+            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+billing_events\b"
+        ),
+        "rls_subscriptions": has(
+            r"ALTER\s+TABLE\s+subscriptions\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
+        ),
+        "rls_billing_events": has(
+            r"ALTER\s+TABLE\s+billing_events\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY"
+        ),
+        "policy_subscriptions_service_role": has(
+            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+subscriptions\b"
+            r"[^;]*?auth\.role\(\)\s*=\s*'service_role'"
+        ),
+        "policy_billing_events_service_role": has(
+            r"CREATE\s+POLICY\s+\"[^\"]+\"\s+ON\s+billing_events\b"
+            r"[^;]*?auth\.role\(\)\s*=\s*'service_role'"
+        ),
+        "idempotent_policy_drop": text.lower().count("drop policy if exists") >= 2,
+        "idempotent_add_column": "add column if not exists" in text.lower(),
+    }
+
+    parens_open = text.count("(")
+    parens_close = text.count(")")
+    syntax = {
+        "parens_open": parens_open,
+        "parens_close": parens_close,
+        "balanced": parens_open == parens_close,
+        "ends_with_semi": text.rstrip().endswith(";"),
+        "comment_lines": sum(1 for ln in lines if ln.strip().startswith("--")),
+    }
+    result.update(
+        {
+            "total_lines": len(lines),
+            "checks": checks,
+            "syntax": syntax,
+            "ok": all(checks.values()) and syntax["balanced"] and syntax["ends_with_semi"],
+        }
+    )
+    return result
 
 
 def audit_dotenv_vs_config() -> dict:
@@ -187,7 +251,7 @@ def audit_endpoints() -> dict:
     }
 
 
-def render_report(sql: dict, env: dict, ep: dict) -> str:
+def render_report(sql: dict, env: dict, ep: dict, billing: dict | None = None) -> str:
     out = []
     out.append("# SPESEMED — Pre-Go-Live Audit Report\n")
 
@@ -215,6 +279,22 @@ def render_report(sql: dict, env: dict, ep: dict) -> str:
     out.append("\n### Indici (CREATE INDEX)\n")
     for lineno, name in sql["indexes"]:
         out.append(f"  - L{lineno}: `{name}`\n")
+
+    if billing is not None:
+        out.append("\n## 1b. Migration `004_billing.sql`\n")
+        if not billing.get("exists"):
+            out.append(f"- **File**: `{billing['file']}` -> ❌ NON TROVATO\n")
+        else:
+            bs = billing["syntax"]
+            out.append(f"- **File**: `{billing['file']}` ({billing['total_lines']} righe)\n")
+            out.append(f"- **Parens bilanciati**: {bs['parens_open']} `(` vs {bs['parens_close']} `)` -> "
+                       f"{'✅ balanced' if bs['balanced'] else '❌ NOT balanced'}\n")
+            out.append(f"- **Termina con `;`**: {'✅' if bs['ends_with_semi'] else '❌'}\n")
+            out.append(f"- **Linee di commento**: {bs['comment_lines']}\n")
+            out.append("\n### Requisiti billing (idempotenza + RLS)\n")
+            for check, passed in billing["checks"].items():
+                out.append(f"  - {'✅' if passed else '❌'} `{check}`\n")
+            out.append(f"\n> {'✅ billing migration OK' if billing['ok'] else '❌ billing migration NON conforme'}\n")
 
     out.append("\n## 2. `.env.example` vs `config.py` Settings\n")
     out.append(f"- **{env['example_count']}** env-vars documentate in `.env.example`\n")
@@ -256,9 +336,10 @@ def render_report(sql: dict, env: dict, ep: dict) -> str:
 def main() -> int:
     print(">>> SPESEMED pre-go-live audit...\n")
     sql = audit_sql()
+    billing = audit_billing_migration()
     env = audit_dotenv_vs_config()
     ep = audit_endpoints()
-    report = render_report(sql, env, ep)
+    report = render_report(sql, env, ep, billing)
 
     out_path = ROOT / "tests" / "AUDIT_REPORT.md"
     out_path.write_text(report, encoding="utf-8")
@@ -267,13 +348,17 @@ def main() -> int:
     bad = []
     if not sql["syntax"]["balanced"]:
         bad.append("parens non bilanciati in migration SQL")
+    if not billing.get("ok"):
+        failed = [name for name, ok in billing.get("checks", {}).items() if not ok]
+        detail = ", ".join(failed) if failed else "file mancante o sintassi non valida"
+        bad.append(f"004_billing.sql non conforme ({detail})")
     if env["orphan_in_example"] or env["missing_in_example"]:
         bad.append(f"{len(env['orphan_in_example']) + len(env['missing_in_example'])} env-vars disallineate")
 
     if bad:
         print(f">>> AUDIT FAILED: {'; '.join(bad)}")
         return 1
-    print(">>> AUDIT PASSED: migration SQL sintatticamente OK, .env allineata a config.py.")
+    print(">>> AUDIT PASSED: migration SQL sintatticamente OK (001 + 004_billing), .env allineata a config.py.")
     return 0
 
 

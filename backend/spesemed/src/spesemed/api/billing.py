@@ -19,7 +19,7 @@ Design:
     - Webhook: verifica firma con ``stripe.Webhook.construct_event``.
     - Persistenza: alla ``checkout.session.completed`` la subscription viene
       scritta best-effort nella tabella `subscriptions` (vedi
-      migrations/004_stripe_subscriptions.sql). Se Supabase/DB non e'
+      migrations/004_billing.sql). Se Supabase/DB non e'
       disponibile, l'evento viene comunque ack-ato con un log (idempotenza
       garantita dal fare retry piu' tardi).
 
@@ -269,7 +269,7 @@ def _record_subscription(
 ) -> bool:
     """Scrive la subscription su Supabase (best-effort, non blocca l'ack).
 
-    Richiede la tabella `subscriptions` (migrations/004_stripe_subscriptions.sql).
+    Richiede la tabella `subscriptions` (migrations/004_billing.sql).
     Se Supabase/DB non e' disponibile, logga un WARNING e torna False:
     il webhook Stripe ritenta in automatico fino a successo.
     """
